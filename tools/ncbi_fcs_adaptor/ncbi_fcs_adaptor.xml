@@ -1,0 +1,68 @@
+<tool id="ncbi_fcs_adaptor" name="NCBI FCS Adaptor" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>detects contamination from foreign organisms in genome sequences</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="edam_ontology"/>
+    <expand macro="requirements"/>
+    <command detect_errors="exit_code"><![CDATA[
+        /app/fcs/bin/av_screen_x -o "\$(pwd)" '$tax' '$input'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="fasta" label="Input file (Fasta file)" help="To detect contamination from adaptors and vectors, a genome sequence in a fasta file."/>
+        <param name="tax" type="select" label="Choose the taxonomy">
+            <option value="--euk" selected="true">Eukaryotes</option>
+            <option value="--prok">Prokaryotes</option>
+        </param>
+        <section name="advanced" title="Advanced options" expanded="false">
+            <param name="optional_log" type="select" label="Choose additional logs" multiple="true" display="checkboxes">
+                <option value="adaptor_log" selected="false">Adaptor log</option>
+                <option value="validate_fasta_log" selected="false">FASTA validation log</option>
+            </param>
+        </section>
+    </inputs>
+    <outputs>
+        <data name="adaptor_report" format="tabular" from_work_dir="fcs_adaptor_report.txt" label="${tool.name} on ${on_string}: Adaptor report"/>
+        <data name="clean_fasta" format="fasta" from_work_dir="cleaned_sequences/*.dat" label="${tool.name} on ${on_string}: Cleaned Fasta"/>
+        <data name="adaptor_log" format="txt" from_work_dir="fcs_adaptor.log" label="${tool.name} on ${on_string}: Adaptor log">
+            <filter>advanced['optional_log'] is not None and 'adaptor_log' in advanced['optional_log'].split(',')</filter>
+        </data>
+        <data name="validate_fasta_log" format="txt" from_work_dir="validate_fasta.txt" label="${tool.name} on ${on_string}: FASTA validation log">
+            <filter>advanced['optional_log'] is not None and 'validate_fasta_log' in advanced['optional_log'].split(',')</filter>
+        </data>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="2">
+            <param name="input" value="fcsadaptor_prok_test.fa.gz" ftype="fasta"/>
+            <param name="tax" value="--prok"/>
+            <output name="adaptor_report" file="adaptor_report.tab" ftype="tabular" />
+            <output name="clean_fasta" decompress="true" file="clean_fasta.fa.gz" ftype="fasta" />
+        </test>
+        <test expect_num_outputs="4">
+            <param name="input" value="fcsadaptor_prok_test.fa.gz" ftype="fasta"/>
+            <param name="tax" value="--prok"/>
+            <param name="optional_log" value="adaptor_log,validate_fasta_log"/>
+            <output name="adaptor_report" file="adaptor_report.tab" ftype="tabular" />
+            <output name="clean_fasta" decompress="true" file="clean_fasta.fa.gz" ftype="fasta" />
+            <output name="adaptor_log">
+                <assert_contents>
+                    <has_text_matching expression="\bINFO \[workflow \] completed success\b" />
+                </assert_contents>
+            </output>
+            <output name="validate_fasta_log">
+                <assert_contents>
+                    <has_size value="0" />
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help><![CDATA[
+    FCS-adaptor is a high-throughput implementation of NCBI VecScreen.  FCS-adaptor runs a pipeline to screen input sequences against a non-redudant database of adaptors and vectors using stringent BLAST searches and remove contaminants from your genome.
+
+    FCS-adaptor removes terminal and internal matches to foreign sequences. Sequences identified as mostly adaptor/vector are removed entirely. FCS-adaptor produces a tabular output with details on the contaminant sequences identified as well as a cleaned FASTA.
+
+    Please see the wiki for more information.
+
+    https://github.com/ncbi/fcs/wiki/FCS-adaptor
+    ]]></help>
+</tool>

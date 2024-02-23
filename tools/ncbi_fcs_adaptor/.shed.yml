@@ -1,0 +1,15 @@
+categories:
+- Sequence Analysis
+description: FCS-adaptor detects adaptor and vector contamination in genome sequences.
+homepage_url: https://github.com/ncbi/fcs
+long_description: |
+  FCS-adaptor detects adaptor and vector contamination in genome
+  sequences. FCS-adaptor is a high-throughput implementation of NCBI
+  VecScreen. The FCS-adaptor executable retrieves a Docker or Singularity
+  container and runs a pipeline to screen input sequences against a
+  non-redudant database of adaptors and vectors using stringent BLAST
+  searches and remove contaminants from your genome.
+name: ncbi_fcs_adaptor
+owner: richard-burhans
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ncbi_fcs_adaptor
+type: unrestricted
