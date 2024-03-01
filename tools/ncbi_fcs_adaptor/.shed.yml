@@ -1,5 +1,5 @@
 categories:
-- Sequence Analysis
+  - Sequence Analysis
 description: FCS-adaptor detects adaptor and vector contamination in genome sequences.
 homepage_url: https://github.com/ncbi/fcs
 long_description: |
