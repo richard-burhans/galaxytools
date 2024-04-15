@@ -1,0 +1,11 @@
+<macros>
+    <xml name="scoring_options">
+        <section name="scoring_options" expanded="false" title="Scoring Options">
+            <param argument="--scoring" type="data" value="false" optional="true" format="txt" label="Scoring file in LASTZ format" />
+            <!--
+              ambiguous can be: {"n", "n,int,int", "iupac", "iupac,int,int"}
+              ints are ambiguous_reward and ambiguous_penalty
+            -->
+        </section>
+    </xml>
+</macros>

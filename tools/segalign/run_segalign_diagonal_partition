@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+#set -o xtrace
+
+##
+## parse arguments
+##
+
+SEGALIGN_ARGS=()
+
+MAX_SEGMENT_SIZE=""
+OUTPUT_FILENAME=""
+LASTZ_COMMAND_FILE="lastz_commands.txt"
+HELP=0
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --help)
+            HELP=1
+            shift
+            ;;
+        --max_segments)
+            MAX_SEGMENT_SIZE="$2"
+            shift 2
+            ;;
+        --output)
+            OUTPUT_FILENAME=$(readlink -f "$2")
+            shift 2
+            ;;
+        --tool_directory)
+            TOOL_DIRECTORY="$2"
+            shift 2
+            ;;
+        *)
+            SEGALIGN_ARGS+=("$1")
+            shift
+    esac
+done
+
+set -- "${SEGALIGN_ARGS[@]}"
+
+##
+## check arguments
+##
+
+if [[ $# == 0 || "$HELP" == "1" ]]; then
+    segalign --help
+    exit 0
+fi
+
+if [[ $# -lt 2 ]]; then
+    echo "run_segalign_diagonal_partition: missing target and query sequences" 1>&2
+    exit 1
+fi
+
+ref_path=$(readlink -f "$1")
+test -e "$ref_path" || {
+    echo "run_segalign_diagonal_partition: target file \"$ref_path\" does not exist" 1>&2
+    exit 1
+}
+query_path=$(readlink -f "$2")
+test -e "$query_path" || {
+    echo "run_segalign_diagonal_partition: query file \"$query_path\" does not exist" 1>&2
+    exit 1
+}
+shift 2
+
+DATA_FOLDER="data"
+mkdir -p "$DATA_FOLDER" || {
+    echo "run_segalign_diagonal_partition: cannont create data directory \"$DATA_FOLDER\"" 1>&2
+    exit 1
+}
+
+cd $DATA_FOLDER/..
+echo ""
+echo "Converting fasta files to 2bit format" 1>&2
+
+##
+## convert target and query to 2bit
+##
+faToTwoBit "$ref_path" "$DATA_FOLDER/ref.2bit" || {
+    echo "run_segalign_diagonal_partition: cannot convert \"$ref_path\" to 2bit" 1>&2
+    exit 1
+}
+faToTwoBit "$query_path" "$DATA_FOLDER/query.2bit" || {
+    echo "run_segalign_diagonal_partition: cannont convert \"$ref_path\" to 2bit" 1>&2
+    exit 1
+}
+
+
+
+time {
+    while IFS= read -r line; do
+        "$TOOL_DIRECTORY/diagonal_partition.py" $MAX_SEGMENT_SIZE $line >> $LASTZ_COMMAND_FILE
+        # segalign sort writes out the partitioned segment files to the working
+        # directory and prints the modified lastz commands.
+    done < <(stdbuf -oL segalign $ref_path $query_path "${DATA_FOLDER}/" "$@" ) # segalign begins running in this line, 
+} 1>&2 # and every newline written to stdout, get assigned to $line which
+       # gets sent to diagonal_partition for diagonal partitioning
+
+exit 0
+

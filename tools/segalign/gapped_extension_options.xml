@@ -1,0 +1,10 @@
+<macros>
+    <xml name="gapped_extension_options">
+        <section name="gapped_extension_options" expanded="false" title="Gapped Extension Options">
+            <param argument="--nogapped" type="boolean" checked="false" label="Don't perform gapped extension stage"/>
+            <param argument="--ydrop" type="integer" value="9430" label="Y-drop value for gapped extension"/>
+            <param argument="--gappedthresh" type="integer" value="" optional="true" label="Score threshold for gapped alignments"/>
+            <param argument="--notrivial" type="boolean" checked="false" label="Don't output a trivial self-alignment block if the target and query sequences are identical"/>
+        </section>
+    </xml>
+</macros>

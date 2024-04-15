@@ -1,0 +1,14 @@
+categories:
+- Next Gen Mappers
+description: A Scalable GPU System for Pairwise Whole Genome Alignments based on LASTZ's seed-filter-extend paradigm.
+homepage_url: https://github.com/gsneha26/SegAlign
+long_description: |
+  FCS-GX classifies sequences as contaminant when their taxonomic
+  assignment is different from the user provided taxonomic identifier. A
+  contamination summary provides an overview of observed contaminant
+  divisions, counts, and total sizes, and an action report provides
+  details and recommended actions for each problematic sequence.
+name: segalign
+owner: richard-burhans
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/segalign
+type: unrestricted
