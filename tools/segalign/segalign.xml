@@ -58,6 +58,14 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
 #if $scoring_pathname != "None":
             --scoring '$scoring_pathname'
 #end if
+#if str($mode.scoring_options.ambiguous_selector) != "x"
+    #if str($mode.scoring_options.set_ambiguous_params_selector) == "true"
+        #set $argument_value = ','.join($mode.scoring_options.ambiguous_selector, $mode.scoring_options.ambiguous_reward, $mode.scoring_options.ambiguous_penalty)
+            --ambiguous '$argument_value'
+    #else
+            --ambiguous '$ambiguous_selector'
+    #end if
+#end if
 
 ## Seeding Options -----------------------------------------------------
 
