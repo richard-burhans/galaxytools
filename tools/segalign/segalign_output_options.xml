@@ -68,8 +68,10 @@
                     <option value="shingle">shingle: A measurement of the shingle overlap between the target and the query</option>
                     <option value="number">number: The alignment number, counted as alignments are written to output (1-base)</option>
                     <option value="znumber">znumber: The alignment number, counted as alignments are written to output (0-base)</option>
-                    <sanitizer invalid_char=""> 
-                        <valid initial="string.letters,string.digits"><add value="%" /> </valid>
+                    <sanitizer invalid_char="">
+                        <valid initial="string.letters,string.digits">
+                            <add value="%"/>
+                        </valid>
                     </sanitizer>
                 </param>
             </when>
@@ -89,4 +91,3 @@
         </conditional>
     </xml>
 </macros>
-

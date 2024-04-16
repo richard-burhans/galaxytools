@@ -67,7 +67,7 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
             --seed '$mode.seeding_options.seed.seed_selector'
 #end if
             --step '$mode.seeding_options.step'
-#if str($mode.seeding_options.notransition) == 'true'
+#if str($mode.seeding_options.notransition) == "true"
             --notransition
 #end if
 
@@ -75,21 +75,21 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
 
             --xdrop '$mode.ungapped_extension_options.xdrop'
             --hspthresh '$mode.ungapped_extension_options.hspthresh'
-#if str($mode.ungapped_extension_options.noentropy) == 'true'
+#if str($mode.ungapped_extension_options.noentropy) == "true"
             --noentropy
 #end if
 
 ## Gapped Extension Options --------------------------------------------
 
 #if $segalign_mode != "segalign_repeat_masker"
-    #if str($mode.gapped_extension_options.nogapped) == 'true'
+    #if str($mode.gapped_extension_options.nogapped) == "true"
             --nogapped
     #end if
             --ydrop '$mode.gapped_extension_options.ydrop'
     #if str($mode.gapped_extension_options.gappedthresh) != ""
             --gappedthresh '$mode.gapped_extension_options.gappedthresh'
     #end if
-    #if str($mode.gapped_extension_options.notrivial) == 'true'
+    #if str($mode.gapped_extension_options.notrivial) == "true"
             --notrivial
     #end if
 #end if
@@ -129,7 +129,7 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
             --M '$mode.output_options.M'
             --output '$segalign_repeat_masker_output'
 #end if
-#if str($mode.output_options.markend) == 'true'
+#if str($mode.output_options.markend) == "true"
             --markend
 #end if
 
@@ -139,7 +139,7 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
             --lastz_interval_size '$mode.system_options.lastz_interval_size'
             --seq_block_size '$mode.system_options.seq_block_size'
             --num_gpu '$mode.system_options.num_gpu'
-#if str($mode.system_options.debug) == 'true'
+#if str($mode.system_options.debug) == "true"
             --debug
 #end if
 
@@ -158,43 +158,43 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
                 <option value="segalign_repeat_masker">SegAlign repeat masker</option>
             </param>
             <when value="segalign">
-                <param name="target" type="data" format="fasta" label="Target sequence file in FASTA format" />
-                <param name="query" type="data" format="fasta" label="Query sequence file in FASTA format" />
-                <expand macro="sequence_options" />
+                <param name="target" type="data" format="fasta" label="Target sequence file in FASTA format"/>
+                <param name="query" type="data" format="fasta" label="Query sequence file in FASTA format"/>
+                <expand macro="sequence_options"/>
                 <expand macro="scoring_options"/>
-                <expand macro="seeding_options" />
+                <expand macro="seeding_options"/>
                 <expand macro="ungapped_extension_options"/>
                 <expand macro="gapped_extension_options"/>
                 <expand macro="output_options">
                     <expand macro="segalign_output_options"/>
                 </expand>
-                <expand macro="system_options" />
+                <expand macro="system_options"/>
                 <section name="diagonal_partition_options" title="Diagonal Partition Options">
-                    <param argument="--diagonal_partition" type="boolean" value="false" label="Enable diagonal partition optimization" />
-                    <param argument="--max_segments" type="integer" value="20000" label="Max segments" />
+                    <param argument="--diagonal_partition" type="boolean" value="false" label="Enable diagonal partition optimization"/>
+                    <param argument="--max_segments" type="integer" value="20000" label="Max segments"/>
                 </section>
             </when>
             <when value="segalign_repeat_masker">
-                <param name="seq_file" type="data" format="fasta" label="Sequence file in FASTA format" />
+                <param name="seq_file" type="data" format="fasta" label="Sequence file in FASTA format"/>
                 <expand macro="sequence_options">
-                    <param argument="--neighbor_proportion" type="float" value="0.2" label="Proportion of neighbouring intervals to align the query interval to" />
+                    <param argument="--neighbor_proportion" type="float" value="0.2" label="Proportion of neighbouring intervals to align the query interval to"/>
                 </expand>
                 <expand macro="scoring_options"/>
-                <expand macro="seeding_options" />
+                <expand macro="seeding_options"/>
                 <expand macro="ungapped_extension_options"/>
                 <expand macro="output_options">
-                    <param argument="--M" type="integer" value="1" max="255" label="report any position that is covered by at least this many alignments; the maximum allowed depth is 255" />
+                    <param argument="--M" type="integer" value="1" max="255" label="report any position that is covered by at least this many alignments; the maximum allowed depth is 255"/>
                 </expand>
-                <expand macro="system_options" />
+                <expand macro="system_options"/>
             </when>
         </conditional>
     </inputs>
     <outputs>
         <data name="segalign_output" format="tabular" label="SegAlign on ${on_string}">
             <change_format>
-                <when input="mode.output_options.format.format_selector" value="bam" format="bam" />
-                <when input="mode.output_options.format.format_selector" value="maf" format="maf" />
-                <when input="mode.output_options.format.format_selector" value="differences" format="interval" />
+                <when input="mode.output_options.format.format_selector" value="bam" format="bam"/>
+                <when input="mode.output_options.format.format_selector" value="maf" format="maf"/>
+                <when input="mode.output_options.format.format_selector" value="differences" format="interval"/>
             </change_format>
             <filter>mode['mode_selector'] == 'segalign' and mode['diagonal_partition_options']['diagonal_partition'] is False</filter>
         </data>
@@ -206,10 +206,16 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
         </data>
     </outputs>
     <tests>
-        <test>
-            <param name="target" value="hg38.chr20.chunk.fa.gz" type="fasta" />
-            <param name="query" value="mm39.chr2.chunk.fa.gz" type="fasta" />
-            <output name="segalign_output" decompress="true" file="segalign-output.maf.gz" ftype="maf" />
+        <test expect_num_outputs="1">
+            <param name="mode_selector" value="segalign"/>
+            <param name="mode_selector" value="segalign_repeat_masker"/>
+            <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta"/>
+            <output name="segalign_output" decompress="true" file="segalign-output.maf.gz" ftype="maf"/>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="mode_selector" value="segalign_repeat_masker"/>
+            <param name="seq_file" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
+            <output name="segalign_repeat_masker_output" decompress="true" file="segalign-repeat-masker-output.tab.gz" ftype="maf"/>
         </test>
     </tests>
     <help><![CDATA[

@@ -1,8 +1,8 @@
 <macros>
     <xml name="output_options">
         <section name="output_options" expanded="false" title="Output Options">
-            <yield />
-            <param argument="--markend" type="boolean" value="false" label="Write a marker line just before completion" />
+            <yield/>
+            <param argument="--markend" type="boolean" value="false" label="Write a marker line just before completion"/>
         </section>
     </xml>
 </macros>

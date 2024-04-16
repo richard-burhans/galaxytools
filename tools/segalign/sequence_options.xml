@@ -6,7 +6,7 @@
                 <option value="minus">minus</option>
                 <option value="both" selected="true">both</option>
             </param>
-            <yield />
+            <yield/>
         </section>
     </xml>
 </macros>

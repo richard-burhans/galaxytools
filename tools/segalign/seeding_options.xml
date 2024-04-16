@@ -14,9 +14,9 @@
                     <!-- Do nothing -->
                 </when>
                 <when value="custom">
-                     <param name="custom_seed" type="text" value="" optional="false" label="Custom seed pattern">
-                         <validator type="empty_field"/>
-                         <!--
+                    <param name="custom_seed" type="text" value="" optional="false" label="Custom seed pattern">
+                        <validator type="empty_field"/>
+                        <!--
                          <validator type="regex" message="Arbitrary pattern of 1s, 0s, and Ts">^[01T]+$</validator>
                          <sanitizer invalid_char="">
                              <valid initial="none">
@@ -26,11 +26,11 @@
                              </valid>
                          </sanitizer>
                          -->
-                     </param>
+                    </param>
                 </when>
             </conditional>
-            <param argument="--step" type="integer" value="1" label="Offset between the starting positions of successive target words considered for generating seed table" />
-            <param argument="--notransition" type="boolean" checked="false" label="Don't allow one transition in a seed hit" />
+            <param argument="--step" type="integer" value="1" label="Offset between the starting positions of successive target words considered for generating seed table"/>
+            <param argument="--notransition" type="boolean" checked="false" label="Don't allow one transition in a seed hit"/>
         </section>
     </xml>
 </macros>

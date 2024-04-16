@@ -1,11 +1,25 @@
 <macros>
     <xml name="scoring_options">
         <section name="scoring_options" expanded="false" title="Scoring Options">
-            <param argument="--scoring" type="data" value="false" optional="true" format="txt" label="Scoring file in LASTZ format" />
-            <!--
-              ambiguous can be: {"n", "n,int,int", "iupac", "iupac,int,int"}
-              ints are ambiguous_reward and ambiguous_penalty
-            -->
+            <param argument="--scoring" type="data" value="false" optional="true" format="txt" label="Scoring file in LASTZ format"/>
+            <param name="ambiguous_selector" type="select" label="Ambiguous Nucleotides">
+                <option value="x" selected="true">None</option>
+                <option value="n">N</option>
+                <option value="iupac">IUPAC</option>
+            </param>
+            <conditional name="ambiguous_params">
+                <param name="set_ambiguous_params_selector" type="select" label="Set Ambiguous Nucleotide Scoring Parameters">
+                    <option value="false" selected="true">No</option>
+                    <option value="true">Yes</option>
+                </param>
+                <when value="false">
+                    <!-- Do nothing -->
+                </when>
+                <when value="true">
+                    <param name="ambiguous_reward" type="integer" value="0" label="Ambiguous Nucleotide Reward"/>
+                    <param name="ambiguous_penalty" type="integer" value="0" label="Ambiguous Nucleotide Penalty"/>
+                </when>
+            </conditional>
         </section>
     </xml>
 </macros>
