@@ -169,7 +169,7 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
                     <expand macro="segalign_output_options"/>
                 </expand>
                 <expand macro="system_options"/>
-                <section name="diagonal_partition_options" title="Diagonal Partition Options">
+                <section name="diagonal_partition_options" expanded="false" title="Diagonal Partition Options">
                     <param argument="--diagonal_partition" type="boolean" value="false" label="Enable diagonal partition optimization"/>
                     <param argument="--max_segments" type="integer" value="20000" label="Max segments"/>
                 </section>
@@ -208,14 +208,25 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
     <tests>
         <test expect_num_outputs="1">
             <param name="mode_selector" value="segalign"/>
-            <param name="mode_selector" value="segalign_repeat_masker"/>
+            <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
             <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta"/>
             <output name="segalign_output" decompress="true" file="segalign-output.maf.gz" ftype="maf"/>
         </test>
         <test expect_num_outputs="1">
             <param name="mode_selector" value="segalign_repeat_masker"/>
             <param name="seq_file" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
-            <output name="segalign_repeat_masker_output" decompress="true" file="segalign-repeat-masker-output.tab.gz" ftype="maf"/>
+            <output name="segalign_repeat_masker_output" decompress="true" file="segalign-repeat-masker-output.tab.gz" ftype="tabular"/>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="mode_selector" value="segalign"/>
+            <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
+            <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta"/>
+            <param name="diagonal_partition" value="true"/>
+            <output name="segalign_diagonal_partition_output" ftype="tgz">
+                <assert_contents>
+                    <has_archive_member path="galaxy/commands.json"/>
+                </assert_contents>
+            </output>
         </test>
     </tests>
     <help><![CDATA[
