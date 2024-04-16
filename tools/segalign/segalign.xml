@@ -118,7 +118,7 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
     #else if str($mode.output_options.format.format_selector) == "differences"
             --format=differences
     #end if
-    ## TODO :: rplot, bam
+    ## todo :: rplot, bam
     ##  --action:target=multiple
     ##  $output_format.rplot
     ##  .if str( $output_format.out.format ) == "bam":
