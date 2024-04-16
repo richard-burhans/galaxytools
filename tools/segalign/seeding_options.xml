@@ -16,16 +16,14 @@
                 <when value="custom">
                     <param name="custom_seed" type="text" value="" optional="false" label="Custom seed pattern">
                         <validator type="empty_field"/>
-                        <!--
-                         <validator type="regex" message="Arbitrary pattern of 1s, 0s, and Ts">^[01T]+$</validator>
-                         <sanitizer invalid_char="">
-                             <valid initial="none">
-                                 <add value="0" />
-                                 <add value="1" />
-                                 <add value="T" />
-                             </valid>
-                         </sanitizer>
-                         -->
+                        <validator type="regex" message="Arbitrary pattern of 1s, 0s, and Ts">^[01T]+$</validator>
+                        <sanitizer invalid_char="">
+                            <valid initial="none">
+                                <add value="0"/>
+                                <add value="1"/>
+                                <add value="T"/>
+                            </valid>
+                        </sanitizer>
                     </param>
                 </when>
             </conditional>
