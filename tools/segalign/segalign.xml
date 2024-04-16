@@ -151,13 +151,13 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
             --debug
 #end if
 
+## -------------------------------------------------------------------
 
 #if $segalign_mode == "segalign_diagonal_partition"
         &&
         '$__tool_directory__/package_output.py'
 #end if
 
-## -------------------------------------------------------------------
     ]]></command>
     <inputs>
         <conditional name="mode">

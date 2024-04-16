@@ -103,12 +103,14 @@ class bashCommandLineFile:
                 for line in f:
                     line = line.rstrip("\n")
                     command_dict = self._parse_line(line)
-                    print(json.dumps(command_dict), file=ofh)
+                    # we may want to re-write args here
+                    new_args_list = []
 
                     args_list = command_dict.get("args", [])
                     for arg in args_list:
                         if arg.startswith("--target="):
                             pathname = arg[9:]
+                            new_args_list.append(arg)
                             if "[" in pathname:
                                 elems = pathname.split("[")
                                 sequence_file = elems.pop(0)
@@ -122,6 +124,7 @@ class bashCommandLineFile:
 
                         elif arg.startswith("--query="):
                             pathname = arg[8:]
+                            new_args_list.append(arg)
                             if "[" in pathname:
                                 elems = pathname.split("[")
                                 sequence_file = elems.pop(0)
@@ -134,7 +137,17 @@ class bashCommandLineFile:
                                             self.package_file.add_file(subset_file)
                         elif arg.startswith("--segments="):
                             pathname = arg[11:]
+                            new_args_list.append(arg)
                             self.package_file.add_file(pathname)
+                        elif arg.startswith("--scores="):
+                            pathname = arg[9:]
+                            new_args_list.append("--scores=data/scores.txt")
+                            self.package_file.add_file(pathname, "data/scores.txt")
+                        else:
+                            new_args_list.append(arg)
+
+                    command_dict["args"] = new_args_list
+                    print(json.dumps(command_dict), file=ofh)
 
         self.package_file.add_config("commands.json")
 
@@ -256,9 +269,6 @@ class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[name-defined,misc]
 
     def visitheredoc(self, n: bashlex.ast.node, value: typing.Any) -> None:  # type: ignore[name-defined]
         pass
-
-
-# --package-output
 
 
 def main() -> None:
