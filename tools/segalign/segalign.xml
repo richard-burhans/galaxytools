@@ -1,0 +1,221 @@
+<tool id="segalign" name="SegAlign" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>A Scalable GPU System for Pairwise Whole Genome Alignments based on LASTZ's seed-filter-extend paradigm</description>
+    <macros>
+        <import>macros.xml</import>
+        <import>sequence_options.xml</import>
+        <import>scoring_options.xml</import>
+        <import>seeding_options.xml</import>
+        <import>ungapped_extension_options.xml</import>
+        <import>gapped_extension_options.xml</import>
+        <import>output_options.xml</import>
+        <import>segalign_output_options.xml</import>
+        <import>system_options.xml</import>
+    </macros>
+    <expand macro="edam_ontology"/>
+    <expand macro="requirements"/>
+    <command detect_errors="exit_code"><![CDATA[
+##
+## https://www.gnu.org/software/coreutils/manual/html_node/nproc-invocation.html
+##
+## If the OMP_NUM_THREADS or OMP_THREAD_LIMIT environment variables
+## are set, then they will determine the minimum and maximum returned
+## value respectively.
+##
+## This is how you tame nproc(1)
+##
+OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
+
+## Mode ----------------------------------------------------------------
+
+#if str($mode.mode_selector) == "segalign"
+    #if str($mode.diagonal_partition_options.diagonal_partition) == "true"
+        #set $segalign_mode = "segalign_diagonal_partition"
+        '$__tool_directory__/run_segalign_diagonal_partition'
+            --tool_directory '$__tool_directory__'
+            --max_segments '$mode.diagonal_partition_options.max_segments'
+    #else
+        #set $segalign_mode = "segalign"
+        run_segalign
+    #end if
+            '$mode.target'
+            '$mode.query'
+#else if str($mode.mode_selector) == "segalign_repeat_masker"
+    #set $segalign_mode = "segalign_repeat_masker"
+        run_segalign_repeat_masker
+            '$mode.seq_file'
+#end if
+
+## Sequence Options ----------------------------------------------------
+
+            --strand '$mode.sequence_options.strand_selector'
+#if $segalign_mode == "segalign_repeat_masker"
+            --neighbor_proportion '$mode.sequence_options.neighbor_proportion'
+#end if
+
+## Scoring Options -----------------------------------------------------
+
+#set $scoring_pathname = str($mode.scoring_options.scoring)
+#if $scoring_pathname != "None":
+            --scoring '$scoring_pathname'
+#end if
+
+## Seeding Options -----------------------------------------------------
+
+#if str($mode.seeding_options.seed.seed_selector) == "custom"
+            --seed '$mode.seeding_options.seed.custom_seed'
+#else
+            --seed '$mode.seeding_options.seed.seed_selector'
+#end if
+            --step '$mode.seeding_options.step'
+#if str($mode.seeding_options.notransition) == 'true'
+            --notransition
+#end if
+
+## Ungapped Extension Options ------------------------------------------
+
+            --xdrop '$mode.ungapped_extension_options.xdrop'
+            --hspthresh '$mode.ungapped_extension_options.hspthresh'
+#if str($mode.ungapped_extension_options.noentropy) == 'true'
+            --noentropy
+#end if
+
+## Gapped Extension Options --------------------------------------------
+
+#if $segalign_mode != "segalign_repeat_masker"
+    #if str($mode.gapped_extension_options.nogapped) == 'true'
+            --nogapped
+    #end if
+            --ydrop '$mode.gapped_extension_options.ydrop'
+    #if str($mode.gapped_extension_options.gappedthresh) != ""
+            --gappedthresh '$mode.gapped_extension_options.gappedthresh'
+    #end if
+    #if str($mode.gapped_extension_options.notrivial) == 'true'
+            --notrivial
+    #end if
+#end if
+
+## Output Options -----------------------------------------------------
+
+#if $segalign_mode != "segalign_repeat_masker"
+    #if str($mode.output_options.format.format_selector) == "bam"
+            --format '$mode.output_options.format.bam_options'
+    #else if str($mode.output_options.format.format_selector) == "general_def"
+            --format general-
+    #else if str($mode.output_options.format.format_selector) == "general_full"
+            --format 'general-:${mode.output_options.format.fields}'
+    #else if str($mode.output_options.format.format_selector) == "maf"
+            --format '$mode.output_options.format.maf_type'
+    #else if str($mode.output_options.format.format_selector) == "blastn"
+            --format=BLASTN-
+    #else if str($mode.output_options.format.format_selector) == "differences"
+            --format=differences
+    #end if
+    ## TODO :: rplot, bam
+    ##  --action:target=multiple
+    ##  $output_format.rplot
+    ##  .if str( $output_format.out.format ) == "bam":
+    ##      | samtools sort -@\${GALAXY_SLOTS:-2} -T "\${TMPDIR:-.}" -O bam -o '${output}'
+    ##  .else:
+    ##      > '${output}'
+    ##  .end if
+    ##  .if $output_format.rplot:
+    ##      &&
+    ##      Rscript $r_plot > /dev/null 2>&1
+    ##  .end if
+    #if $segalign_mode == "segalign"
+            --output '$segalign_output'
+    #end if
+#else if $segalign_mode == "segalign_repeat_masker"
+            --M '$mode.output_options.M'
+            --output '$segalign_repeat_masker_output'
+#end if
+#if str($mode.output_options.markend) == 'true'
+            --markend
+#end if
+
+## System Options -----------------------------------------------------
+
+            --wga_chunk_size '$mode.system_options.wga_chunk_size'
+            --lastz_interval_size '$mode.system_options.lastz_interval_size'
+            --seq_block_size '$mode.system_options.seq_block_size'
+            --num_gpu '$mode.system_options.num_gpu'
+#if str($mode.system_options.debug) == 'true'
+            --debug
+#end if
+
+
+#if $segalign_mode == "segalign_diagonal_partition"
+        &&
+        '$__tool_directory__/package_output.py'
+#end if
+
+## -------------------------------------------------------------------
+    ]]></command>
+    <inputs>
+        <conditional name="mode">
+            <param name="mode_selector" type="select" label="Choose the mode">
+                <option value="segalign" selected="true">SegAlign</option>
+                <option value="segalign_repeat_masker">SegAlign repeat masker</option>
+            </param>
+            <when value="segalign">
+                <param name="target" type="data" format="fasta" label="Target sequence file in FASTA format" />
+                <param name="query" type="data" format="fasta" label="Query sequence file in FASTA format" />
+                <expand macro="sequence_options" />
+                <expand macro="scoring_options"/>
+                <expand macro="seeding_options" />
+                <expand macro="ungapped_extension_options"/>
+                <expand macro="gapped_extension_options"/>
+                <expand macro="output_options">
+                    <expand macro="segalign_output_options"/>
+                </expand>
+                <expand macro="system_options" />
+                <section name="diagonal_partition_options" title="Diagonal Partition Options">
+                    <param argument="--diagonal_partition" type="boolean" value="false" label="Enable diagonal partition optimization" />
+                    <param argument="--max_segments" type="integer" value="20000" label="Max segments" />
+                </section>
+            </when>
+            <when value="segalign_repeat_masker">
+                <param name="seq_file" type="data" format="fasta" label="Sequence file in FASTA format" />
+                <expand macro="sequence_options">
+                    <param argument="--neighbor_proportion" type="float" value="0.2" label="Proportion of neighbouring intervals to align the query interval to" />
+                </expand>
+                <expand macro="scoring_options"/>
+                <expand macro="seeding_options" />
+                <expand macro="ungapped_extension_options"/>
+                <expand macro="output_options">
+                    <param argument="--M" type="integer" value="1" max="255" label="report any position that is covered by at least this many alignments; the maximum allowed depth is 255" />
+                </expand>
+                <expand macro="system_options" />
+            </when>
+        </conditional>
+    </inputs>
+    <outputs>
+        <data name="segalign_output" format="tabular" label="SegAlign on ${on_string}">
+            <change_format>
+                <when input="mode.output_options.format.format_selector" value="bam" format="bam" />
+                <when input="mode.output_options.format.format_selector" value="maf" format="maf" />
+                <when input="mode.output_options.format.format_selector" value="differences" format="interval" />
+            </change_format>
+            <filter>mode['mode_selector'] == 'segalign' and mode['diagonal_partition_options']['diagonal_partition'] is False</filter>
+        </data>
+        <data name="segalign_diagonal_partition_output" format="tgz" from_work_dir="data_package.tgz" label="SegAlign Diagonal Partition on ${on_string}">
+            <filter>mode['mode_selector'] == 'segalign' and mode['diagonal_partition_options']['diagonal_partition'] is True</filter>
+        </data>
+        <data name="segalign_repeat_masker_output" format="tabular" label="SegAlign Repeat Masker on ${on_string}">
+            <filter>mode['mode_selector'] == 'segalign_repeat_masker'</filter>
+        </data>
+    </outputs>
+    <tests>
+        <test>
+            <param name="target" value="hg38.chr20.chunk.fa.gz" type="fasta" />
+            <param name="query" value="mm39.chr2.chunk.fa.gz" type="fasta" />
+            <output name="segalign_output" decompress="true" file="segalign-output.maf.gz" ftype="maf" />
+        </test>
+    </tests>
+    <help><![CDATA[
+    SegAlign is a scalable, GPU-accelerated system for computing pairwise WGA. SegAlign is based on the standard seed-filter-extend heuristic, in which the filtering stage dominates the runtime (e.g. 98% for human-mouse WGA), and is accelerated using GPU(s).
+
+    https://github.com/gsneha26
+    ]]></help>
+    <expand macro="citations"/>
+</tool>
