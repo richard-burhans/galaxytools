@@ -14,7 +14,7 @@ import os
 def chunks(lst, n):
     """Yield successive n-sized chunks from list."""
     for i in range(0, len(lst), n):
-        yield lst[i : i + n]
+        yield lst[i: i + n]
 
 
 if __name__ == "__main__":
@@ -34,9 +34,9 @@ if __name__ == "__main__":
     for index, value in enumerate(params):
         if value[: len(segment_key)] == segment_key:
             segment_index = index
-            input_file = value[len(segment_key) :]
+            input_file = value[len(segment_key):]
             break
-    if segment_index == None:
+    if segment_index is None:
         print(f"Error: could not segment key {segment_key} in parameters {params}")
         exit(0)
 
@@ -62,16 +62,16 @@ if __name__ == "__main__":
     for index, value in enumerate(params):
         if value[: len(output_key)] == output_key:
             output_index = index
-            output_alignment_file = value[len(output_key) :]
+            output_alignment_file = value[len(output_key):]
             output_alignment_file_base, output_format = output_alignment_file.rsplit(
                 ".", 1
             )
         if value[: len(strand_key)] == strand_key:
             strand_index = index
-    if segment_index == None:
+    if segment_index is None:
         print(f"Error: could not output key {output_key} in parameters {params}")
         exit(0)
-    if strand_index == None:
+    if strand_index is None:
         print(f"Error: could not output key {strand_key} in parameters {params}")
         exit(0)
 

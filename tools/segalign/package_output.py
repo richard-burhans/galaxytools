@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
-import typing
-
 import argparse
-import bashlex
 import configparser
 import json
 import os
-import re
 import sys
 import tarfile
+import typing
+
+import bashlex
 
 
 class PackageFile:
@@ -152,7 +151,7 @@ class bashCommandLineFile:
         self.package_file.add_config("commands.json")
 
     def _parse_line(self, line: str) -> typing.Dict[str, typing.Any]:
-        ## resolve shell redirects
+        # resolve shell redirects
         trees: typing.List[typing.Any] = bashlex.parse(line, strictmode=False)  # type: ignore[attr-defined]
         positions: typing.List[typing.Tuple[int, int]] = []
 
@@ -178,7 +177,6 @@ class bashCommandLineFile:
 
     def _parse_processed_line(self, line: str) -> typing.Dict[str, typing.Any]:
         argv: typing.List[str] = list(bashlex.split(line))  # type: ignore[attr-defined]
-        options: typing.Dict[str, typing.Any] = {}
         self.executable = argv.pop(0)
 
         parser: argparse.ArgumentParser = argparse.ArgumentParser(add_help=False)
@@ -280,7 +278,7 @@ def main() -> None:
 
     package_file = PackageFile()
     lastz_command_file = "lastz_commands.txt"
-    foo = bashCommandLineFile(lastz_command_file, config, package_file)
+    bashCommandLineFile(lastz_command_file, config, package_file)
     package_file.close()
 
 
