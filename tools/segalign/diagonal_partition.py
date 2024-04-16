@@ -7,8 +7,8 @@ Usage:
 diagonal_partition <max-segments> <lastz-command>
 """
 
-import sys
 import os
+import sys
 
 
 def chunks(lst, n):
