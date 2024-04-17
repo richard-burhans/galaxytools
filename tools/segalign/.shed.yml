@@ -4,7 +4,7 @@ description: A Scalable GPU System for Pairwise Whole Genome Alignments based on
 homepage_url: https://github.com/gsneha26/SegAlign
 long_description: |
   SegAlign is a scalable, GPU-accelerated system for computing pairwise
-  WGA. SegAlign is based on the standard seed-filter-extend heuristic, 
+  WGA. SegAlign is based on the standard seed-filter-extend heuristic,
   in which the filtering stage dominates the runtime.
 name: segalign
 owner: richard-burhans
