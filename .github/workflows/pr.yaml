@@ -182,7 +182,7 @@ jobs:
   lintr:
     name: Lint R scripts
     needs: setup
-    if: ${{ needs.setup.outputs.repository-list != '' }}
+    if: ${{ github.event_name == 'pull_request' && needs.setup.outputs.repository-list != '' }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
