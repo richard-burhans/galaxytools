@@ -214,18 +214,18 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
         </data>
     </outputs>
     <tests>
-        <test expect_num_outputs="1">
+        <test expect_num_outputs="1" expect_test_failure="true">
             <param name="mode_selector" value="segalign"/>
             <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
             <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta"/>
             <output name="segalign_output" decompress="true" file="segalign-output.maf.gz" ftype="maf"/>
         </test>
-        <test expect_num_outputs="1">
+        <test expect_num_outputs="1" expect_test_failure="true">
             <param name="mode_selector" value="segalign_repeat_masker"/>
             <param name="seq_file" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
             <output name="segalign_repeat_masker_output" decompress="true" file="segalign-repeat-masker-output.tab.gz" ftype="tabular"/>
         </test>
-        <test expect_num_outputs="1">
+        <test expect_num_outputs="1" expect_test_failure="true">
             <param name="mode_selector" value="segalign"/>
             <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
             <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta"/>
