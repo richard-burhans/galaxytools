@@ -5,8 +5,7 @@ homepage_url: https://github.com/gsneha26/SegAlign
 long_description: |
   SegAlign is a scalable, GPU-accelerated system for computing pairwise
   WGA. SegAlign is based on the standard seed-filter-extend heuristic,
-  in which the filtering stage dominates the runtime (e.g. 98% for
-  human-mouse WGA), and is accelerated using GPU(s).
+  in which the filtering stage dominates the runtime.
 name: segalign
 owner: richard-burhans
 remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/segalign
