@@ -30,7 +30,9 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
 #if str($mode.mode_selector) == "segalign"
     #if str($mode.diagonal_partition_options.diagonal_partition) == "true"
         #set $segalign_mode = "segalign_diagonal_partition"
-        '$__tool_directory__/run_segalign_diagonal_partition'
+        ## explicitly calling bash to bypass a pulsar bug
+        ## https://github.com/galaxyproject/pulsar/issues/341
+        bash '$__tool_directory__/run_segalign_diagonal_partition'
             --tool_directory '$__tool_directory__'
             --max_segments '$mode.diagonal_partition_options.max_segments'
     #else
