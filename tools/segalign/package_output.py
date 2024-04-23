@@ -33,7 +33,7 @@ class PackageFile:
                 name=self.pathname,
                 mode="w:gz",
                 format=tarfile.GNU_FORMAT,
-                compresslevel=1,
+                compresslevel=6,
             )
 
     def add_config(self, pathname: str) -> None:
@@ -152,7 +152,7 @@ class bashCommandLineFile:
 
     def _parse_line(self, line: str) -> typing.Dict[str, typing.Any]:
         # resolve shell redirects
-        trees: typing.List[typing.Any] = bashlex.parse(line, strictmode=False)  # type: ignore[attr-defined]
+        trees: typing.List[typing.Any] = bashlex.parse(line, strictmode=False)
         positions: typing.List[typing.Tuple[int, int]] = []
 
         for tree in trees:
@@ -176,7 +176,7 @@ class bashCommandLineFile:
         return command_dict
 
     def _parse_processed_line(self, line: str) -> typing.Dict[str, typing.Any]:
-        argv: typing.List[str] = list(bashlex.split(line))  # type: ignore[attr-defined]
+        argv: typing.List[str] = list(bashlex.split(line))
         self.executable = argv.pop(0)
 
         parser: argparse.ArgumentParser = argparse.ArgumentParser(add_help=False)
@@ -236,7 +236,7 @@ class bashCommandLineFile:
         return command_dict
 
 
-class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[name-defined,misc]
+class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[misc]
     def __init__(self, positions: typing.List[typing.Tuple[int, int]]) -> None:
         self.positions = positions
         self.stdin = None
@@ -245,14 +245,14 @@ class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[name-defined,misc]
 
     def visitredirect(
         self,
-        n: bashlex.ast.node,  # type: ignore[name-defined]
+        n: bashlex.ast.node,
         n_input: int,
         n_type: str,
         output: typing.Any,
         heredoc: typing.Any,
     ) -> None:
         if isinstance(n_input, int) and 0 <= n_input <= 2:
-            if isinstance(output, bashlex.ast.node) and output.kind == "word":  # type: ignore[attr-defined]
+            if isinstance(output, bashlex.ast.node) and output.kind == "word":
                 self.positions.append(n.pos)
                 if n_input == 0:
                     self.stdin = output.word
@@ -265,7 +265,7 @@ class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[name-defined,misc]
         else:
             sys.exit(f"oops 2: {type(n_input)}")
 
-    def visitheredoc(self, n: bashlex.ast.node, value: typing.Any) -> None:  # type: ignore[name-defined]
+    def visitheredoc(self, n: bashlex.ast.node, value: typing.Any) -> None:
         pass
 
 
