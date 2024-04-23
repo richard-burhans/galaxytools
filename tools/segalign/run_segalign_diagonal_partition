@@ -93,7 +93,7 @@ faToTwoBit "$query_path" "$DATA_FOLDER/query.2bit" || {
 
 time {
     while IFS= read -r line; do
-        "$TOOL_DIRECTORY/diagonal_partition.py" $MAX_SEGMENT_SIZE $line >> $LASTZ_COMMAND_FILE
+        python "$TOOL_DIRECTORY/diagonal_partition.py" $MAX_SEGMENT_SIZE $line >> $LASTZ_COMMAND_FILE
         # segalign sort writes out the partitioned segment files to the working
         # directory and prints the modified lastz commands.
     done < <(stdbuf -oL segalign $ref_path $query_path "${DATA_FOLDER}/" "$@" ) # segalign begins running in this line, 
