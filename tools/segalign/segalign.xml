@@ -13,6 +13,12 @@
     </macros>
     <expand macro="edam_ontology"/>
     <expand macro="requirements"/>
+    <required_files>
+        <include path="diagonal_partition.py"/>
+        <include path="lastz-cmd.ini"/>
+        <include path="package_output.py"/>
+        <include path="run_segalign_diagonal_partition"/>
+    </required_files>
     <command detect_errors="exit_code"><![CDATA[
 ##
 ## https://www.gnu.org/software/coreutils/manual/html_node/nproc-invocation.html
