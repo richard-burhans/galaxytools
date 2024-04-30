@@ -1,0 +1,26 @@
+<macros>
+    <xml name="requirements">
+        <requirements>
+            <requirement type="package" version="@TOOL_VERSION@">lastz</requirement>
+            <yield/>
+        </requirements>
+    </xml>
+    <token name="@TOOL_VERSION@">1.04.22</token>
+    <token name="@VERSION_SUFFIX@">0</token>
+    <token name="@PROFILE@">21.05</token>
+    <xml name="citations">
+        <citations>
+            <citation type="bibtex">
+            @misc{
+                githublastz,
+                author = {Harris, Robert},
+                year = {2007},
+                title = {Improved pairwise alignment of genomic DNA},
+                publisher = {The Pennsylvania State University},
+                journal = {Ph. D. Thesis},
+                url = {http://www.bx.psu.edu/~rsharris/rsharris_phd_thesis_2007.pdf},
+                }
+            </citation>
+        </citations>
+    </xml>
+</macros>

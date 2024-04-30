@@ -1,0 +1,20 @@
+<tool id="batched_lastz" name="Batched Lastz" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>: align batches of sequences</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <command detect_errors="exit_code"><![CDATA[
+        run_lastz_tarball.py '--input=$input' '--output=$output' '--parallel=\${GALAXY_SLOTS:-2}'
+    ]]></command>
+    <inputs>
+        <param argument="--tarball" type="data" format="tgz" label="Tarball"/>
+    </inputs>
+    <outputs>
+        <data name="output" label="Output"/>
+    </outputs>
+    <help><![CDATA[
+    TODO: Fill in help.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>
