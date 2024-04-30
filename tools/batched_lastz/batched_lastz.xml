@@ -8,7 +8,7 @@
         run_lastz_tarball.py '--input=$input' '--output=$output' '--parallel=\${GALAXY_SLOTS:-2}'
     ]]></command>
     <inputs>
-        <param argument="--tarball" type="data" format="tgz" label="Tarball"/>
+        <param argument="--input" type="data" format="tgz" label="Tarball"/>
     </inputs>
     <outputs>
         <data name="output" label="Output"/>
