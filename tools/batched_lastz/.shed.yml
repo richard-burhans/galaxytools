@@ -1,0 +1,14 @@
+categories:
+- Next Gen Mappers
+description: Galaxy wrapper for the batching Lastz runs
+homepage_url: https://github.com/gsneha26/SegAlign
+long_description: |
+  LASTZ is designed to preprocess one sequence or set of sequences
+  (which we collectively call the TARGET) and then align several
+  QUERY sequences to it. LASTZ_D is a non-integer (D stands for Double)
+  version of LASTZ that can be used to estimate substitution matrix
+  that will be used to score alignments.
+name: batched_lastz
+owner: richard-burhans
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/batched_lastz
+type: unrestricted
