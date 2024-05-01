@@ -2,7 +2,7 @@
     <xml name="requirements">
         <requirements>
             <requirement type="package" version="@TOOL_VERSION@">lastz</requirement>
-            <yield/>
+            <requirement type="package" version="3.9">python</requirement>
         </requirements>
     </xml>
     <token name="@TOOL_VERSION@">1.04.22</token>
