@@ -323,7 +323,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, required=True)
     parser.add_argument("--output", type=str, required=True)
-    parser.add_argument("--parallel", type=int, default=1, required=False)
+    parser.add_argument("--parallel", type=int, default=2, required=False)
     parser.add_argument("--debug", action="store_true", required=False)
 
     args = parser.parse_args()
