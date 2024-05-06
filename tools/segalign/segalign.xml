@@ -174,8 +174,8 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
                 <option value="segalign_repeat_masker">SegAlign repeat masker</option>
             </param>
             <when value="segalign">
-                <param name="target" type="data" format="fasta" label="Target sequence file in FASTA format"/>
-                <param name="query" type="data" format="fasta" label="Query sequence file in FASTA format"/>
+                <param name="target" type="data" format="fasta,fasta.gz" label="Target sequence file in FASTA format"/>
+                <param name="query" type="data" format="fasta,fasta.gz" label="Query sequence file in FASTA format"/>
                 <expand macro="sequence_options"/>
                 <expand macro="scoring_options"/>
                 <expand macro="seeding_options"/>
@@ -191,7 +191,7 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
                 </section>
             </when>
             <when value="segalign_repeat_masker">
-                <param name="seq_file" type="data" format="fasta" label="Sequence file in FASTA format"/>
+                <param name="seq_file" type="data" format="fasta,fasta.gz" label="Sequence file in FASTA format"/>
                 <expand macro="sequence_options">
                     <param argument="--neighbor_proportion" type="float" value="0.2" label="Proportion of neighbouring intervals to align the query interval to"/>
                 </expand>
@@ -224,19 +224,19 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
     <tests>
         <test expect_num_outputs="1" expect_test_failure="true">
             <param name="mode_selector" value="segalign"/>
-            <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
-            <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta"/>
+            <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta.gz"/>
+            <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta.gz"/>
             <output name="segalign_output" decompress="true" file="segalign-output.maf.gz" ftype="maf"/>
         </test>
         <test expect_num_outputs="1" expect_test_failure="true">
             <param name="mode_selector" value="segalign_repeat_masker"/>
-            <param name="seq_file" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
+            <param name="seq_file" value="hg38.chr20.chunk.fa.gz" ftype="fasta.gz"/>
             <output name="segalign_repeat_masker_output" decompress="true" file="segalign-repeat-masker-output.tab.gz" ftype="tabular"/>
         </test>
         <test expect_num_outputs="1" expect_test_failure="true">
             <param name="mode_selector" value="segalign"/>
-            <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta"/>
-            <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta"/>
+            <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta.gz"/>
+            <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta.gz"/>
             <param name="diagonal_partition" value="true"/>
             <output name="segalign_diagonal_partition_output" ftype="tgz">
                 <assert_contents>
