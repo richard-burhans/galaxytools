@@ -80,11 +80,11 @@ echo "Converting fasta files to 2bit format" 1>&2
 ##
 ## convert target and query to 2bit
 ##
-faToTwoBit "$ref_path" "$DATA_FOLDER/ref.2bit" || {
+faToTwoBit <(gzip -cdfq "$ref_path") "$DATA_FOLDER/ref.2bit" || {
     echo "run_segalign_diagonal_partition: cannot convert \"$ref_path\" to 2bit" 1>&2
     exit 1
 }
-faToTwoBit "$query_path" "$DATA_FOLDER/query.2bit" || {
+faToTwoBit <(gzip -cdfq "$query_path") "$DATA_FOLDER/query.2bit" || {
     echo "run_segalign_diagonal_partition: cannont convert \"$ref_path\" to 2bit" 1>&2
     exit 1
 }
@@ -93,7 +93,10 @@ faToTwoBit "$query_path" "$DATA_FOLDER/query.2bit" || {
 
 time {
     while IFS= read -r line; do
-        python "$TOOL_DIRECTORY/diagonal_partition.py" $MAX_SEGMENT_SIZE $line >> $LASTZ_COMMAND_FILE
+        python "$TOOL_DIRECTORY/diagonal_partition.py" $MAX_SEGMENT_SIZE $line >> $LASTZ_COMMAND_FILE || {
+            echo "run_segalign_diagonal_partition: failed: diagonal_partition.py $MAX_SEGMENT_SIZE $line" 1>&2
+            exit 1
+        }
         # segalign sort writes out the partitioned segment files to the working
         # directory and prints the modified lastz commands.
     done < <(stdbuf -oL segalign $ref_path $query_path "${DATA_FOLDER}/" "$@" ) # segalign begins running in this line, 
