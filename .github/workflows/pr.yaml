@@ -182,7 +182,7 @@ jobs:
   lintr:
     name: Lint R scripts
     needs: setup
-    if: ${{ github.event_name == 'pull_request' && needs.setup.outputs.repository-list != '' }}
+    if: ${{ needs.setup.outputs.repository-list != '' }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -204,7 +204,7 @@ jobs:
       uses: r-lib/actions/setup-r-dependencies@v2
       with:
         packages: |
-          any::argparse 
+          any::argparse
           any::styler
     - name: lintr
       run: |
