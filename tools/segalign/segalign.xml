@@ -14,10 +14,9 @@
     <expand macro="edam_ontology"/>
     <expand macro="requirements"/>
     <required_files>
-        <include path="diagonal_partition.py"/>
         <include path="lastz-cmd.ini"/>
         <include path="package_output.py"/>
-        <include path="run_segalign_diagonal_partition"/>
+        <include path="runner.py"/>
     </required_files>
     <command detect_errors="exit_code"><![CDATA[
 ##
@@ -38,12 +37,19 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
         #set $segalign_mode = "segalign_diagonal_partition"
         ## explicitly calling bash to bypass a pulsar bug
         ## https://github.com/galaxyproject/pulsar/issues/341
-        bash '$__tool_directory__/run_segalign_diagonal_partition'
+        bash '$__tool_directory__/runner.py'
+            --output-type tarball
+            --output-filename fake
+            --diagonal-partition
+            --num-cpu \${GALAXY_SLOTS:-2}
             --tool_directory '$__tool_directory__'
-            --max_segments '$mode.diagonal_partition_options.max_segments'
     #else
         #set $segalign_mode = "segalign"
-        run_segalign
+        bash '$__tool_directory__/runner.py'
+            --output-type output
+            --output-filename foo.maf
+            --num-cpu \${GALAXY_SLOTS:-2}
+            --tool_directory '$__tool_directory__'
     #end if
             '$mode.target'
             '$mode.query'
@@ -187,7 +193,6 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
                 <expand macro="system_options"/>
                 <section name="diagonal_partition_options" expanded="false" title="Diagonal Partition Options">
                     <param argument="--diagonal_partition" type="boolean" value="false" label="Enable diagonal partition optimization"/>
-                    <param argument="--max_segments" type="integer" value="20000" label="Max segments"/>
                 </section>
             </when>
             <when value="segalign_repeat_masker">
