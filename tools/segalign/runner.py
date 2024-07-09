@@ -3,8 +3,8 @@
 import argparse
 import collections
 import concurrent.futures
-import os
 import multiprocessing
+import os
 import queue
 import re
 import resource
