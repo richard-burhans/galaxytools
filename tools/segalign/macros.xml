@@ -2,8 +2,6 @@
     <xml name="requirements">
         <requirements>
             <requirement type="package" version="@TOOL_VERSION@">segalign-full</requirement>
-            <requirement type="package" version="0.18">bashlex</requirement>
-            <requirement type="package" version="3.12">python</requirement>
         </requirements>
     </xml>
     <token name="@TOOL_VERSION@">0.1.2.7</token>
