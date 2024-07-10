@@ -19,8 +19,14 @@
     <outputs>
         <data name="output" label="Output" format="maf"/>
     </outputs>
+    <tests>
+      <test expect_num_outputs="1">
+        <param name="input" value="input.tgz" ftype="tgz"/>
+        <output name="output" decompress="true" file="output.maf.gz" ftype="maf"/>
+      </test>
+    </tests>
     <help><![CDATA[
-    TODO: Fill in help.
+    Run batched lastz
     ]]></help>
     <expand macro="citations"/>
 </tool>
