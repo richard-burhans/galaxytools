@@ -277,7 +277,7 @@ def main() -> None:
     config.read(lastz_command_config_file)
 
     package_file = PackageFile()
-    lastz_command_file = "lastz_commands.txt"
+    lastz_command_file = "lastz-commands.txt"
     bashCommandLineFile(lastz_command_file, config, package_file)
     package_file.close()
 

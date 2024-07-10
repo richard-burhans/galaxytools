@@ -33,21 +33,26 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
 ## Mode ----------------------------------------------------------------
 
 #if str($mode.mode_selector) == "segalign"
+    #if str($mode.gapped_extension_options.nogapped) == "false"
+        mkdir -p "\$(pwd)/work" && 
+        faToTwoBit <(gzip -cdfq '$mode.target') "\$(pwd)/work/ref.2bit" &&
+        faToTwoBit <(gzip -cdfq '$mode.query') "\$(pwd)/work/query.2bit" &&
+    #end if
     #if str($mode.diagonal_partition_options.diagonal_partition) == "true"
         #set $segalign_mode = "segalign_diagonal_partition"
-        ## explicitly calling bash to bypass a pulsar bug
+        ## explicitly calling python to bypass a pulsar bug
         ## https://github.com/galaxyproject/pulsar/issues/341
-        bash '$__tool_directory__/runner.py'
+        python '$__tool_directory__/runner.py'
             --output-type tarball
-            --output-filename fake
+            --output-file '$segalign_diagonal_partition_output'
             --diagonal-partition
             --num-cpu \${GALAXY_SLOTS:-2}
             --tool_directory '$__tool_directory__'
     #else
         #set $segalign_mode = "segalign"
-        bash '$__tool_directory__/runner.py'
+        python '$__tool_directory__/runner.py'
             --output-type output
-            --output-filename foo.maf
+            --output-file '$segalign_output'
             --num-cpu \${GALAXY_SLOTS:-2}
             --tool_directory '$__tool_directory__'
     #end if
@@ -57,6 +62,7 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
     #set $segalign_mode = "segalign_repeat_masker"
         run_segalign_repeat_masker
             '$mode.seq_file'
+            --num_cpu \${GALAXY_SLOTS:-2}
 #end if
 
 ## Sequence Options ----------------------------------------------------
@@ -144,9 +150,6 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
     ##      &&
     ##      Rscript $r_plot > /dev/null 2>&1
     ##  .end if
-    #if $segalign_mode == "segalign"
-            --output '$segalign_output'
-    #end if
 #else if $segalign_mode == "segalign_repeat_masker"
             --M '$mode.output_options.M'
             --output '$segalign_repeat_masker_output'
