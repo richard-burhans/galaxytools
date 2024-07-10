@@ -8,12 +8,12 @@ import os
 import queue
 import re
 import shutil
-import sys
 import subprocess
+import sys
 import tarfile
 import tempfile
-import typing
 import time
+import typing
 
 
 lastz_output_format_regex = re.compile(
@@ -69,7 +69,7 @@ def run_command(
             if stderr is not None:
                 try:
                     statinfo = os.stat(stderr, follow_symlinks=False)
-                except:
+                except Exception:
                     statinfo = None
 
                 if statinfo is None:
@@ -305,6 +305,7 @@ class TarRunner:
 
         for file_type, file_list in self.output_files.items():
             with open(f"output.{file_type}", "w") as ofh:
+                print("##maf version=1", file=ofh)
                 for filename in file_list:
                     with open(f"galaxy/files/{filename}") as ifh:
                         for line in ifh:
