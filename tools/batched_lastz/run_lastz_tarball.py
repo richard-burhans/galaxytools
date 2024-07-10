@@ -69,7 +69,7 @@ def run_command(
             if stderr is not None:
                 try:
                     statinfo = os.stat(stderr, follow_symlinks=False)
-                except:
+                except Exception:
                     statinfo = None
 
                 if statinfo is None:
@@ -256,6 +256,8 @@ class TarRunner:
 
             command_dict["args"] = new_args
 
+
+
     def run(self) -> None:
         run_times = []
         begin = time.perf_counter()
@@ -305,6 +307,7 @@ class TarRunner:
 
         for file_type, file_list in self.output_files.items():
             with open(f"output.{file_type}", "w") as ofh:
+                print("##maf version=1", file=ofh)
                 for filename in file_list:
                     with open(f"galaxy/files/{filename}") as ifh:
                         for line in ifh:
