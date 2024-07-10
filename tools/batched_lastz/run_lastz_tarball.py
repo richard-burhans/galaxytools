@@ -8,12 +8,12 @@ import os
 import queue
 import re
 import shutil
-import sys
 import subprocess
+import sys
 import tarfile
 import tempfile
-import typing
 import time
+import typing
 
 
 lastz_output_format_regex = re.compile(
@@ -255,8 +255,6 @@ class TarRunner:
                     new_args.append(arg)
 
             command_dict["args"] = new_args
-
-
 
     def run(self) -> None:
         run_times = []
