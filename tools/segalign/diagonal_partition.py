@@ -149,8 +149,7 @@ if __name__ == "__main__":
     # If there are chromosome pairs with segment count <= chunk_size
     # then no need to sort and split these pairs into separate files.
     # It is better to keep these pairs in a single segment file.
-    skip_pairs = []  # pairs that have count <= chunk_size
-                     # these will not be sorted
+    skip_pairs = []  # pairs that have count <= chunk_size. these will not be sorted
 
     # save query key order
     # for lastz segment files: 'Query sequence names must appear in the same
