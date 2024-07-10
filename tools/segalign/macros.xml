@@ -1,7 +1,7 @@
 <macros>
     <xml name="requirements">
         <requirements>
-            <requirement type="package" version="@TOOL_VERSION@">segalign-full</requirement>
+            <requirement type="package" version="@TOOL_VERSION@">segalign-galaxy</requirement>
         </requirements>
     </xml>
     <token name="@TOOL_VERSION@">0.1.2.7</token>

@@ -301,17 +301,17 @@ def run_diagonal_partitioners(args: argparse.Namespace, num_workers: int, input_
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
         for i in range(num_workers):
-            executor.submit(diagonal_partition_worker(input_q, output_q, chunk_size, i))
+            executor.submit(diagonal_partition_worker(args, input_q, output_q, chunk_size, i))
 
 
-def diagonal_partition_worker(input_q: queue.Queue[str], output_q: queue.Queue[str], chunk_size: int, instance: int) -> None:
+def diagonal_partition_worker(args: argparse.Namespace, input_q: queue.Queue[str], output_q: queue.Queue[str], chunk_size: int, instance: int) -> None:
     while True:
         line = input_q.get()
         if line == SENTINEL_VALUE:
             input_q.task_done()
             break
 
-        run_args = ["python", "/jetstream2/scratch/rico/job-dir/tool_files/diagonal_partition.py", str(chunk_size)]
+        run_args = ["python", f"{args.tool_directory}/diagonal_partition.py", str(chunk_size)]
         for word in line.split():
             run_args.append(word)
         process = subprocess.run(run_args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -380,6 +380,7 @@ def run_segalign(args: argparse.Namespace, num_sentinel: int, segalign_args: lis
         run_args.extend(segalign_args)
         run_args.append("--num_threads")
         run_args.append(str(args.num_cpu))
+        run_args.append("work/")
 
         if args.debug:
             beg: int = time.monotonic_ns()
