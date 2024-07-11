@@ -14,6 +14,7 @@
     <expand macro="edam_ontology"/>
     <expand macro="requirements"/>
     <required_files>
+        <include path="diagonal_partition.py"/>
         <include path="lastz-cmd.ini"/>
         <include path="package_output.py"/>
         <include path="runner.py"/>
