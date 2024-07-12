@@ -270,8 +270,11 @@ class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[misc]
 
 
 def main() -> None:
-    our_dirname: str = os.path.dirname(os.path.realpath(__file__))
-    lastz_command_config_file: str = os.path.join(our_dirname, "lastz-cmd.ini")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tool_directory", type=str, required=True, help="tool directory")
+    args = parser.parse_args()
+
+    lastz_command_config_file: str = os.path.join(args.tool_directory, "lastz-cmd.ini")
 
     config: configparser.ConfigParser = configparser.ConfigParser()
     config.read(lastz_command_config_file)
