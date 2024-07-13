@@ -173,7 +173,7 @@ OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
 
 #if $segalign_mode == "segalign_diagonal_partition"
         &&
-        python '$__tool_directory__/package_output.py' \
+        python '$__tool_directory__/package_output.py'
             --tool_directory '$__tool_directory__'
 #end if
 
