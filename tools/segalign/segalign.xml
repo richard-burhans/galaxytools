@@ -8,7 +8,6 @@
         <import>ungapped_extension_options.xml</import>
         <import>gapped_extension_options.xml</import>
         <import>output_options.xml</import>
-        <import>segalign_output_options.xml</import>
         <import>system_options.xml</import>
     </macros>
     <expand macro="edam_ontology"/>
@@ -20,235 +19,135 @@
         <include path="runner.py"/>
     </required_files>
     <command detect_errors="exit_code"><![CDATA[
-##
-## https://www.gnu.org/software/coreutils/manual/html_node/nproc-invocation.html
-##
-## If the OMP_NUM_THREADS or OMP_THREAD_LIMIT environment variables
-## are set, then they will determine the minimum and maximum returned
-## value respectively.
-##
-## This is how you tame nproc(1)
-##
-OMP_THREAD_LIMIT=\${GALAXY_SLOTS:-2}
+## Convert input to 2bit for lastz -------------------------------------
 
-## Mode ----------------------------------------------------------------
+mkdir -p "\$(pwd)/work" &&
+faToTwoBit <(gzip -cdfq '$target') "\$(pwd)/work/ref.2bit" &&
+faToTwoBit <(gzip -cdfq '$query') "\$(pwd)/work/query.2bit" &&
 
-#if str($mode.mode_selector) == "segalign"
-    #if str($mode.gapped_extension_options.nogapped) == "false"
-        mkdir -p "\$(pwd)/work" && 
-        faToTwoBit <(gzip -cdfq '$mode.target') "\$(pwd)/work/ref.2bit" &&
-        faToTwoBit <(gzip -cdfq '$mode.query') "\$(pwd)/work/query.2bit" &&
-    #end if
-    #if str($mode.diagonal_partition_options.diagonal_partition) == "true"
-        #set $segalign_mode = "segalign_diagonal_partition"
-        ## explicitly calling python to bypass a pulsar bug
-        ## https://github.com/galaxyproject/pulsar/issues/341
-        python '$__tool_directory__/runner.py'
-            --output-type tarball
-            --output-file '$segalign_diagonal_partition_output'
-            --diagonal-partition
-            --num-cpu \${GALAXY_SLOTS:-2}
-            --tool_directory '$__tool_directory__'
-    #else
-        #set $segalign_mode = "segalign"
-        python '$__tool_directory__/runner.py'
-            --output-type output
-            --output-file '$segalign_output'
-            --num-cpu \${GALAXY_SLOTS:-2}
-            --tool_directory '$__tool_directory__'
-    #end if
-            '$mode.target'
-            '$mode.query'
-#else if str($mode.mode_selector) == "segalign_repeat_masker"
-    #set $segalign_mode = "segalign_repeat_masker"
-        run_segalign_repeat_masker
-            '$mode.seq_file'
-            --num_cpu \${GALAXY_SLOTS:-2}
-#end if
+## explicitly calling python to bypass a pulsar bug
+## https://github.com/galaxyproject/pulsar/issues/341
+python '$__tool_directory__/runner.py'
+    --output-type tarball
+    --output-file '$segalign_output'
+    --diagonal-partition
+    --num-cpu \${GALAXY_SLOTS:-2}
+    --tool_directory '$__tool_directory__'
+    '$target'
+    '$query'
 
 ## Sequence Options ----------------------------------------------------
 
-            --strand '$mode.sequence_options.strand_selector'
-#if $segalign_mode == "segalign_repeat_masker"
-            --neighbor_proportion '$mode.sequence_options.neighbor_proportion'
-#end if
+    --strand '$sequence_options.strand_selector'
 
 ## Scoring Options -----------------------------------------------------
 
-#set $scoring_pathname = str($mode.scoring_options.scoring)
+#set $scoring_pathname = str($scoring_options.scoring)
 #if $scoring_pathname != "None":
-            --scoring '$scoring_pathname'
+    --scoring '$scoring_pathname'
 #end if
-#if str($mode.scoring_options.ambiguous_selector) != "x"
-    #if str($mode.scoring_options.set_ambiguous_params_selector) == "true"
-        #set $argument_value = ','.join($mode.scoring_options.ambiguous_selector, $mode.scoring_options.ambiguous_reward, $mode.scoring_options.ambiguous_penalty)
-            --ambiguous '$argument_value'
+#if str($scoring_options.ambiguous_selector) != "x"
+    #if str($scoring_options.set_ambiguous_params_selector) == "true"
+        #set $argument_value = ','.join($scoring_options.ambiguous_selector, $scoring_options.ambiguous_reward, $scoring_options.ambiguous_penalty)
+    --ambiguous '$argument_value'
     #else
-            --ambiguous '$ambiguous_selector'
+    --ambiguous '$ambiguous_selector'
     #end if
 #end if
 
 ## Seeding Options -----------------------------------------------------
 
-#if str($mode.seeding_options.seed.seed_selector) == "custom"
-            --seed '$mode.seeding_options.seed.custom_seed'
+#if str($seeding_options.seed.seed_selector) == "custom"
+    --seed '$seeding_options.seed.custom_seed'
 #else
-            --seed '$mode.seeding_options.seed.seed_selector'
+    --seed '$seeding_options.seed.seed_selector'
 #end if
-            --step '$mode.seeding_options.step'
-#if str($mode.seeding_options.notransition) == "true"
-            --notransition
+    --step '$seeding_options.step'
+#if str($seeding_options.notransition) == "true"
+    --notransition
 #end if
 
 ## Ungapped Extension Options ------------------------------------------
 
-            --xdrop '$mode.ungapped_extension_options.xdrop'
-            --hspthresh '$mode.ungapped_extension_options.hspthresh'
-#if str($mode.ungapped_extension_options.noentropy) == "true"
-            --noentropy
+    --xdrop '$ungapped_extension_options.xdrop'
+    --hspthresh '$ungapped_extension_options.hspthresh'
+#if str($ungapped_extension_options.noentropy) == "true"
+    --noentropy
 #end if
 
 ## Gapped Extension Options --------------------------------------------
 
-#if $segalign_mode != "segalign_repeat_masker"
-    #if str($mode.gapped_extension_options.nogapped) == "true"
-            --nogapped
-    #end if
-            --ydrop '$mode.gapped_extension_options.ydrop'
-    #if str($mode.gapped_extension_options.gappedthresh) != ""
-            --gappedthresh '$mode.gapped_extension_options.gappedthresh'
-    #end if
-    #if str($mode.gapped_extension_options.notrivial) == "true"
-            --notrivial
-    #end if
+    --nogapped
+    --ydrop '$gapped_extension_options.ydrop'
+#if str($gapped_extension_options.gappedthresh) != ""
+    --gappedthresh '$gapped_extension_options.gappedthresh'
+#end if
+#if str($gapped_extension_options.notrivial) == "true"
+    --notrivial
 #end if
 
 ## Output Options -----------------------------------------------------
 
-#if $segalign_mode != "segalign_repeat_masker"
-    #if str($mode.output_options.format.format_selector) == "bam"
-            --format '$mode.output_options.format.bam_options'
-    #else if str($mode.output_options.format.format_selector) == "general_def"
-            --format general-
-    #else if str($mode.output_options.format.format_selector) == "general_full"
-            --format 'general-:${mode.output_options.format.fields}'
-    #else if str($mode.output_options.format.format_selector) == "maf"
-            --format '$mode.output_options.format.maf_type'
-    #else if str($mode.output_options.format.format_selector) == "blastn"
-            --format=BLASTN-
-    #else if str($mode.output_options.format.format_selector) == "differences"
-            --format=differences
-    #end if
+#if str($output_options.format.format_selector) == "bam"
+    --format '$output_options.format.bam_options'
+#else if str($output_options.format.format_selector) == "general_def"
+    --format general-
+#else if str($output_options.format.format_selector) == "maf"
+    --format '$output_options.format.maf_type'
+#else if str($output_options.format.format_selector) == "blastn"
+    --format=BLASTN-
+#else if str($output_options.format.format_selector) == "general_full"
+    --format 'general-:${output_options.format.fields}'
+#else if str($output_options.format.format_selector) == "differences"
+    --format=differences
+#end if
     ## todo :: rplot, bam
     ##  --action:target=multiple
     ##  $output_format.rplot
-    ##  .if str( $output_format.out.format ) == "bam":
+    ##  #if str( $output_format.out.format ) == "bam":
     ##      | samtools sort -@\${GALAXY_SLOTS:-2} -T "\${TMPDIR:-.}" -O bam -o '${output}'
-    ##  .else:
+    ##  #else:
     ##      > '${output}'
-    ##  .end if
-    ##  .if $output_format.rplot:
+    ##  #end if
+    ##  #if $output_format.rplot:
     ##      &&
     ##      Rscript $r_plot > /dev/null 2>&1
-    ##  .end if
-#else if $segalign_mode == "segalign_repeat_masker"
-            --M '$mode.output_options.M'
-            --output '$segalign_repeat_masker_output'
-#end if
-#if str($mode.output_options.markend) == "true"
-            --markend
-#end if
+    ##  #end if
 
 ## System Options -----------------------------------------------------
 
-            --wga_chunk_size '$mode.system_options.wga_chunk_size'
-            --lastz_interval_size '$mode.system_options.lastz_interval_size'
-            --seq_block_size '$mode.system_options.seq_block_size'
-            --num_gpu '$mode.system_options.num_gpu'
-#if str($mode.system_options.debug) == "true"
-            --debug
+    --wga_chunk_size '$system_options.wga_chunk_size'
+    --lastz_interval_size '$system_options.lastz_interval_size'
+    --seq_block_size '$system_options.seq_block_size'
+    --num_gpu '$system_options.num_gpu'
+#if str($system_options.debug) == "true"
+    --debug
 #end if
 
-## -------------------------------------------------------------------
+## Package Output ----------------------------------------------------
 
-#if $segalign_mode == "segalign_diagonal_partition"
-        &&
-        python '$__tool_directory__/package_output.py'
-            --tool_directory '$__tool_directory__'
-#end if
+    && python '$__tool_directory__/package_output.py'
 
     ]]></command>
     <inputs>
-        <conditional name="mode">
-            <param name="mode_selector" type="select" label="Choose the mode">
-                <option value="segalign" selected="true">SegAlign</option>
-                <option value="segalign_repeat_masker">SegAlign repeat masker</option>
-            </param>
-            <when value="segalign">
-                <param name="target" type="data" format="fasta,fasta.gz" label="Target sequence file in FASTA format"/>
-                <param name="query" type="data" format="fasta,fasta.gz" label="Query sequence file in FASTA format"/>
-                <expand macro="sequence_options"/>
-                <expand macro="scoring_options"/>
-                <expand macro="seeding_options"/>
-                <expand macro="ungapped_extension_options"/>
-                <expand macro="gapped_extension_options"/>
-                <expand macro="output_options">
-                    <expand macro="segalign_output_options"/>
-                </expand>
-                <expand macro="system_options"/>
-                <section name="diagonal_partition_options" expanded="false" title="Diagonal Partition Options">
-                    <param argument="--diagonal_partition" type="boolean" value="false" label="Enable diagonal partition optimization"/>
-                </section>
-            </when>
-            <when value="segalign_repeat_masker">
-                <param name="seq_file" type="data" format="fasta,fasta.gz" label="Sequence file in FASTA format"/>
-                <expand macro="sequence_options">
-                    <param argument="--neighbor_proportion" type="float" value="0.2" label="Proportion of neighbouring intervals to align the query interval to"/>
-                </expand>
-                <expand macro="scoring_options"/>
-                <expand macro="seeding_options"/>
-                <expand macro="ungapped_extension_options"/>
-                <expand macro="output_options">
-                    <param argument="--M" type="integer" value="1" max="255" label="report any position that is covered by at least this many alignments; the maximum allowed depth is 255"/>
-                </expand>
-                <expand macro="system_options"/>
-            </when>
-        </conditional>
+        <param name="target" type="data" format="fasta,fasta.gz" label="Target sequence file in FASTA format"/>
+        <param name="query" type="data" format="fasta,fasta.gz" label="Query sequence file in FASTA format"/>
+        <expand macro="sequence_options"/>
+        <expand macro="scoring_options"/>
+        <expand macro="seeding_options"/>
+        <expand macro="ungapped_extension_options"/>
+        <expand macro="gapped_extension_options"/>
+        <expand macro="output_options"/>
+        <expand macro="system_options"/>
     </inputs>
     <outputs>
-        <data name="segalign_output" format="tabular" label="SegAlign on ${on_string}">
-            <change_format>
-                <when input="mode.output_options.format.format_selector" value="bam" format="bam"/>
-                <when input="mode.output_options.format.format_selector" value="maf" format="maf"/>
-                <when input="mode.output_options.format.format_selector" value="differences" format="interval"/>
-            </change_format>
-            <filter>mode['mode_selector'] == 'segalign' and mode['diagonal_partition_options']['diagonal_partition'] is False</filter>
-        </data>
-        <data name="segalign_diagonal_partition_output" format="tgz" from_work_dir="data_package.tgz" label="SegAlign Diagonal Partition on ${on_string}">
-            <filter>mode['mode_selector'] == 'segalign' and mode['diagonal_partition_options']['diagonal_partition'] is True</filter>
-        </data>
-        <data name="segalign_repeat_masker_output" format="tabular" label="SegAlign Repeat Masker on ${on_string}">
-            <filter>mode['mode_selector'] == 'segalign_repeat_masker'</filter>
-        </data>
+        <data name="segalign_output" format="tgz" from_work_dir="data_package.tgz" label="SegAlign on ${on_string}"/>
     </outputs>
     <tests>
         <test expect_num_outputs="1" expect_test_failure="true">
-            <param name="mode_selector" value="segalign"/>
             <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta.gz"/>
             <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta.gz"/>
-            <output name="segalign_output" decompress="true" file="segalign-output.maf.gz" ftype="maf"/>
-        </test>
-        <test expect_num_outputs="1" expect_test_failure="true">
-            <param name="mode_selector" value="segalign_repeat_masker"/>
-            <param name="seq_file" value="hg38.chr20.chunk.fa.gz" ftype="fasta.gz"/>
-            <output name="segalign_repeat_masker_output" decompress="true" file="segalign-repeat-masker-output.tab.gz" ftype="tabular"/>
-        </test>
-        <test expect_num_outputs="1" expect_test_failure="true">
-            <param name="mode_selector" value="segalign"/>
-            <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta.gz"/>
-            <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta.gz"/>
-            <param name="diagonal_partition" value="true"/>
-            <output name="segalign_diagonal_partition_output" ftype="tgz">
+            <output name="segalign_output" ftype="tgz">
                 <assert_contents>
                     <has_archive_member path="galaxy/commands.json"/>
                 </assert_contents>
