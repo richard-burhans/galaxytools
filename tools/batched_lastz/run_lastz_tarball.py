@@ -91,12 +91,37 @@ class BatchTar:
         self.debug = debug
         self.tarfile = None
         self.commands: typing.List[typing.Dict[str, typing.Any]] = []
+        self.format_name = "tabular"
         self._extract()
         self._load_commands()
+        self._load_format()
 
     def batch_commands(self) -> typing.Iterator[typing.Dict[str, typing.Any]]:
         for command in self.commands:
             yield command
+
+    def final_output_format(self) -> str:
+        return self.format_name
+
+    def _extract(self) -> None:
+        try:
+            self.tarball = tarfile.open(
+                name=self.pathname, mode="r:*", format=tarfile.GNU_FORMAT
+            )
+        except FileNotFoundError:
+            sys.exit(f"ERROR: unable to find input tarball: {self.pathname}")
+        except tarfile.ReadError:
+            sys.exit(f"ERROR: error reading input tarball: {self.pathname}")
+
+        begin = time.perf_counter()
+        self.tarball.extractall(filter="data")
+        self.tarball.close()
+        elapsed = time.perf_counter() - begin
+
+        if self.debug:
+            print(
+                f"Extracted tarball in {elapsed} seconds", file=sys.stderr, flush=True
+            )
 
     def _load_commands(self) -> None:
         try:
@@ -173,25 +198,20 @@ class BatchTar:
 
         self.commands.append(command_dict)
 
-    def _extract(self) -> None:
+    def _load_format(self) -> None:
         try:
-            self.tarball = tarfile.open(
-                name=self.pathname, mode="r:*", format=tarfile.GNU_FORMAT
-            )
+            with open("galaxy/format.txt") as f:
+                format_name = f.readline()
+                format_name = format_name.rstrip("\n")
         except FileNotFoundError:
-            sys.exit(f"ERROR: unable to find input tarball: {self.pathname}")
-        except tarfile.ReadError:
-            sys.exit(f"ERROR: error reading input tarball: {self.pathname}")
-
-        begin = time.perf_counter()
-        self.tarball.extractall(filter="data")
-        self.tarball.close()
-        elapsed = time.perf_counter() - begin
-
-        if self.debug:
-            print(
-                f"Extracted tarball in {elapsed} seconds", file=sys.stderr, flush=True
+            sys.exit(
+                f"ERROR: input tarball missing galaxy/format.txt: {self.pathname}"
             )
+
+        if format_name in ["bam", "maf"]:
+            self.format_name = format_name
+        elif format_name == "differences":
+            self.format_name = "interval"
 
 
 class TarRunner:
@@ -302,19 +322,31 @@ class TarRunner:
 
     def _cleanup(self) -> None:
         num_output_files = len(self.output_files.keys())
+        if num_output_files != 1:
+            sys.exit(f"ERROR: expecting a single output file, found {num_output_files}")
+
+        final_output_format = self.batch_tar.final_output_format()
 
         for file_type, file_list in self.output_files.items():
-            with open(f"output.{file_type}", "w") as ofh:
-                print("##maf version=1", file=ofh)
+            with open(f"output.{final_output_format}", "w") as ofh:
+                if final_output_format == "maf":
+                    print("##maf version=1", file=ofh)
                 for filename in file_list:
                     with open(f"galaxy/files/{filename}") as ifh:
                         for line in ifh:
                             ofh.write(line)
 
-        if num_output_files == 1:
-            file_type = list(self.output_files.keys())[0]
-            src_filename = f"output.{file_type}"
-            shutil.copy2(src_filename, self.output_pathname)
+        src_filename = f"output.{final_output_format}"
+        shutil.copy2(src_filename, self.output_pathname)
+
+        output_metadata = {
+            "output": {
+                "ext": final_output_format,
+            }
+        }
+
+        with open("galaxy.json", "w") as ofh:
+            json.dump(output_metadata, ofh)
 
 
 def main() -> None:
