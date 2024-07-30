@@ -18,11 +18,14 @@ class PackageFile:
         top_dir: str = "galaxy",
         data_dir: str = "files",
         config_file: str = "commands.json",
+        format_file: str = "format.txt"
     ) -> None:
         self.pathname: str = os.path.realpath(pathname)
         self.data_root: str = os.path.join(top_dir, data_dir)
         self.config_path: str = os.path.join(top_dir, config_file)
         self.config_file: str = config_file
+        self.format_path: str = os.path.join(top_dir, format_file)
+        self.format_file: str = format_file
         self.tarfile: typing.Optional[tarfile.TarFile] = None
         self.name_cache: typing.Dict[typing.Any, typing.Any] = {}
         self.working_dir: str = os.path.realpath(os.getcwd())
@@ -76,6 +79,15 @@ class PackageFile:
                     self.name_cache[dest_path] = 1
                     # print(f"added: {dest_path}", flush=True)
 
+    def add_format(self, pathname: str) -> None:
+        if self.tarfile is None:
+            self._initialize()
+
+        source_path = os.path.realpath(pathname)
+
+        if self.tarfile is not None:
+            self.tarfile.add(source_path, arcname=self.format_path, recursive=False)
+
     def close(self) -> None:
         if self.tarfile is not None:
             self.tarfile.close()
@@ -87,13 +99,16 @@ class bashCommandLineFile:
         self,
         pathname: str,
         config: configparser.ConfigParser,
+        args: argparse.Namespace,
         package_file: PackageFile,
     ) -> None:
         self.pathname: str = pathname
         self.config = config
+        self.args = args
         self.package_file = package_file
         self.executable: typing.Optional[str] = None
         self._parse_lines()
+        self._write_format()
 
     def _parse_lines(self) -> None:
         with open("commands.json", "w") as ofh:
@@ -235,6 +250,21 @@ class bashCommandLineFile:
 
         return command_dict
 
+    def _write_format(self) -> None:
+        if self.args.format_selector == "bam":
+            format_name = "bam"
+        elif self.args.format_selector == "maf":
+            format_name = "maf"
+        elif self.args.format_selector == "differences":
+            format_name = "interval"
+        else:
+            format_name = "tabular"
+
+        with open("format.txt", "w") as ofh:
+            print(f"{format_name}", file=ofh)
+
+        self.package_file.add_format("format.txt")
+
 
 class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[misc]
     def __init__(self, positions: typing.List[typing.Tuple[int, int]]) -> None:
@@ -270,15 +300,19 @@ class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[misc]
 
 
 def main() -> None:
-    our_dirname: str = os.path.dirname(os.path.realpath(__file__))
-    lastz_command_config_file: str = os.path.join(our_dirname, "lastz-cmd.ini")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tool_directory", type=str, required=True, help="tool directory")
+    parser.add_argument("--format_selector", type=str, required=True, help="format selector")
+    args = parser.parse_args()
+
+    lastz_command_config_file: str = os.path.join(args.tool_directory, "lastz-cmd.ini")
 
     config: configparser.ConfigParser = configparser.ConfigParser()
     config.read(lastz_command_config_file)
 
     package_file = PackageFile()
     lastz_command_file = "lastz-commands.txt"
-    bashCommandLineFile(lastz_command_file, config, package_file)
+    bashCommandLineFile(lastz_command_file, config, args, package_file)
     package_file.close()
 
 
