@@ -126,7 +126,9 @@ python '$__tool_directory__/runner.py'
 
 ## Package Output ----------------------------------------------------
 
-    && python '$__tool_directory__/package_output.py'
+&&
+python '$__tool_directory__/package_output.py'
+    --tool_directory '$__tool_directory__'
 
     ]]></command>
     <inputs>
