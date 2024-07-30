@@ -19,11 +19,13 @@
         <include path="runner.py"/>
     </required_files>
     <command detect_errors="exit_code"><![CDATA[
-## Convert input to 2bit for lastz -------------------------------------
+## Convert input sequences to 2bit -------------------------------------
 
 mkdir -p "\$(pwd)/work" &&
 faToTwoBit <(gzip -cdfq '$target') "\$(pwd)/work/ref.2bit" &&
 faToTwoBit <(gzip -cdfq '$query') "\$(pwd)/work/query.2bit" &&
+
+## Run SegAlign --------------------------------------------------------
 
 ## explicitly calling python to bypass a pulsar bug
 ## https://github.com/galaxyproject/pulsar/issues/341
@@ -77,7 +79,6 @@ python '$__tool_directory__/runner.py'
 
 ## Gapped Extension Options --------------------------------------------
 
-    --nogapped
     --ydrop '$gapped_extension_options.ydrop'
 #if str($gapped_extension_options.gappedthresh) != ""
     --gappedthresh '$gapped_extension_options.gappedthresh'
@@ -92,27 +93,28 @@ python '$__tool_directory__/runner.py'
     --format '$output_options.format.bam_options'
 #else if str($output_options.format.format_selector) == "general_def"
     --format general-
+#else if str($output_options.format.format_selector) == "general_full"
+    --format 'general-:${output_options.format.fields}'
+
 #else if str($output_options.format.format_selector) == "maf"
     --format '$output_options.format.maf_type'
 #else if str($output_options.format.format_selector) == "blastn"
     --format=BLASTN-
-#else if str($output_options.format.format_selector) == "general_full"
-    --format 'general-:${output_options.format.fields}'
 #else if str($output_options.format.format_selector) == "differences"
     --format=differences
 #end if
-    ## todo :: rplot, bam
-    ##  --action:target=multiple
-    ##  $output_format.rplot
-    ##  #if str( $output_format.out.format ) == "bam":
-    ##      | samtools sort -@\${GALAXY_SLOTS:-2} -T "\${TMPDIR:-.}" -O bam -o '${output}'
-    ##  #else:
-    ##      > '${output}'
-    ##  #end if
-    ##  #if $output_format.rplot:
-    ##      &&
-    ##      Rscript $r_plot > /dev/null 2>&1
-    ##  #end if
+## todo :: rplot, bam
+##  --action:target=multiple
+##  $output_format.rplot
+##  .if str( $output_format.out.format ) == "bam":
+##      | samtools sort -@\${GALAXY_SLOTS:-2} -T "\${TMPDIR:-.}" -O bam -o '${output}'
+##  .else:
+##      > '${output}'
+##  .end if
+##  .if $output_format.rplot:
+##      &&
+##      Rscript $r_plot > /dev/null 2>&1
+##  .end if
 
 ## System Options -----------------------------------------------------
 
@@ -129,6 +131,7 @@ python '$__tool_directory__/runner.py'
 &&
 python '$__tool_directory__/package_output.py'
     --tool_directory '$__tool_directory__'
+    --format_selector '$output_options.format.format_selector'
 
     ]]></command>
     <inputs>
