@@ -132,6 +132,9 @@ python '$__tool_directory__/runner.py'
 python '$__tool_directory__/package_output.py'
     --tool_directory '$__tool_directory__'
     --format_selector '$output_options.format.format_selector'
+#if str($system_options.debug) == "true"
+    --debug
+#end if
 
     ]]></command>
     <inputs>
