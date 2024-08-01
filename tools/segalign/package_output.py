@@ -4,11 +4,15 @@ import argparse
 import configparser
 import json
 import os
+import resource
 import sys
 import tarfile
+import time
 import typing
 
 import bashlex
+
+RUSAGE_ATTRS: typing.Final = ["ru_utime", "ru_stime", "ru_maxrss", "ru_minflt", "ru_majflt", "ru_inblock", "ru_oublock", "ru_nvcsw", "ru_nivcsw"]
 
 
 class PackageFile:
@@ -303,7 +307,12 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tool_directory", type=str, required=True, help="tool directory")
     parser.add_argument("--format_selector", type=str, required=True, help="format selector")
+    parser.add_argument("--debug", action="store_true", help="enable debug messages")
     args = parser.parse_args()
+
+    if args.debug:
+        r_beg = resource.getrusage(resource.RUSAGE_SELF)
+        beg: int = time.monotonic_ns()
 
     lastz_command_config_file: str = os.path.join(args.tool_directory, "lastz-cmd.ini")
 
@@ -314,6 +323,14 @@ def main() -> None:
     lastz_command_file = "lastz-commands.txt"
     bashCommandLineFile(lastz_command_file, config, args, package_file)
     package_file.close()
+
+    if args.debug:
+        ns: int = time.monotonic_ns() - beg
+        r_end = resource.getrusage(resource.RUSAGE_SELF)
+        print(f"package output clock time: {ns} ns", file=sys.stderr, flush=True)
+        for rusage_attr in RUSAGE_ATTRS:
+            value = getattr(r_end, rusage_attr) - getattr(r_beg, rusage_attr)
+            print(f"  package output {rusage_attr}: {value}", file=sys.stderr, flush=True)
 
 
 if __name__ == "__main__":
