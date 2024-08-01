@@ -4,11 +4,15 @@ import argparse
 import configparser
 import json
 import os
+import resource
 import sys
 import tarfile
+import time
 import typing
 
 import bashlex
+
+RUSAGE_ATTRS: typing.Final = ["ru_utime", "ru_stime", "ru_maxrss", "ru_minflt", "ru_majflt", "ru_inblock", "ru_oublock", "ru_nvcsw", "ru_nivcsw"]
 
 
 class PackageFile:
@@ -327,7 +331,6 @@ def main() -> None:
         for rusage_attr in RUSAGE_ATTRS:
             value = getattr(r_end, rusage_attr) - getattr(r_beg, rusage_attr)
             print(f"  package output {rusage_attr}: {value}", file=sys.stderr, flush=True)
-
 
 
 if __name__ == "__main__":
