@@ -8,6 +8,43 @@
     <command detect_errors="exit_code"><![CDATA[
     ]]></command>
     <inputs>
+
+      <param name="genome" type="data" format="fasta,fasta.gz" label="Assembled genome in FASTA format"/>
+      <param name="taxid" type="integer" label="NCBI Taxonomy identifier of the target organism"/>
+      <param name="reads" type="integer" label="RNA-seq data"/>
+
+<!--
+reads: [ array of paths to reads FASTA or FASTQ files]
+    ## Note: Look into name requirements
+    ## Are they just looking for <foo>.1 and <foo>.2 ??
+    # should this be a collection?
+    # can you have a collection of 1?
+
+SRA server tool for below?
+
+reads: [ array of SRA run IDs ]
+    ## reads:
+    ##   - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR8506572.1
+    ##   - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR8506572.2
+    ##   - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR9005248.1
+    ##   - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR9005248.2
+    
+reads: [SRA Study ID]
+    ## reads:
+    ##   - SRR8506572
+    ##   - SRR9005248
+
+reads: SRA query for reads
+    ## reads: 'txid6954[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession] AND (SRR8506572[Accession] OR SRR9005248[Accession] )'
+
+-->
+
+      <!-- optional key-value pairs -->
+      <!-- A taxid-based protein set will be chosen if no protein set is provided. -->
+      <param name="proteins" type="data" format="fasta,fasta.gz" label="Protein data in FASTA format"/>
+      <!-- A taxid-based HMM will be chosen if no HMM file is provided. -->
+      <param name="hmm" type="data" label="HMM file for Gnomon training"/>
+
     </inputs>
     <outputs>
     </outputs>
