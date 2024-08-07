@@ -386,7 +386,7 @@ def run_segalign(args: argparse.Namespace, num_sentinel: int, segalign_args: lis
             beg: int = time.monotonic_ns()
             r_beg = resource.getrusage(resource.RUSAGE_CHILDREN)
 
-        process = subprocess.run(run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.run(run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, text=True)
 
         for line in process.stdout.splitlines():
             commands.add(line)
