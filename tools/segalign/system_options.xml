@@ -3,7 +3,7 @@
         <section name="system_options" title="System Options">
             <param argument="--wga_chunk_size" type="integer" value="250000" label="Chunk sizes for GPU calls for Xdrop - ⚠ change only if you are a developer"/>
             <param argument="--lastz_interval_size" type="integer" value="10000000" label="LASTZ interval for Ydrop - ⚠ change only if you are a developer"/>
-            <param argument="--seq_block_size" type="integer" value="500000000" label="LASTZ interval for Ydrop - ⚠ change only if you are a developer"/>
+            <param argument="--seq_block_size" type="integer" value="400000000" label="LASTZ interval for Ydrop - ⚠ change only if you are a developer"/>
             <param argument="--num_gpu" type="integer" value="-1" label="Specify number of GPUs to use - -1 if all the GPUs should be used"/>
             <param argument="--debug" type="boolean" value="false" label="Print debug messages"/>
         </section>

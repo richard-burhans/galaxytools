@@ -314,7 +314,7 @@ def diagonal_partition_worker(args: argparse.Namespace, input_q: queue.Queue[str
         run_args = ["python", f"{args.tool_directory}/diagonal_partition.py", str(chunk_size)]
         for word in line.split():
             run_args.append(word)
-        process = subprocess.run(run_args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        process = subprocess.run(run_args, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, text=True)
 
         for line in process.stdout.splitlines():
             output_q.put(line)
@@ -327,6 +327,8 @@ def diagonal_partition_worker(args: argparse.Namespace, input_q: queue.Queue[str
 
 
 def estimate_chunk_size(args: argparse.Namespace) -> int:
+    # only used when segment size is being estimated
+    MAX_CHUNK_SIZE = 50000
     chunk_size = -1
     line_size = -1
 
@@ -353,9 +355,18 @@ def estimate_chunk_size(args: argparse.Namespace) -> int:
 
             fdict[entry.name.split(".split", 1)[0]] += file_size
 
-    # if noot enough segment files for estimation, continue
-    if len(fdict) > 2:
+    if len(fdict) < 7:
+        # outliers can heavily skew prediction if <7 data points
+        # to be safe, use 50% quantile
+        chunk_size = int(statistics.quantiles(fdict.values())[1] // line_size)
+    else:
+        # otherwise use 75% quantile
         chunk_size = int(statistics.quantiles(fdict.values())[-1] // line_size)
+
+    # if not enough data points, there is a chance of getting unlucky
+    # minimize worst case by using MAX_CHUNK_SIZE
+
+    chunk_size = min(chunk_size, MAX_CHUNK_SIZE)
 
     if args.debug:
         ns: int = time.monotonic_ns() - beg
