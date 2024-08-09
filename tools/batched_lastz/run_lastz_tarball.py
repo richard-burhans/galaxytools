@@ -40,7 +40,7 @@ def run_command(
         if not command_dict:
             return
 
-        args = ["lastz"]
+        args = ["lastz", "--allocate:traceback=1.99G"]
         args.extend(command_dict["args"])
 
         stdin = command_dict["stdin"]
@@ -62,9 +62,7 @@ def run_command(
             if var is not None:
                 var.close()
 
-        if p.returncode != 0:
-            sys.exit(f"command failed: {' '.join(args)}")
-        else:
+        if p.returncode == 0:
             stderr = command_dict["stderr"]
             if stderr is not None:
                 try:
@@ -80,6 +78,33 @@ def run_command(
 
             elapsed = time.perf_counter() - begin
             output_queue.put(elapsed)
+
+        elif p.returncode == 1:
+            # should be more robust
+            traceback_warning = True
+
+            stderr_file = command_dict["stderr"]
+            if stderr_file is None:
+                traceback_warning = False
+            else:
+                with open(stderr_file) as f:
+                    for stderr_line in f:
+                        for prefix in ["truncating alignment", "truncation can be reduced"]:
+                            if stderr_line.startswith(prefix):
+                                continue
+
+                        stderr_line = stderr_line.strip()
+                        if stderr_line:
+                            traceback_warning = False
+
+            if traceback_warning:
+                elapsed = time.perf_counter() - begin
+                output_queue.put(elapsed)
+            else:
+                sys.exit(f"command failed: {' '.join(args)}")
+
+        else:
+            sys.exit(f"command failed: {' '.join(args)}")
 
         if debug:
             print(f"runtime {elapsed}", file=sys.stderr, flush=True)
