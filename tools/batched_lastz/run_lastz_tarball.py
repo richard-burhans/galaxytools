@@ -31,7 +31,7 @@ def run_command(
     input_queue: "queue.Queue[typing.Dict[str, typing.Any]]",
     output_queue: "queue.Queue[float]",
     debug: bool = False,
-) -> None:
+) -> str | None:
     os.chdir("galaxy/files")
 
     # These are not considered errors even though
@@ -45,7 +45,7 @@ def run_command(
         command_dict = input_queue.get()
 
         if not command_dict:
-            return
+            return None
 
         args = ["lastz", "--allocate:traceback=1.99G"]
         args.extend(command_dict["args"])
@@ -69,50 +69,28 @@ def run_command(
             if var is not None:
                 var.close()
 
-        if p.returncode == 0:
-            stderr = command_dict["stderr"]
-            if stderr is not None:
-                try:
-                    statinfo = os.stat(stderr, follow_symlinks=False)
-                except Exception:
-                    statinfo = None
+        # if there is a stderr_file, make sure it is
+        # empty or only contains truncation messages
+        stderr_ok = True
+        stderr_file = command_dict["stderr"]
 
-                if statinfo is None:
-                    sys.exit(f"unable to stat stderr file: {' '.join(args)}")
-
+        if stderr_file is not None:
+            try:
+                statinfo = os.stat(stderr_file, follow_symlinks=False)
                 if statinfo.st_size != 0:
-                    sys.exit(f"stderr file is not empty: {' '.join(args)}")
+                    with open(stderr_file) as f:
+                        for stderr_line in f:
+                            stderr_line = stderr_line.strip()
+                            if (not truncation_regex.match(stderr_line) and stderr_line != truncation_msg):
+                                stderr_ok = False
+            except Exception:
+                stderr_ok = False
 
+        if p.returncode in [0, 1] and stderr_ok:
             elapsed = time.perf_counter() - begin
             output_queue.put(elapsed)
-
-        elif p.returncode == 1:
-            traceback_warning = True
-
-            stderr_file = command_dict["stderr"]
-            if stderr_file is None:
-                traceback_warning = False
-            else:
-                with open(stderr_file) as f:
-                    for stderr_line in f:
-                        stderr_line = stderr_line.strip()
-                        if (
-                            not truncation_regex.match(stderr_line)
-                            and stderr_line != truncation_msg
-                        ):
-                            traceback_warning = False
-
-            if traceback_warning:
-                elapsed = time.perf_counter() - begin
-                output_queue.put(elapsed)
-            else:
-                sys.exit(f"command failed: {' '.join(args)}")
-
         else:
-            sys.exit(f"command failed: {' '.join(args)}")
-
-        if debug:
-            print(f"runtime {elapsed}", file=sys.stderr, flush=True)
+            return f"command failed (rc={p.returncode}): {' '.join(args)}"
 
 
 class BatchTar:
@@ -333,13 +311,22 @@ class TarRunner:
                     for instance in range(self.parallel)
                 ]
 
+            found_falures = False
+
             for f in concurrent.futures.as_completed(futures):
+                result = f.result()
+                if result is not None:
+                    print(f"lastz: {result}", file=sys.stderr, flush=True)
+
                 if not f.done() or f.cancelled() or f.exception() is not None:
-                    sys.exit("lastz command failed")
+                    found_falures = True
 
             while not output_queue.empty():
                 run_time = output_queue.get()
                 run_times.append(run_time)
+
+            if found_falures:
+                sys.exit("lastz command failed")
 
         elapsed = time.perf_counter() - begin
 
@@ -359,6 +346,7 @@ class TarRunner:
             with open(f"output.{final_output_format}", "w") as ofh:
                 if final_output_format == "maf":
                     print("##maf version=1", file=ofh)
+
                 for filename in file_list:
                     with open(f"galaxy/files/{filename}") as ifh:
                         for line in ifh:
