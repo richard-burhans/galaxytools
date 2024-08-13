@@ -34,6 +34,13 @@ def run_command(
 ) -> None:
     os.chdir("galaxy/files")
 
+    # These are not considered errors even though
+    # we will end up with a segmented alignment
+    truncation_regex = re.compile(
+        r"truncating alignment (ending|starting) at \(\d+,\d+\);  anchor at \(\d+,\d+\)$"
+    )
+    truncation_msg = "truncation can be reduced by using --allocate:traceback to increase traceback memory"
+
     while True:
         command_dict = input_queue.get()
 
@@ -80,7 +87,6 @@ def run_command(
             output_queue.put(elapsed)
 
         elif p.returncode == 1:
-            # should be more robust
             traceback_warning = True
 
             stderr_file = command_dict["stderr"]
@@ -89,12 +95,11 @@ def run_command(
             else:
                 with open(stderr_file) as f:
                     for stderr_line in f:
-                        for prefix in ["truncating alignment", "truncation can be reduced"]:
-                            if stderr_line.startswith(prefix):
-                                continue
-
                         stderr_line = stderr_line.strip()
-                        if stderr_line:
+                        if (
+                            not truncation_regex.match(stderr_line)
+                            and stderr_line != truncation_msg
+                        ):
                             traceback_warning = False
 
             if traceback_warning:
@@ -229,9 +234,7 @@ class BatchTar:
                 format_name = f.readline()
                 format_name = format_name.rstrip("\n")
         except FileNotFoundError:
-            sys.exit(
-                f"ERROR: input tarball missing galaxy/format.txt: {self.pathname}"
-            )
+            sys.exit(f"ERROR: input tarball missing galaxy/format.txt: {self.pathname}")
 
         if format_name in ["bam", "maf"]:
             self.format_name = format_name
