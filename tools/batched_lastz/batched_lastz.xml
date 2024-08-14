@@ -17,7 +17,7 @@
         <param argument="--input" type="data" format="tgz" label="Tarball"/>
     </inputs>
     <outputs>
-        <data name="output" label="Output" format="auto" />
+        <data name="output" label="Batched Lastz on ${on_string}" format="auto" />
     </outputs>
     <tests>
       <test expect_num_outputs="1">
