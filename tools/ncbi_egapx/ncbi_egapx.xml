@@ -70,36 +70,30 @@ input_D_farinae_small.yaml
 
 ::
 
-  ```
-  genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz
+  genome: https\://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz
   taxid: 6954
   reads:
-    - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR8506572.1
-    - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR8506572.2
-    - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR9005248.1
-    - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR9005248.2
-  ```
+    - https\://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR8506572.1
+    - https\://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR8506572.2
+    - https\://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR9005248.1
+    - https\://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/data/Dermatophagoides_farinae_small/SRR9005248.2
 
 
 input_Gavia_stellata.yaml
 
 ::
 
-  ```
-  genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/030/936/135/GCF_030936135.1_bGavSte3.hap2/GCF_030936135.1_bGavSte3.hap2_genomic.fna.gz
+  genome: https\://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/030/936/135/GCF_030936135.1_bGavSte3.hap2/GCF_030936135.1_bGavSte3.hap2_genomic.fna.gz
   reads: txid37040[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession]
   taxid: 37040
-  ```
 
 input_C_longicornis.yaml
 
 ::
 
-  ```
-  genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/029//603/195/GCF_029603195.1_ASM2960319v2/GCF_029603195.1_ASM2960319v2_genomic.fna.gz
+  genome: https\://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/029//603/195/GCF_029603195.1_ASM2960319v2/GCF_029603195.1_ASM2960319v2_genomic.fna.gz
   reads: txid2530218[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession]
   taxid: 2530218
-  ```
 
 Purpose
 ========
