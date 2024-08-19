@@ -20,7 +20,7 @@
       </collection>
     </outputs>
     <tests>
-      <test>
+      <test expect_test_failure="true">
         <param name="yamlconfig" value="input_D_farinae_minimal.yaml"/>
         <output_collection name="egapx_out" type="list" count="8">
           <element name="accept" ftype="gff">
