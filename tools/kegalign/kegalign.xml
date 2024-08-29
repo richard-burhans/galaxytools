@@ -1,0 +1,208 @@
+<tool id="kegalign" name="KegAlign" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>A Scalable GPU System for Pairwise Whole Genome Alignments based on LASTZ's seed-filter-extend paradigm</description>
+    <macros>
+        <import>macros.xml</import>
+        <import>sequence_options.xml</import>
+        <import>scoring_options.xml</import>
+        <import>seeding_options.xml</import>
+        <import>ungapped_extension_options.xml</import>
+        <import>gapped_extension_options.xml</import>
+        <import>output_options.xml</import>
+        <import>system_options.xml</import>
+    </macros>
+    <expand macro="edam_ontology"/>
+    <expand macro="requirements"/>
+    <required_files>
+        <include path="diagonal_partition.py"/>
+        <include path="lastz-cmd.ini"/>
+        <include path="package_output.py"/>
+        <include path="runner.py"/>
+    </required_files>
+    <command detect_errors="exit_code"><![CDATA[
+## Convert input sequences to 2bit -------------------------------------
+
+mkdir -p "\$(pwd)/work" &&
+faToTwoBit <(gzip -cdfq '$target') "\$(pwd)/work/ref.2bit" &&
+faToTwoBit <(gzip -cdfq '$query') "\$(pwd)/work/query.2bit" &&
+
+## Run KegAlign --------------------------------------------------------
+
+## explicitly calling python to bypass a pulsar bug
+## https://github.com/galaxyproject/pulsar/issues/341
+python '$__tool_directory__/runner.py'
+    --output-type tarball
+    --output-file '$kegalign_output'
+    --diagonal-partition
+    --num-cpu \${GALAXY_SLOTS:-2}
+    --tool_directory '$__tool_directory__'
+    '$target'
+    '$query'
+
+## Sequence Options ----------------------------------------------------
+
+    --strand '$sequence_options.strand_selector'
+
+## Scoring Options -----------------------------------------------------
+
+#set $scoring_pathname = str($scoring_options.scoring)
+#if $scoring_pathname != "None":
+    --scoring '$scoring_pathname'
+#end if
+#if str($scoring_options.ambiguous_selector) != "x"
+    #if str($scoring_options.set_ambiguous_params_selector) == "true"
+        #set $argument_value = ','.join($scoring_options.ambiguous_selector, $scoring_options.ambiguous_reward, $scoring_options.ambiguous_penalty)
+    --ambiguous '$argument_value'
+    #else
+    --ambiguous '$ambiguous_selector'
+    #end if
+#end if
+
+## Seeding Options -----------------------------------------------------
+
+#if str($seeding_options.seed.seed_selector) == "custom"
+    --seed '$seeding_options.seed.custom_seed'
+#else
+    --seed '$seeding_options.seed.seed_selector'
+#end if
+    --step '$seeding_options.step'
+#if str($seeding_options.notransition) == "true"
+    --notransition
+#end if
+
+## Ungapped Extension Options ------------------------------------------
+
+    --xdrop '$ungapped_extension_options.xdrop'
+    --hspthresh '$ungapped_extension_options.hspthresh'
+#if str($ungapped_extension_options.noentropy) == "true"
+    --noentropy
+#end if
+
+## Gapped Extension Options --------------------------------------------
+
+    --ydrop '$gapped_extension_options.ydrop'
+#if str($gapped_extension_options.gappedthresh) != ""
+    --gappedthresh '$gapped_extension_options.gappedthresh'
+#end if
+#if str($gapped_extension_options.notrivial) == "true"
+    --notrivial
+#end if
+
+## Output Options -----------------------------------------------------
+
+#if str($output_options.format.format_selector) == "bam"
+    --format '$output_options.format.bam_options'
+#else if str($output_options.format.format_selector) == "general_def"
+    --format general-
+#else if str($output_options.format.format_selector) == "general_full"
+    --format 'general-:${output_options.format.fields}'
+
+#else if str($output_options.format.format_selector) == "maf"
+    --format '$output_options.format.maf_type'
+#else if str($output_options.format.format_selector) == "blastn"
+    --format=BLASTN-
+#else if str($output_options.format.format_selector) == "differences"
+    --format=differences
+#end if
+## todo :: rplot, bam
+##  --action:target=multiple
+##  $output_format.rplot
+##  .if str( $output_format.out.format ) == "bam":
+##      | samtools sort -@\${GALAXY_SLOTS:-2} -T "\${TMPDIR:-.}" -O bam -o '${output}'
+##  .else:
+##      > '${output}'
+##  .end if
+##  .if $output_format.rplot:
+##      &&
+##      Rscript $r_plot > /dev/null 2>&1
+##  .end if
+
+## System Options -----------------------------------------------------
+
+    --wga_chunk_size '$system_options.wga_chunk_size'
+    --lastz_interval_size '$system_options.lastz_interval_size'
+    --seq_block_size '$system_options.seq_block_size'
+    --num_gpu '$system_options.num_gpu'
+#if str($system_options.debug) == "true"
+    --debug
+#end if
+
+## Package Output ----------------------------------------------------
+
+&&
+python '$__tool_directory__/package_output.py'
+    --tool_directory '$__tool_directory__'
+    --format_selector '$output_options.format.format_selector'
+#if str($system_options.debug) == "true"
+    --debug
+#end if
+
+    ]]></command>
+    <inputs>
+        <param name="target" type="data" format="fasta,fasta.gz" label="Target sequence file in FASTA format"/>
+        <param name="query" type="data" format="fasta,fasta.gz" label="Query sequence file in FASTA format"/>
+        <expand macro="sequence_options"/>
+        <expand macro="scoring_options"/>
+        <expand macro="seeding_options"/>
+        <expand macro="ungapped_extension_options"/>
+        <expand macro="gapped_extension_options"/>
+        <expand macro="output_options"/>
+        <expand macro="system_options"/>
+    </inputs>
+    <outputs>
+        <data name="kegalign_output" format="tgz" from_work_dir="data_package.tgz" label="KegAlign on ${on_string}"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1" expect_test_failure="true">
+            <param name="target" value="hg38.chr20.chunk.fa.gz" ftype="fasta.gz"/>
+            <param name="query" value="mm39.chr2.chunk.fa.gz" ftype="fasta.gz"/>
+            <output name="kegalign_output" ftype="tgz">
+                <assert_contents>
+                    <has_archive_member path="galaxy/commands.json"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help><![CDATA[
+KegAlign is a scalable, GPU-accelerated system for computing pairwise WGA. KegAlign is based on the standard seed-filter-extend heuristic, in which the filtering stage dominates the runtime (e.g. 98% for human-mouse WGA), and is accelerated using GPU(s). KegAlign was designed as a faster replacement for lastz pairwise aligner.
+
+**Using this tool**
+
+.. class:: warningmark
+
+This tool is the first part of a two-step process for generation of paiwrise alignments. The output of this tool is used as an input to **Batched LASTZ** tool. The *Batched LASTZ** can be found in the list of tool of this Galaxy instance.
+
+**What it does**
+
+KegAlign processes **Target** and **Query** sequences to identify highly similar regions where gapped extension will be performed to create actual alignments. The actual alignments are generated by **Batched LASTZ** that should be run on the output of this tool.
+
+.. class:: infomark
+
+Although this tool is only the first part of the alignment process all parameters related to generation of alignments are set **during this stage**.
+
+**Scoring Options**
+
+By default the HOXD70 substitution scores are used (from `Chiaromonte et al. 2002 <https://www.ncbi.nlm.nih.gov/pubmed/11928468>`_)::
+
+    bad_score          = X:-1000  # used for sub['X'][*] and sub[*]['X']
+    fill_score         = -100     # used when sub[*][*] is not defined
+    gap_open_penalty   =  400
+    gap_extend_penalty =   30
+
+         A     C     G     T
+    A   91  -114   -31  -123
+    C -114   100  -125   -31
+    G  -31  -125   100  -114
+    T -123   -31  -114    91
+
+Matrix can be supplied as an input to **Read the substitution scores** parameter in *Scoring* section. Substitution matrix can be inferred from your data using another LASTZ-based tool (LASTZ_D: Infer substitution scores).
+
+**Output Options**
+
+.. class:: infomark
+
+The final format in which alignmnets will be generated by **Batched LASTZ** are set here.
+
+The default output is a MAF alignment file. Other formats can be configured in *Output Options* section.  See LASTZ manual <https://lastz.github.io/lastz/#formats>`_ for description of possible formats.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

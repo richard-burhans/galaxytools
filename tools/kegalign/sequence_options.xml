@@ -1,0 +1,12 @@
+<macros>
+    <xml name="sequence_options">
+        <section name="sequence_options" expanded="false" title="Sequence Options">
+            <param name="strand_selector" type="select" label="Strand to search">
+                <option value="plus">plus</option>
+                <option value="minus">minus</option>
+                <option value="both" selected="true">both</option>
+            </param>
+            <yield/>
+        </section>
+    </xml>
+</macros>
