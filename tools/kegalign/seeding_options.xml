@@ -1,0 +1,34 @@
+<macros>
+    <xml name="seeding_options">
+        <section name="seeding_options" expanded="false" title="Seeding Options">
+            <conditional name="seed">
+                <param name="seed_selector" type="select" label="Seed patern">
+                    <option value="12of19" selected="true">12of19 (1110100110010101111)</option>
+                    <option value="14of22">14of22 (1110101100110010101111)</option>
+                    <option value="custom">custom</option>
+                </param>
+                <when value="12of19">
+                    <!-- Do nothing -->
+                </when>
+                <when value="14of22">
+                    <!-- Do nothing -->
+                </when>
+                <when value="custom">
+                    <param name="custom_seed" type="text" value="" optional="false" label="Custom seed pattern">
+                        <validator type="empty_field"/>
+                        <validator type="regex" message="Arbitrary pattern of 1s, 0s, and Ts">^[01T]+$</validator>
+                        <sanitizer invalid_char="">
+                            <valid initial="none">
+                                <add value="0"/>
+                                <add value="1"/>
+                                <add value="T"/>
+                            </valid>
+                        </sanitizer>
+                    </param>
+                </when>
+            </conditional>
+            <param argument="--step" type="integer" value="1" label="Offset between the starting positions of successive target words considered for generating seed table"/>
+            <param argument="--notransition" type="boolean" checked="false" label="Don't allow one transition in a seed hit"/>
+        </section>
+    </xml>
+</macros>

@@ -1,0 +1,9 @@
+<macros>
+    <xml name="ungapped_extension_options">
+        <section name="ungapped_extension_options" expanded="false" title="Ungapped Extension Options">
+            <param argument="--xdrop" type="integer" value="910" label="X-drop value for gap-free extension"/>
+            <param argument="--hspthresh" type="integer" value="3000" label="Segment score threshold for high scoring pairs"/>
+            <param argument="--noentropy" type="boolean" checked="false" label="Don't adjust low score segment pair scores using entropy factor after filtering stage"/>
+        </section>
+    </xml>
+</macros>

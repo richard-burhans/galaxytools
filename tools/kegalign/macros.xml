@@ -1,0 +1,20 @@
+<macros>
+    <xml name="requirements">
+        <requirements>
+            <requirement type="package" version="@TOOL_VERSION@">kegalign-full</requirement>
+        </requirements>
+    </xml>
+    <token name="@TOOL_VERSION@">0.1.2.7</token>
+    <token name="@VERSION_SUFFIX@">1</token>
+    <token name="@PROFILE@">21.05</token>
+    <xml name="edam_ontology">
+        <edam_operations>
+            <edam_operation>operation_0491</edam_operation>
+        </edam_operations>
+    </xml>
+    <xml name="citations">
+        <citations>
+            <citation type="doi">10.1109/SC41405.2020.00043</citation>
+        </citations>
+    </xml>
+</macros>
