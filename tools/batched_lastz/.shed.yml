@@ -1,7 +1,7 @@
 categories:
 - Next Gen Mappers
 description: Galaxy wrapper for the batching Lastz runs
-homepage_url: https://github.com/gsneha26/SegAlign
+homepage_url: https://github.com/galaxyproject/KegAlign
 long_description: |
   LASTZ is designed to preprocess one sequence or set of sequences
   (which we collectively call the TARGET) and then align several
