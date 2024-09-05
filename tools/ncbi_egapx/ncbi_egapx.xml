@@ -21,16 +21,16 @@
       #else:
         echo 'genome:  $reference_genome.uri' >> 'egapx.yaml' &&
       #end if
-      echo "reads:" >> 'egapx.yaml' &&
+      echo 'reads:' >> 'egapx.yaml' &&
       #if str($condrnaseq.rna_type_select) == "history":
         #for $r in $rnaseq:
-          echo "  - $r"  >> 'egapx.yaml' &&
+          echo '  - $r'  >> 'egapx.yaml' &&
         #end for
       #else:
         #set rs = $rnaseq.split()
         #set rsplit = [x.strip() for x in $rs]
         #for $r in $rsplit:
-          echo "  - $r"  >> 'egapx.yaml' &&
+          echo '  - $r'  >> 'egapx.yaml' &&
         #end for
       #end if
       #if len($xtra.strip()) > 0:
@@ -39,7 +39,7 @@
             echo '$row' >> 'egapx.yaml' &&
         #end for
       #end if
-      echo "" >> 'egapx.yaml' &&
+      echo '' >> 'egapx.yaml' &&
       echo "Calculated contents of egapx yaml" &&
       cat 'egapx.yaml' &&
     #end if
