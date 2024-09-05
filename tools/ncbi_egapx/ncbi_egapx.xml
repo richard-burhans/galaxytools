@@ -50,8 +50,8 @@
     ]]></command>
     <inputs>
     <conditional name="cond_input_style">
-      <param name="input_style" type="select" label="Fill in a tool form or use an existing yaml configuration?"
-        help="Use a pre-prepared yaml if available. Use the tool form if history files are needed for this job">
+      <param name="input_style" type="select" label="Fill in a tool form or use an existing yaml configuration from the current history?"
+        help="Use a pre-prepared yaml if available. Use the tool form if history files are needed as rna-seq or reference genome inputs for this job">
         <option selected="True" value="history">Use a pre-prepared yaml egapx configuration</option>
         <option value="fillform">Provide configuration details for conversion into a configuration yaml</option>
       </param>
@@ -61,9 +61,10 @@
       <when value="fillform">
           <param name="taxid" type="text" optional="false" label="NCBI Taxon ID" help="Used to identify the HMM model files needed"/>
           <conditional name="reference_genome">
-            <param name="genome_type_select" type="select" label="Reference genome source" help="Select a built in, history or remote URI for the reference genome fasta">
-                <option selected="True" value="indexed">Use a Galaxy server built-in genome</option>
-                <option value="history">Use a genome fasta file from the current history</option>
+            <param name="genome_type_select" type="select" label="Reference genome source for mapping supplied RNA-seq reads" 
+              help="Select a built in, history or remote URI for the reference genome fasta">
+                <option value="indexed">Use a Galaxy server built-in genome</option>
+                <option value="history" selected="True">Use a genome fasta file from the current history</option>
                 <option value="uri">Provide a remote web link URI ("https://...") pointing at the required genome reference fasta file</option>
             </param>
             <when value="indexed">
@@ -135,7 +136,7 @@ This wrapper is designed to allow measuring how *inefficient* it is in terms of 
 required to convert Nextflow DDL into tools and WF logic. Balancing these competing requirements is a fundamental Galaxy challenge.
 
 
-EGAPx requires very substantial resources to run with real data. *128GB and 32 cores* are the minimum requirement; *256GB and 64 cores* are recommended.
+EGAPx requires very substantial resources to run with real data. *132GB and 32 cores* are the minimum requirement; *256GB and 64 cores* are recommended.
 
 A special minimal example that can be run in 6GB with 4 cores is provided as a yaml configuration and is used for the tool test.
 
