@@ -51,12 +51,12 @@
     <inputs>
     <conditional name="cond_input_style">
       <param name="input_style" type="select" label="Fill in a tool form or use an existing yaml configuration?"
-        help="Use a pre-prepared yaml if available. Filling in a tool form is possible but more error prone">
+        help="Use a pre-prepared yaml if available. Use the tool form if history files are needed for this job">
         <option selected="True" value="history">Use a pre-prepared yaml egapx configuration</option>
-        <option value="fillform">Provide configuration details using a tool form</option>
+        <option value="fillform">Provide configuration details for conversion into a configuration yaml</option>
       </param>
       <when value="history">
-        <param name="yamlin" type="data" optional="false" label="egapx configuration yaml file to execute" help="" format="yaml,txt"/>
+        <param name="yamlin" type="data" optional="false" label="egapx configuration yaml file to pass to Nextflow" help="" format="yaml,txt"/>
       </when>
       <when value="fillform">
           <param name="taxid" type="text" optional="false" label="NCBI Taxon ID" help="Used to identify the HMM model files needed"/>
