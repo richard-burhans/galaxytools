@@ -76,7 +76,7 @@
                 </param>
             </when>
             <when value="history">
-                <param name="genome" type="data" optional="true" format="fasta" label="Select the reference genome fasta from the current history"/>
+                <param name="genome" type="data" format="fasta" optional="false" label="Select the reference genome fasta from the current history"/>
             </when>
             <when value="uri">
                 <param name="uri" type="text" optional="false" label="URI pointing to the reference genome fasta file" help=""/>
