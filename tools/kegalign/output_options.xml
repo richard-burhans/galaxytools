@@ -7,10 +7,9 @@
                     <option value="general_def">General default (--format=general)</option>
                     <option value="general_full">Customized general (--format=general[:fields])</option>
                     <option value="maf" selected="true">MAF (--format=maf)</option>
+                    <option value="axt">axt (--format=axt)</option>
                     <option value="blastn">blastn (--format=BLASTN)</option>
                     <option value="differences">Differences (--format=differences)</option>
-                    <option value="axt">axt (--format=axt)</option>
-                    <option value="axtplus">axt with stats (--format=axt+)</option>
                 </param>
                 <when value="bam">
                     <param name="bam_options" type="select" display="radio" argument="--format=sam, --format=softsam" label="Select a BAM flavor to output" help="Lastz actually outputs SAM data but Galaxy converts it into BAM to save space. For alignments that don't reach the end of a query, ‑‑format=sam uses 'hard clipping', while ‑‑format=softsam uses 'soft clipping'. See the section on 'clipped alignment' in the SAM specification for an explanation of what this means. The options ‑‑format=sam- and ‑‑format=softsam- suppress the SAM header lines. This makes them suitable for concatenating output from multiple runs. If you need to specify readgroup information: use AddOrEplaceReadGroups from Picard package">
@@ -83,6 +82,12 @@
                         <option value="maf">MAF</option>
                         <option value="maf+">MAF with additional stats</option>
                         <option value="maf-" selected="true">MAF without header and comments</option>
+                    </param>
+                </when>
+                <when value="axt">
+                    <param name="axt_type" type="select" display="radio" argument="--format=axt" label="Select axt flavor" help="axt is a multiple alignment format developed at UCSC">
+                        <option value="axt" selected="true">axt</option>
+                        <option value="axt+">axt with additional stats (axt+)</option>
                     </param>
                 </when>
                 <when value="blastn">
