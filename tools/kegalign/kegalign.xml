@@ -102,6 +102,10 @@ python '$__tool_directory__/runner.py'
     --format=BLASTN-
 #else if str($output_options.format.format_selector) == "differences"
     --format=differences
+#else if str($output_options.format.format_selector) == "axt"
+    --format=axt
+#else if str($output_options.format.format_selector) == "axtplus"
+    --format=axt+
 #end if
 ## todo :: rplot, bam
 ##  --action:target=multiple

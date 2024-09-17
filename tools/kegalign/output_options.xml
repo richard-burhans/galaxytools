@@ -9,6 +9,8 @@
                     <option value="maf" selected="true">MAF (--format=maf)</option>
                     <option value="blastn">blastn (--format=BLASTN)</option>
                     <option value="differences">Differences (--format=differences)</option>
+                    <option value="axt">axt (--format=axt)</option>
+                    <option value="axtplus">axt with stats (--format=axt+)</option>
                 </param>
                 <when value="bam">
                     <param name="bam_options" type="select" display="radio" argument="--format=sam, --format=softsam" label="Select a BAM flavor to output" help="Lastz actually outputs SAM data but Galaxy converts it into BAM to save space. For alignments that don't reach the end of a query, ‑‑format=sam uses 'hard clipping', while ‑‑format=softsam uses 'soft clipping'. See the section on 'clipped alignment' in the SAM specification for an explanation of what this means. The options ‑‑format=sam- and ‑‑format=softsam- suppress the SAM header lines. This makes them suitable for concatenating output from multiple runs. If you need to specify readgroup information: use AddOrEplaceReadGroups from Picard package">
