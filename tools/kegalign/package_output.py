@@ -261,6 +261,8 @@ class bashCommandLineFile:
             format_name = "maf"
         elif self.args.format_selector == "differences":
             format_name = "interval"
+        elif self.args.format_selector in ["axt", "axtplus"]:
+            format_name = "axt"
         else:
             format_name = "tabular"
 

@@ -7,6 +7,7 @@
                     <option value="general_def">General default (--format=general)</option>
                     <option value="general_full">Customized general (--format=general[:fields])</option>
                     <option value="maf" selected="true">MAF (--format=maf)</option>
+                    <option value="axt">axt (--format=axt)</option>
                     <option value="blastn">blastn (--format=BLASTN)</option>
                     <option value="differences">Differences (--format=differences)</option>
                 </param>
@@ -81,6 +82,12 @@
                         <option value="maf">MAF</option>
                         <option value="maf+">MAF with additional stats</option>
                         <option value="maf-" selected="true">MAF without header and comments</option>
+                    </param>
+                </when>
+                <when value="axt">
+                    <param name="axt_type" type="select" display="radio" argument="--format=axt" label="Select axt flavor" help="axt is a pairwise alignment format popular at UCSC and PSU">
+                        <option value="axt" selected="true">axt</option>
+                        <option value="axt+">axt with additional stats (axt+)</option>
                     </param>
                 </when>
                 <when value="blastn">
