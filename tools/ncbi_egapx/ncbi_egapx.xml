@@ -32,20 +32,20 @@
         #set genome_value = $cond_input_style.cond_genome_style.uri
     #end if
 genome: $genome_value
-taxid: $taxid
-    #if str($cond_rnaseq_style.rnaseq_style) == "list"
-        #set $reads_values = $rnaseq.split()
+taxid: $cond_input_style.taxid
+    #if str($cond_input_style.cond_rnaseq_style.rnaseq_style) == "history"
+        #set $reads_values = $cond_input_style.cond_rnaseq_style.rnaseq
     #else
-        #set $reads_values = $rnaseq
+        #set $reads_values = $cond_input_style.cond_rnaseq_style.rnaseq.split()
     #end if
 reads:
     #for r in [x.strip() for x in $reads_values]
   - $r
     #end for
-    #if str($proteins) != "None"
-proteins: $proteins
+    #if str($cond_input_style.proteins) != "None"
+proteins: $cond_input_styleproteins
     #end if
-    #for row in $xtra.strip().split("\n")
+    #for row in $cond_input_style.xtra.strip().split("\n")
 $row
     #end for
 #end if
