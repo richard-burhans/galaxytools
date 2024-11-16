@@ -82,6 +82,7 @@ $row
                     </when>
                 </conditional>
                 <param name="taxid" type="integer" min="0" value="0" label="NCBI Taxon ID" help="Used to identify the HMM model files needed"/>
+
                 <conditional name="condrnaseq">
                     <param name="rna_type_select" type="select" label="RNA sequence data source"
                         help="Select RNAseq input data from history or input a list of SRA identifiers or remote URI">
