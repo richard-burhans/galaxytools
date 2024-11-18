@@ -34,20 +34,22 @@
 genome: $genome_value
 taxid: $cond_input_style.taxid
     #if str($cond_input_style.cond_rnaseq_style.rnaseq_style) == "history"
-        #set $reads_values = $cond_input_style.cond_rnaseq_style.rnaseq
+        #set reads_values = $cond_input_style.cond_rnaseq_style.rnaseq
     #else
-        #set $reads_values = $cond_input_style.cond_rnaseq_style.rnaseq.split()
+        #set reads_values = $cond_input_style.cond_rnaseq_style.rnaseq.split()
     #end if
 reads:
-    #for r in [x.strip() for x in $reads_values]
+    #for r in [str(rv).strip() for rv in $reads_values]
   - $r
     #end for
     #if str($cond_input_style.proteins) != "None"
 proteins: $cond_input_styleproteins
     #end if
-    #for row in $cond_input_style.xtra.strip().split("\n")
+    #if str($cond_input_style.xtra) != "None"
+        #for row in str($cond_input_style.xtra).strip().split("\n")
 $row
-    #end for
+        #end for
+    #end if
 #end if
         ]]></configfile>
     </configfiles>
@@ -104,7 +106,7 @@ $row
                     </when>
                 </conditional>
                 <param name="proteins" type="data" format="fasta,fasta.gz" optional="true" label="Select a protein set"/>
-                <param name="xtra" type="text" area="true" label="Additional yaml to append to the egapx.yaml configuration"
+                <param name="xtra" type="text" area="true" optional="true" label="Additional yaml to append to the egapx.yaml configuration"
                     help="Not normally needed but useful for testing additional configuration elements">
                     <sanitizer invalid_char="">
                         <valid initial="string.printable"/>
