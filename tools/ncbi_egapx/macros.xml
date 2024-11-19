@@ -4,8 +4,8 @@
             <container type="docker">quay.io/galaxy/egapx:@TOOL_VERSION@</container>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">0.2-alpha</token>
-    <token name="@VERSION_SUFFIX@">7</token>
+    <token name="@TOOL_VERSION@">0.3.1-alpha</token>
+    <token name="@VERSION_SUFFIX@">0</token>
     <token name="@PROFILE@">22.05</token>
     <xml name="edam_ontology">
         <edam_operations>
