@@ -6,8 +6,43 @@
     <expand macro="edam_ontology"/>
     <expand macro="requirements"/>
     <command detect_errors="aggressive"><![CDATA[
-    #if str($cond_input_style.input_style) == "fillform"
+    export NXF_DEBUG=3 &&
+    echo \${PWD} &&
+    #if $cond_input_style.input_style == "fillform"
         #set yamlconfig = $egapx_config
+        ## The EGAPx pipeline code determines that a file is gzipped if it has a '.gz' extension.
+        ## This code creates symlinks with the appropriate extension.
+        #if $cond_input_style.cond_genome_style.genome_style == "history"
+            #set $genome_pathname = "genome_" + re.sub('[^\w\-\s]', '_', str($genome.element_identifier)) + "." + $genome.ext
+            ln -s '$genome' '$genome_pathname' &&
+        #else if $cond_input_style.cond_genome_style.genome_style == "indexed"
+            #set $genome_pathname = "genome_" + re.sub('[^\w\-\s]', '_', str($genome.fields.element_identifier)) + "." + $genome.fields.ext
+            ln -s '$genome.fields.path' '$genome_pathname' &&
+        #end if
+        #if $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
+            #import re
+            mkdir -p reads &&
+            #for $idx, $read in enumerate($cond_input_style.cond_rnaseq_style.rnaseq)
+                #if $read
+                    #set $read_pathname = "reads/" + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
+                    ln -s '$read' '$read_pathname' &&
+                #end if
+            #end for
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_rnaseq_style.reads_lists)
+                #for $idx, $collection in enumerate($repeat_entry.rnaseq_single)
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
+                    ln -s '$collection' '$read_pathname' &&
+                #end for
+            #end for
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_rnaseq_style.reads_paired_lists)
+                #for $idx, $collection in enumerate($repeat_entry.rnaseq_paired)
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + $re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
+                    ln -s '${collection.forward}' '$read_pathname' &&
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
+                    ln -s '${collection.reverse}' '$read_pathname' &&
+                #end for
+            #end for
+        #end if
     #else
         #set yamlconfig = $yamlin
     #end if
@@ -21,32 +56,56 @@
     python3 /galaxy/egapx/ui/egapx.py '$yamlconfig' -e galaxy -o 'egapx_out'
     ]]></command>
     <configfiles>
+        <configfile name="reads_config"><![CDATA[
+        #if $cond_input_style.input_style == "fillform" and $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
+            #import re
+            #for $idx, $read in enumerate($cond_input_style.cond_rnaseq_style.rnaseq)
+                #if $read
+                    #set $read_pathname = "reads/" + str($idx) + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
+${idx}_${read.name} $read_pathname
+                #end if
+            #end for
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_rnaseq_style.reads_lists)
+                #for $idx, $collection in enumerate($repeat_entry.rnaseq_single)
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
+${repeat_idx}${idx}_${collection.name} $read_pathname
+                #end for
+            #end for
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_rnaseq_style.reads_paired_lists)
+                #for $idx, $collection in enumerate($repeat_entry.rnaseq_paired)
+                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
+                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
+${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_pathname
+                #end for
+            #end for
+        #end if
+        ]]></configfile>
         <configfile name="egapx_config"><![CDATA[
-#if str($cond_input_style.input_style) == "fillform"
+#if $cond_input_style.input_style == "fillform"
+    #import re
+    #if $cond_input_style.cond_genome_style.genome_style == "history"
+        #set genome_value = "genome_" + re.sub('[^\w\-\s]', '_', str($genome.element_identifier)) + "." + $genome.ext
+    #else if $cond_input_style.cond_genome_style.genome_style == "indexed"
+        #set genome_value = "genome_" + re.sub('[^\w\-\s]', '_', str($genome.fields.element_identifier)) + "." + $genomefields.ext
+    #else
+        #set genome_value = $uri
+    #end if
 # yaml generated by ncbi_egapx.xml
-    #if str($cond_input_style.cond_genome_style.genome_style) == "history"
-        #set genome_value = $cond_input_style.cond_genome_style.genome
-    #elif str($cond_input_style.cond_genome_style.genome_style) == "indexed"
-        #set genome_value = $cond_input_style.cond_genome_style.genome.fields.path
-    #else
-        #set genome_value = $cond_input_style.cond_genome_style.uri
-    #end if
 genome: $genome_value
-taxid: $cond_input_style.taxid
-    #if str($cond_input_style.cond_rnaseq_style.rnaseq_style) == "history"
-        #set reads_values = $cond_input_style.cond_rnaseq_style.rnaseq
+taxid: $taxid
+    #if $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
+reads: $reads_config
     #else
-        #set reads_values = $cond_input_style.cond_rnaseq_style.rnaseq.split()
+        #set reads_values = $rnaseq.split()
+        #for $read in [str(rv).strip() for rv in $reads_values]
+  - $read
+        #end for
     #end if
-reads:
-    #for r in [str(rv).strip() for rv in $reads_values]
-  - $r
-    #end for
     #if str($cond_input_style.proteins) != "None"
-proteins: $cond_input_styleproteins
+proteins: $cond_input_style.proteins
     #end if
-    #if str($cond_input_style.xtra) != "None"
-        #for row in str($cond_input_style.xtra).strip().split("\n")
+    #if str($cond_input_style.extra) != "None"
+        #for row in str($cond_input_style.extra).strip().split("\n")
 $row
         #end for
     #end if
@@ -55,15 +114,13 @@ $row
     </configfiles>
     <inputs>
         <conditional name="cond_input_style">
-            <param name="input_style" type="select" label="Fill in a tool form or use an existing yaml configuration from the current history?"
-                help="Use the tool form to select inputs from the history, or use a pre-prepared yaml file.">
+            <param name="input_style" type="select" label="Fill in a tool form or use an existing yaml configuration from the current history?" help="Use the tool form to select inputs from the history, or use a pre-prepared yaml file.">
                 <option value="fillform" selected="True">Provide configuration details for conversion into a configuration yaml</option>
                 <option value="history">Use a pre-prepared yaml egapx configuration</option>
-            </param> 
+            </param>
             <when value="fillform">
                 <conditional name="cond_genome_style">
-                    <param name="genome_style" type="select" label="Reference genome source for mapping supplied RNA-seq reads"
-                        help="Select a built in, history or remote URI for the reference genome FASTA">
+                    <param name="genome_style" type="select" label="Reference genome source for mapping supplied RNA-seq reads" help="Select a built in, history or remote URI for the reference genome FASTA">
                         <option value="history" selected="True">Use a genome FASTA file from the current history</option>
                         <option value="indexed">Use a Galaxy server built-in genome</option>
                         <option value="uri">Provide a remote web link URI ("https://...") pointing at the required genome reference FASTA file</option>
@@ -72,8 +129,7 @@ $row
                         <param name="genome" type="data" format="fasta" label="Select the reference genome FASTA from the current history"/>
                     </when>
                     <when value="indexed">
-                        <param name="genome" type="select" label="Select a built in reference genome or custom genome"
-                            help="If not listed, add a custom genome or use a reference genome from the history">
+                        <param name="genome" type="select" label="Select a built in reference genome or custom genome" help="If not listed, add a custom genome or use a reference genome from the history">
                             <options from_data_table="all_fasta">
                                 <validator message="No genomes are available " type="no_options"/>
                             </options>
@@ -83,30 +139,31 @@ $row
                         <param name="uri" type="text" label="URI pointing to the reference genome FASTA file"/>
                     </when>
                 </conditional>
-
                 <param name="taxid" type="text" label="NCBI Taxon ID" help="Used to identify the HMM model files needed">
                     <validator type="regex" message="Numeric">^[0-9]+$</validator>
                 </param>
-
                 <conditional name="cond_rnaseq_style">
-                    <param name="rnaseq_style" type="select" label="RNA sequence data source"
-                        help="Select RNAseq input data from history or input a list of SRA identifiers or remote URI">
+                    <param name="rnaseq_style" type="select" label="RNA sequence data source" help="Select RNAseq input data from history or input a list of SRA identifiers or remote URI">
                         <option value="history" selected="True">Select one or more RNA-seq fastq datasets from the current history</option>
                         <option value="list">Type in a list of SRA identifiers and/or remote RNA-seq FASTA URI</option>
                     </param>
                     <when value="history">
-                        <param name="rnaseq" type="data" format="fastqsanger,fastqsanger.gz" multiple="true" label="Select multiple RNA-seq fastqsanger inputs from the current history"
-                            help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                        <param name="rnaseq" type="data" format="fastqsanger,fastqsanger.gz" multiple="true" optional="true" label="Select multiple RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                        <repeat name="reads_lists" title="Single-end reads" min="0">
+                            <param name="rnaseq_single" type="data_collection" format="fastqsanger,fastqsanger.gz" collection_type="list" label="Select multiple RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                        </repeat>
+                        <repeat name="reads_paired_lists" title="Paired-end reads" min="0">
+                            <param name="rnaseq_paired" type="data_collection" format="fastqsanger,fastqsanger.gz" collection_type="list:paired" label="Select multiple RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                        </repeat>
                     </when>
                     <when value="list">
-                        <param name="rnaseq" type="text" area="true" label="List all required individual RNA-seq URI or SRA identifiers, separated by spaces or newlines"
-                            help="Either a working URI for a RNA-seq FASTA, or a bare SRA identifier will work - can be mixed">
+                        <param name="rnaseq" type="text" area="true" label="List all required individual RNA-seq URI or SRA identifiers, separated by spaces or newlines" help="Either a working URI for a RNA-seq FASTA, or a bare SRA identifier will work - can be mixed">
                             <validator type="empty_field"/>
                         </param>
                     </when>
                 </conditional>
                 <param name="proteins" type="data" format="fasta,fasta.gz" optional="true" label="Select a protein set"/>
-                <param name="xtra" type="text" area="true" optional="true" label="Additional yaml to append to the egapx.yaml configuration"
+                <param name="extra" type="text" area="true" optional="true" label="Additional yaml to append to the egapx.yaml configuration"
                     help="Not normally needed but useful for testing additional configuration elements">
                     <sanitizer invalid_char="">
                         <valid initial="string.printable"/>
@@ -136,26 +193,74 @@ $row
             <param name="uri" value="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz"/>
             <param name="rnaseq_style" value="list"/>
             <param name="rnaseq" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.1 https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.2 https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.1 https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.2"/>
-            <param name="xtra" value="hmm: https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/gnomon/hmm_parameters/6956.params&#10;tasks:&#10;  star_wnode:&#10;    star_wnode: -cpus-per-worker 4"/>
-            <output name="output"><assert_contents><has_size min="1"/></assert_contents></output>
+            <param name="extra" value="hmm: https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/gnomon/hmm_parameters/6956.params&#10;tasks:&#10;  star_wnode:&#10;    star_wnode: -cpus-per-worker 4"/>
+            <output name="output">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </output>
             <output_collection name="nextflow_stats" type="list">
-                <element name="nf_log"><assert_contents><has_size min="1"/></assert_contents></element>
-                <element name="nf_report"><assert_contents><has_size min="1"/></assert_contents></element>
-                <element name="nf_trace"><assert_contents><has_size min="1"/></assert_contents></element>
-                <element name="nf_timeline"><assert_contents><has_size min="1"/></assert_contents></element>
-                <element name="nf_params"><assert_contents><has_size min="1"/></assert_contents></element>
+                <element name="nf_log">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
+                <element name="nf_report">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
+                <element name="nf_trace">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
+                <element name="nf_timeline">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
+                <element name="nf_params">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
             </output_collection>
         </test>
         <test expect_test_failure="true">
             <param name="input_style" value="history"/>
             <param name="yamlin" value="input.yaml"/>
-            <output name="output"><assert_contents><has_size min="1"/></assert_contents></output>
+            <output name="output">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </output>
             <output_collection name="nextflow_stats" type="list">
-                <element name="nf_log"><assert_contents><has_size min="1"/></assert_contents></element>
-                <element name="nf_report"><assert_contents><has_size min="1"/></assert_contents></element>
-                <element name="nf_trace"><assert_contents><has_size min="1"/></assert_contents></element>
-                <element name="nf_timeline"><assert_contents><has_size min="1"/></assert_contents></element>
-                <element name="nf_params"><assert_contents><has_size min="1"/></assert_contents></element>
+                <element name="nf_log">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
+                <element name="nf_report">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
+                <element name="nf_trace">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
+                <element name="nf_timeline">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
+                <element name="nf_params">
+                    <assert_contents>
+                        <has_size min="1"/>
+                    </assert_contents>
+                </element>
             </output_collection>
         </test>
     </tests>
