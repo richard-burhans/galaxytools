@@ -163,7 +163,8 @@ $row
                     </when>
                 </conditional>
                 <param name="proteins" type="data" format="fasta,fasta.gz" optional="true" label="Select a protein set"/>
-                <param name="extra" type="text" area="true" optional="true" label="Additional yaml to append to the egapx.yaml configuration" help="Not normally needed but useful for testing additional configuration elements">
+                <param name="xtra" type="text" area="true" optional="true" label="Additional yaml to append to the egapx.yaml configuration"
+                    help="Not normally needed but useful for testing additional configuration elements">
                     <sanitizer invalid_char="">
                         <valid initial="string.printable"/>
                     </sanitizer>
