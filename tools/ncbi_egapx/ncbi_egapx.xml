@@ -176,12 +176,12 @@ $row
         </conditional>
     </inputs>
     <outputs>
-        <data name="output" format="gff" label="EGAPx annotation for ${on_string}" from_work_dir="egapx_out/accept.gff"/>
+        <data name="output" format="gff" label="EGAPx annotation for ${on_string}" from_work_dir="egapx_out/complete.genomic.gff"/>
         <collection name="nextflow_stats" type="list" label="EGAPx nextflow stats for ${on_string}">
-            <data name="nf_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow.log"/>
             <data name="nf_report" format="html" label="Nextflow execution report" from_work_dir="egapx_out/run.report.html"/>
-            <data name="nf_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/run.trace.txt"/>
             <data name="nf_timeline" format="html" label="Nextflow execution timeline" from_work_dir="egapx_out/run.timeline.html"/>
+            <data name="nf_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow.log"/>
+            <data name="nf_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/run.trace.txt"/>
             <data name="nf_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
         </collection>
     </outputs>
@@ -384,11 +384,11 @@ EGAPx has dependencies in and outside of its execution path that include several
 Output
 =======
 
-EGAPx output will appear as a collection in the user history. The main annotation file is called *accept.gff*.
+EGAPx output will appear as a collection in the user history. The main annotation file is called *complete.genomic.gff*.
 
 ::
 
- accept.gff
+ complete.genomic.gff
  annot_builder_output
  nextflow.log
  run.report.html
