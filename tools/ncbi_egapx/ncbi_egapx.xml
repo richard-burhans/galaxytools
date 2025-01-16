@@ -6,8 +6,6 @@
     <expand macro="edam_ontology"/>
     <expand macro="requirements"/>
     <command detect_errors="aggressive"><![CDATA[
-    export NXF_DEBUG=3 &&
-    echo \${PWD} &&
     #if $cond_input_style.input_style == "fillform"
         #set yamlconfig = $egapx_config
         ## The EGAPx pipeline code determines that a file is gzipped if it has a '.gz' extension.
@@ -53,8 +51,13 @@
     ## use the augmented container EGAPx config
     ln -s /galaxy/egapx/egapx_config &&
     ## run EGAPx
-    python3 /galaxy/egapx/ui/egapx.py '$yamlconfig' -e galaxy -o 'egapx_out'
+    python3 /galaxy/egapx/ui/egapx.py '$yamlconfig' -e galaxy -o 'egapx_out' &&
+    ## hack to support 0.2-alpha
+    if [ -e egapx_out/accept.gff ]; then ln -s accept.gff egapx_out/complete.genomic.gff; fi
     ]]></command>
+    <environment_variables>
+         <environment_variable name="NXF_DEBUG">3</environment_variable>
+    </environment_variables>
     <configfiles>
         <configfile name="reads_config"><![CDATA[
         #if $cond_input_style.input_style == "fillform" and $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
