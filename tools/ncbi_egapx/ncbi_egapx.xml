@@ -99,6 +99,7 @@ taxid: $taxid
     #if $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
 reads: $reads_config
     #else
+reads:
         #set reads_values = $rnaseq.split()
         #for $read in [str(rv).strip() for rv in $reads_values]
   - $read
@@ -179,13 +180,27 @@ $row
         </conditional>
     </inputs>
     <outputs>
-        <data name="output" format="gff" label="EGAPx annotation for ${on_string}" from_work_dir="egapx_out/complete.genomic.gff"/>
+        <data name="complete_genomic_gff" format="gff" label="Final annotation for ${on_string}" from_work_dir="egapx_out/complete.genomic.gff"/>
+        <collection name="output_files" type="list" label="EGAPx output for ${on_string}">
+            <data name="complete_genomic_gtf" format="gtf" label="Final annotation" from_work_dir="egapx_out/complete.genomic.gtf"/>
+            <data name="complete_genomic_fna" format="fasta" label="Full genome sequences" from_work_dir="egapx_out/complete.genomic.fna"/>
+            <data name="complete_cds" format="fasta" label="Annotated CDS" from_work_dir="egapx_out/complete.cds.fna"/>
+            <data name="complete_transcripts" format="fasta" label="Annotated transcripts" from_work_dir="egapx_out/complete.transcripts.fna"/>
+            <data name="complete_proteins" format="fasta" label="Annotated proteins" from_work_dir="egapx_out/complete.proteins.faa"/>
+            <data name="annotated_genome" format="asn1" label="Final annotation" from_work_dir="egapx_out/annotated_genome.asn"/>
+            <data name="accept_ftable_annot" format="txt" label="Accepted annotation models" from_work_dir="egapx_out/annot_builder_output/accept.ftable_annot"/>
+            <data name="annotation_data_cmt" format="tabular" label="Structured Comment" from_work_dir="egapx_out/annotation_data.cmt"/>
+            <data name="feature_counts" format="xml" label="Feature counts" from_work_dir="egapx_out/stats/feature_counts.xml"/>
+            <data name="feature_stats" format="xml" label="Feature stats" from_work_dir="egapx_out/stats/feature_stats.xml"/>
+            <data name="all_unannotated_val" format="xml" label="" from_work_dir="egapx_out/validated/all_unannotated.val"/>
+            <data name="genome_val" format="xml" label="" from_work_dir="egapx_out/validated/genome.val"/>
+        </collection>
         <collection name="nextflow_stats" type="list" label="EGAPx nextflow stats for ${on_string}">
-            <data name="nf_report" format="html" label="Nextflow execution report" from_work_dir="egapx_out/run.report.html"/>
-            <data name="nf_timeline" format="html" label="Nextflow execution timeline" from_work_dir="egapx_out/run.timeline.html"/>
-            <data name="nf_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow.log"/>
-            <data name="nf_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/run.trace.txt"/>
-            <data name="nf_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
+            <data name="run_report" format="html" label="Nextflow execution report" from_work_dir="egapx_out/run.report.html"/>
+            <data name="run_timeline" format="html" label="Nextflow execution timeline" from_work_dir="egapx_out/run.timeline.html"/>
+            <data name="nextflow_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow.log"/>
+            <data name="run_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/run.trace.txt"/>
+            <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
         </collection>
     </outputs>
     <tests>
@@ -195,76 +210,13 @@ $row
             <param name="genome_style" value="uri"/>
             <param name="uri" value="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz"/>
             <param name="rnaseq_style" value="list"/>
-            <param name="rnaseq" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.1 https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.2 https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.1 https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.2"/>
-            <param name="extra" value="hmm: https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/gnomon/hmm_parameters/6956.params&#10;tasks:&#10;  star_wnode:&#10;    star_wnode: -cpus-per-worker 4"/>
-            <output name="output">
-                <assert_contents>
-                    <has_size min="1"/>
-                </assert_contents>
-            </output>
-            <output_collection name="nextflow_stats" type="list">
-                <element name="nf_log">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-                <element name="nf_report">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-                <element name="nf_trace">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-                <element name="nf_timeline">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-                <element name="nf_params">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-            </output_collection>
+            <param name="rnaseq" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_2.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_2.gz"/>
+            <expand macro="test_outputs"/>
         </test>
         <test expect_test_failure="true">
             <param name="input_style" value="history"/>
             <param name="yamlin" value="input.yaml"/>
-            <output name="output">
-                <assert_contents>
-                    <has_size min="1"/>
-                </assert_contents>
-            </output>
-            <output_collection name="nextflow_stats" type="list">
-                <element name="nf_log">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-                <element name="nf_report">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-                <element name="nf_trace">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-                <element name="nf_timeline">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-                <element name="nf_params">
-                    <assert_contents>
-                        <has_size min="1"/>
-                    </assert_contents>
-                </element>
-            </output_collection>
+            <expand macro="test_outputs"/>
         </test>
     </tests>
     <help><![CDATA[
