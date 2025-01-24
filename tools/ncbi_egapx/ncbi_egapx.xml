@@ -98,10 +98,10 @@ genome: $genome_value
 taxid: $taxid
             #if $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
 reads: $reads_config
-    #else
+            #else
 reads:
-        #set reads_values = $rnaseq.split()
-        #for $read in [str(rv).strip() for rv in $reads_values]
+                #set reads_values = $rnaseq.split()
+                #for $read in [str(rv).strip() for rv in $reads_values]
   - $read
                 #end for
             #end if
