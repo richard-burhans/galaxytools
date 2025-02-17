@@ -18,7 +18,7 @@
     #end if  
 	rdeval --input-reads #echo " ".join([f"'{input}'" for $input in $mangled_inputs])
 	#if $expected_gsize
-		$expected_gsize
+		'$expected_gsize'
 	#end if
 	#if $input_filter.filter_selector == "exclude_file"
 		--exclude-list '$exclude_file'
@@ -88,7 +88,7 @@
                 </param>
                 <when value="no"/>
                 <when value="yes">
-                    <param argument="--random-seed" type="integer" min="0" label="random seed to make subsampling reproducible"/>
+                    <param argument="--random-seed" type="integer" min="0" value="0" label="random seed to make subsampling reproducible"/>
                 </when>
             </conditional>
         </section>
