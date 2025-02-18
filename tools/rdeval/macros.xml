@@ -5,15 +5,8 @@
         </requirements>
     </xml>
     <token name="@TOOL_VERSION@">0.0.5</token>
-    <token name="@VERSION_SUFFIX@">0</token>
+    <token name="@VERSION_SUFFIX@">2</token>
     <token name="@PROFILE@">23.02</token>
-    <token name="@ATTRIBUTION@"><![CDATA[
-        **Attribution**
-        
-        This Galaxy tool is available at `vgl-hub/rdeval <https://github.com/vgl-hub/rdeval/>`_, and
-        relies on the gfastar suite and the gfalibs toolkit `vgl-hub/gfalibs
-        <https://github.com/vgl-hub/gfalibs>`_, developed by Giulio Formenti at the Rockefeller University
-        ]]></token>
     <xml name="citations">
         <citations>
             <citation type="bibtex">
