@@ -242,7 +242,9 @@
 	-v --version software version.
 	--cmd print $0 to stdout.
 
-@ATTRIBUTION@
+**Attribution**
+
+This tool relies on the gfastar suite and the gfalibs toolkit `vgl-hub/gfalibs <https://github.com/vgl-hub/gfalibs>`_, developed by Giulio Formenti at the Rockefeller University
     ]]></help>
     <expand macro="citations"/>
 </tool>
