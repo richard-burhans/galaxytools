@@ -32,7 +32,7 @@
 	#if $input_subsample.seed_selector == "yes"
 		--random-seed '$random_seed'
 	#end if
-	#if $homopolymer_compress.compress_selector == "yes"
+	#if $input_compress.compress_selector == "yes"
 		--homopolymer-compress '$homopolymer_compress'
 	#end if
     #if $stats_flavor.flavor_selector == "stats"
@@ -92,7 +92,7 @@
                 </when>
             </conditional>
         </section>
-        <conditional name="homopolymer_compress">
+        <conditional name="input_compress">
             <param name="compress_selector" type="select" label="Compress homopolymers">
                 <option value="no" selected="true">no</option>
                 <option value="yes">yes</option>
