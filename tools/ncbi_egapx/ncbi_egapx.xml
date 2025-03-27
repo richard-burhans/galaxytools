@@ -221,18 +221,31 @@ $row
     </outputs>
     <tests>
         <test expect_num_outputs="20" expect_test_failure="true">
-            <param name="input_style" value="fillform"/>
-            <param name="taxid" value="6954"/>
-            <param name="genome_style" value="uri"/>
-            <param name="uri" value="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz"/>
-            <param name="rnaseq_style" value="list"/>
-            <param name="rnaseq" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_2.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_2.gz"/>
+            <conditional name="cond_input_style">
+                <param name="input_style" value="fillform"/>
+                <conditional name="cond_genome_style">
+                    <param name="genome_style" value="uri"/>
+                    <param name="uri" value="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz"/>
+                </conditional>
+                <param name="taxid" value="6954"/>
+                <conditional name="cond_rnaseq_style">
+                    <param name="rnaseq_style" value="list"/>
+                    <param name="rnaseq" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_2.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_2.gz"/>
+                </conditional>
+            </conditional>
+            <section name="developer">
+                <param name="collect_star_bams" value="true"/>
+            </section>
             <expand macro="test_outputs"/>
         </test>
         <test expect_num_outputs="21" expect_test_failure="true">
-            <param name="input_style" value="history"/>
-            <param name="yamlin" value="input.yaml"/>
-            <param name="collect_star_bams" value="true"/>
+            <conditional name="cond_input_style">
+                <param name="input_style" value="history"/>
+                <param name="yamlin" value="input.yaml"/>
+            </conditional>
+            <section name="developer">
+                <param name="collect_star_bams" value="true"/>
+            </section>
             <expand macro="test_outputs"/>
         </test>
     </tests>
