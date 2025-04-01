@@ -211,7 +211,7 @@ $row
            <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
         </collection>
         <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
-            <discover_datasets pattern="bam\..+/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
+            <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
             <filter>developer['collect_star_bams']</filter>
         </collection>
         <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
