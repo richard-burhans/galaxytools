@@ -4,8 +4,9 @@
             <requirement type="package" version="@TOOL_VERSION@">rdeval</requirement>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">0.0.5=r44h35c04b2_2</token>
-    <token name="@VERSION_SUFFIX@">0</token>
+    <!-- should be: 0.0.5=r44h35c04b2_2 -->
+    <token name="@TOOL_VERSION@">0.0.5</token>
+    <token name="@VERSION_SUFFIX@">4</token>
     <token name="@PROFILE@">23.02</token>
     <xml name="citations">
         <citations>
