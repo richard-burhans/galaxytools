@@ -60,7 +60,7 @@
 		> '$stats_outfile'
 	]]></command>
     <inputs>
-        <param argument="--input-reads" type="data" format="bam,cram,fasta,fasta.gz,fastq,fastq.gz" multiple="true" label="Input dataset" help="FASTA/FASTQ, BAM, or CRAM files."/>
+        <param argument="--input-reads" type="data" format="bam,cram,fasta,fasta.gz,fastq,fastq.gz" multiple="true" label="Input dataset" help="BAM, CRAM, FASTA, FASTQ, or RD files"/>
         <param name="expected_gsize" type="integer" label="Expected Genome Size" optional="true" help="Integer (e.g., 3000000000 for human)."/>
         <section name="input_filter" title="Filter input reads" expanded="false">
             <conditional name="file_filter">
@@ -183,9 +183,13 @@
         </test>
         <test expect_num_outputs="2">
             <param name="input_reads" value="test2.bam" ftype="bam"/>
-            <param name="type_selector" value="combined_reads"/>
+            <section name="output_options">
+                <conditional name="output_type">
+                    <param name="type_selector" value="combined_reads"/>
+                    <param name="format_selector" value="fastq.gz"/>
+                </conditional>
+            </section>
             <output name="stats_outfile" file="output2.tabular" ftype="tabular"/>
-            <param name="format_selector" value="fastq.gz"/>
             <output name="reads_outfile" file="output2.fastq.gz" ftype="fastq.gz"/>
         </test>
     </tests>
