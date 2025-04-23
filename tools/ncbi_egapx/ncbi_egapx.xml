@@ -5,6 +5,9 @@
     </macros>
     <expand macro="edam_ontology"/>
     <expand macro="requirements"/>
+    <required_files>
+        <include path="get-bams.bash"/>
+    </required_files>
     <command detect_errors="aggressive"><![CDATA[
     #if $cond_input_style.input_style == "fillform"
         #set yamlconfig = $egapx_config
@@ -54,6 +57,9 @@
     python3 /galaxy/egapx/ui/egapx.py '$yamlconfig' -e galaxy -o 'egapx_out' &&
     ## hack to support 0.2-alpha
     if [ -e egapx_out/accept.gff ]; then ln -s accept.gff egapx_out/complete.genomic.gff; fi
+    #if $developer.collect_star_bams
+    && bash '$__tool_directory__/get-bams.bash'
+    #end if
     ]]></command>
     <environment_variables>
          <environment_variable name="NXF_DEBUG">3</environment_variable>
@@ -98,10 +104,10 @@ genome: $genome_value
 taxid: $taxid
             #if $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
 reads: $reads_config
-    #else
+            #else
 reads:
-        #set reads_values = $rnaseq.split()
-        #for $read in [str(rv).strip() for rv in $reads_values]
+                #set reads_values = $rnaseq.split()
+                #for $read in [str(rv).strip() for rv in $reads_values]
   - $read
                 #end for
             #end if
@@ -180,6 +186,9 @@ $row
                 <param name="yamlin" type="data" format="yaml" label="egapx configuration yaml file to pass to Nextflow"/>
             </when>
         </conditional>
+        <section name="developer" title="Developer options" expanded="false">
+            <param name="collect_star_bams" type="boolean" checked="false" label="Collect BAM output from STAR"/>
+        </section>
     </inputs>
     <outputs>
         <data name="complete_genomic_gff" format="gff" label="Final annotation for ${on_string}" from_work_dir="egapx_out/complete.genomic.gff"/>
@@ -202,22 +211,40 @@ $row
             <data name="run_timeline" format="html" label="Nextflow execution timeline" from_work_dir="egapx_out/run.timeline.html"/>
             <data name="nextflow_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow.log"/>
             <data name="run_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/run.trace.txt"/>
-            <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
+           <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
+        </collection>
+        <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
+            <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
+            <filter>developer['collect_star_bams']</filter>
         </collection>
     </outputs>
     <tests>
-        <test expect_test_failure="true">
-            <param name="input_style" value="fillform"/>
-            <param name="taxid" value="6954"/>
-            <param name="genome_style" value="uri"/>
-            <param name="uri" value="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz"/>
-            <param name="rnaseq_style" value="list"/>
-            <param name="rnaseq" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_2.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_2.gz"/>
+        <test expect_num_outputs="20" expect_test_failure="true">
+            <conditional name="cond_input_style">
+                <param name="input_style" value="fillform"/>
+                <conditional name="cond_genome_style">
+                    <param name="genome_style" value="uri"/>
+                    <param name="uri" value="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz"/>
+                </conditional>
+                <param name="taxid" value="6954"/>
+                <conditional name="cond_rnaseq_style">
+                    <param name="rnaseq_style" value="list"/>
+                    <param name="rnaseq" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_2.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_2.gz"/>
+                </conditional>
+            </conditional>
+            <section name="developer">
+                <param name="collect_star_bams" value="true"/>
+            </section>
             <expand macro="test_outputs"/>
         </test>
-        <test expect_test_failure="true">
-            <param name="input_style" value="history"/>
-            <param name="yamlin" value="input.yaml"/>
+        <test expect_num_outputs="21" expect_test_failure="true">
+            <conditional name="cond_input_style">
+                <param name="input_style" value="history"/>
+                <param name="yamlin" value="input.yaml"/>
+            </conditional>
+            <section name="developer">
+                <param name="collect_star_bams" value="true"/>
+            </section>
             <expand macro="test_outputs"/>
         </test>
     </tests>
