@@ -194,61 +194,55 @@
         </test>
     </tests>
     <help><![CDATA[
+What it does
+============
 
-**rdeval** is a general-purpose, multithreaded tool for analyzing and manipulating reads (FASTA/FASTQ/BAM/CRAM/RD).
+**rdeval** accepts an arbitrary number of sequencing files and optionally **filters**, **subsamples**, and/or **compresses homopolymers** within the reads. The retained reads can be saved in multiple formats, and metrics on these reads can be stored in a '*sketch*' file. Statistics can then be efficiently retrieved from these sketch files for further processing.
 
-        rdeval input.fa*[.gz]|bam|cram|rd [expected genome size]
+.. image:: pipeline.svg
 
-::
+Filtering
+=========
 
-	Dataset report example:
+Input reads can be filtered using one of the three methods listed below, applied sequentially in the specified order.
 
-	+++Read summary+++:
-	# reads: 10000
-	Total read length: 134014104
-	Average read length: 13401.41
-	Read N50: 14270
-	Smallest read length: 1142
-	Largest read length: 40910
-	Coverage: inf
-	GC content %: 43.78
-	Base composition (A:C:T:G): 37693226:29331833:37655925:29333120
-	Average per base quality: 26.47
+1. Retain reads whose header lines are listed in the include dataset.
+2. Discard reads whose header lines are listed in the exclude dataset.
+3. Retain reads that match the provided filter expression.
 
-::
-	
-	Per sequence/read report (--sequence-report) example:
+The filter expression can be used to select reads based on read length (l), average read quality (q), or a combination of both. The grammar for constructing filter expressions is outlined below:
 
-	Header  Comment Length  A       C       G       T       N       GC      Average Quality
-	m54306U_210528_154706/69206614/ccs              22812   6170    5146    4802    6694    0       0.44    89.9705
-	m54306U_210528_154706/25888573/ccs              32200   9162    7270    7112    8656    0       0.45    56.8306
-	m54306U_210528_154706/40634168/ccs              8487    2443    1858    1876    2310    0       0.44    90.3828
-	m54306U_210528_154706/103745617/ccs             16496   4546    3752    3760    4438    0       0.46    88.3554
+     * filter-expression ::= <length-expression> | <quality-expression> | <length-expression> <combination-operator> <quality-expression> | <quality-expression> <combination-operator> <length-expression>
+     * length-expression ::= "l" <comparison-operator> <integer>
+     * quality-expression ::= "q" <comparison-operator> <integer>
+     * combination-operator := "&" | "|"
+     * comparison-operator ::= "<" | "=" | ">"
+     * integer ::= <digit> | <digit><integer>
+     * digit ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
 
-::
+Retain reads longer than 10 base pairs
 
-	Options:
-	--sequence-report generates a per-read report
-	-e --exclude-list <file> generates output on a excluding list of headers.
-	-f --filter <exp> filter reads using <exp> in quotes, e.g. 'l>10' for longer than 10bp or 'l>10 & q>10' to further exclude reads by quality (default: none).
-	-i --include-list <file> generates output on a subset list of headers.
-	-o --out-format <file> output file (fa*[.gz], bam, cram, rd). Optionally write reads to file or generate rd summary file.
-	-q --quality q|a generates list of average quality for each read (q) or both length and quality (a).
-	-r --input-reads <file1> <file2> <file n> input file (fa*[.gz], bam, cram, rd).
-	-s --out-size u|s|h|c  generates size list (unsorted|sorted|histogram|inverse cumulative table).
-	--homopolymer-compress <int> compress all the homopolymers longer than n in the input.
-	--sample <float> fraction of reads to subsample.
-	--random-seed <int> an optional random seed to make subsampling reproducible.
-	--md5 print md5 of .rd files.
-	--tabular tabular output.
-	--verbose verbose output.
-	-j --threads <int> numbers of threads (default:5).
-	-v --version software version.
-	--cmd print $0 to stdout.
+    l>10
 
-**Attribution**
+Retain reads with average quality greather than 20
 
-This tool relies on the gfastar suite and the gfalibs toolkit `vgl-hub/gfalibs <https://github.com/vgl-hub/gfalibs>`_, developed by Giulio Formenti at the Rockefeller University
+     q>20
+
+Retain reads longer than 10 base pairs with average quality greather than 20
+
+     l>10 & q>20
+
+.. _sampling-label:
+
+Sub-sampling
+===========
+
+4. Retain a subsample of the reads by specifying the fraction to be kept. Use the *random seed* option to keep subsampling reproducible.
+
+Homopolymer Compression
+=======================
+
+5. Runs of repeated nucleotides in each read are collapsed, with any associated quality data discarded. For example, CAGGCTTT would become CAGCT.
     ]]></help>
     <expand macro="citations"/>
 </tool>
