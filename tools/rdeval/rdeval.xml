@@ -15,46 +15,62 @@
     #end for
     #if $output_options.output_type.type_selector == "combined_reads"
         ln -s '$reads_outfile' 'output.${output_type.format_selector}' &&
-    #end if  
-	rdeval --input-reads #echo " ".join([f"'{input}'" for $input in $mangled_inputs])
+    #end if
+	rdeval --input-reads
+    #for $input in $mangled_inputs
+        '$input'
+    #end for
 	#if $expected_gsize
 		'$expected_gsize'
 	#end if
-	#if $input_filter.filter_selector == "exclude_file"
-		--exclude-list '$exclude_file'
-	#else if $input_filter.filter_selector == "include_file"
-		--include-list '$include_file'
-	#end if
-    #if $filter
-		--filter '$filter'
+	#if $input_filter.include_list
+		--include-list '$input_filter.include_list'
     #end if
-		--sample '$sample'
-	#if $input_subsample.seed_selector == "yes"
-		--random-seed '$random_seed'
+	#if $input_filter.exclude_list
+		--exclude-list '$input_filter.exclude_list'
+    #end if
+    #set $filter_exp_type = $input_filter.filter_expression.filter_selector
+    #if $filter_exp_type != "no_exp"
+        #set $l_exp = "l" + str($input_filter.filter_expression.length_comparison) + str($input_filter.filter_expression.length_value)
+        #set $q_exp = "q" + str($input_filter.filter_expression.quality_comparison) + str($input_filter.filter_expression.quality_value)
+        #if $filter_exp_type == "l_exp"
+            #set $filter_exp = $l_exp
+        #else if $filter_exp_type == "q_exp"
+            #set $filter_exp = $q_exp
+        #else if $filter_exp_type == "lq_exp"
+            #set $filter_exp = $l_exp + str($input_filter.filter_expression.exp_operator) + $q_exp
+        #end if
+        --filter '$filter_exp'
+    #end if
+    #if int($input_subsample.sample) != 1
+		--sample '$input_subsample.sample'
+    #end if
+	#if $input_subsample.random_seed.seed_selector == "yes"
+		--random-seed '$input_subsample.random_seed.random_seed'
 	#end if
 	#if $input_compress.compress_selector == "yes"
-		--homopolymer-compress '$homopolymer_compress'
+		--homopolymer-compress '$input_compress.homopolymer_compress'
 	#end if
-    #if $stats_flavor.flavor_selector == "stats"
-        #if $sequence_report
+    #set $stats_type = $output_options.stats_flavor.flavor_selector
+    #if $stats_type == "stats"
+        #if $output_options.stats_flavor.sequence_report
             --sequence-report
         #end if
-    #else if $stats_flavor.flavor_selector == "quality"
-		--quality '$quality'
-    #else if $stats_flavor.flavor_selector == "size"
-		--out-size '$out_size'
+    #else if $stats_type == "quality"
+		--quality '$output_options.stats_flavor.quality'
+    #else if $stats_type == "size"
+		--out-size '$output_options.stats_flavor.out_size'
     #end if
-    #if $output_options.output_type.type_selector == "rd_file"
-        #if $md5
+    #set $output_type = $output_options.output_type.type_selector
+    #if $output_type == "rd_file"
+        #if $output_options.output_type.md5
             --md5
         #end if
         -o output.rd
-    #else if $output_options.output_type.type_selector == "combined_reads"
-        -o 'output.${output_type.format_selector}'
+    #else if $output_type == "combined_reads"
+        -o 'output.${output_options.output_type.format_selector}'
     #end if
-	#if $verbose
 		--verbose
-	#end if
 		--tabular
 		--threads \${GALAXY_SLOTS:-2}
 		> '$stats_outfile'
@@ -63,21 +79,56 @@
         <param argument="--input-reads" type="data" format="bam,cram,fasta,fasta.gz,fastq,fastq.gz" multiple="true" label="Input dataset" help="BAM, CRAM, FASTA, FASTQ, or RD files"/>
         <param name="expected_gsize" type="integer" label="Expected Genome Size" optional="true" help="Integer (e.g., 3000000000 for human)."/>
         <section name="input_filter" title="Filter input reads" expanded="false">
-            <conditional name="file_filter">
-                <param name="filter_selector" type="select" label="Use an exclude or include file">
-                    <option value="no_file" selected="true">no</option>
-                    <option value="exclude_file">Use an exclude file</option>
-                    <option value="include_file">Use an include file</option>
+            <param argument="--include-list" type="data" format="txt" optional="true" label="File containing headers to include"/>
+            <param argument="--exclude-list" type="data" format="txt" optional="true" label="File containing headers to exclude"/>
+            <conditional name="filter_expression">
+                <param name="filter_selector" type="select" label="Filter using length and/or quality" help="filter help">
+                    <option value="no_exp" selected="true">No</option>
+                    <option value="l_exp">Read length</option>
+                    <option value="q_exp">Average read quality</option>
+                    <option value="lq_exp">Both read length and average read quality</option>
                 </param>
-                <when value="no_file"/>
-                <when value="exclude_file">
-                    <param argument="--exclude-list" type="data" format="txt" optional="true" label="File containing headers to exclude"/>
+                <when value="no_exp"/>
+                <when value="l_exp">
+                    <param name="length_comparison" type="select" label="Retain reads with length">
+                        <option value="&lt;" selected="true">less than</option>
+                        <option value="=">equal to</option>
+                        <option value=">">greater than</option>
+                        <sanitizer sanitize="false"/>
+                    </param>
+                    <param name="length_value" type="integer" min="0" value="0" label="Length in bp" />
                 </when>
-                <when value="include_file">
-                    <param argument="--include-list" type="data" format="txt" optional="true" label="File containing headers to include"/>
+                <when value="q_exp">
+                    <param name="quality_comparison" type="select" label="Retain reads with average read quality">
+                        <option value="&lt;" selected="true">less than</option>
+                        <option value="=">equal to</option>
+                        <option value=">">greater than</option>
+                        <sanitizer sanitize="false"/>
+                    </param>
+                    <param name="quality_value" type="integer" min="0" value="0" label="Average read quality" />
+                </when>
+                <when value="lq_exp">
+                    <param name="length_comparison" type="select" label="Retain reads with length">
+                        <option value="&lt;" selected="true">less than</option>
+                        <option value="=">equal to</option>
+                        <option value=">">greater than</option>
+                        <sanitizer sanitize="false"/>
+                    </param>
+                    <param name="length_value" type="integer" min="0" value="0" label="Length in bp" />
+                    <param name="exp_operator" type="select" label="Combination operator">
+                        <option value="|" selected="true">or</option>
+                        <option value="&amp;">and</option>
+                        <sanitizer sanitize="false"/>
+                    </param>
+                    <param name="quality_comparison" type="select" label="Average read quality">
+                        <option value="&lt;" selected="true">less than</option>
+                        <option value="=">equal to</option>
+                        <option value=">">greater than</option>
+                        <sanitizer sanitize="false"/>
+                    </param>
+                    <param name="quality_value" type="integer" min="0" value="0" label="average read quality" />
                 </when>
             </conditional>
-            <param argument="--filter" type="text" optional="true" label="filter" help="e.g. l&gt;1000 &amp; q&gt;20"/>
         </section>
         <section name="input_subsample" title="Subsample input reads" expanded="false">
             <param argument="--sample" type="float" min="0" max="1" value="1" label="fraction of reads to subsample"/>
@@ -144,7 +195,6 @@
                     <param argument="--md5" type="boolean" checked="false" label="Print md5 of .rd files"/>
                 </when>
             </conditional>
-            <param argument="--verbose" type="boolean" checked="false" label="Verbose output"/>
         </section>
     </inputs>
     <outputs>
@@ -164,33 +214,51 @@
     </outputs>
     <tests>
         <test expect_num_outputs="2">
-            <param name="input_reads" value="test1.fasta.gz" ftype="fasta.gz"/>
+            <param name="input_reads" value="input1.fastq.gz" ftype="fastq.gz"/>
             <output name="stats_outfile" file="output1.tabular" ftype="tabular"/>
             <output name="rd_outfile" ftype="binary">
                 <assert_contents>
-                    <has_size size="109" delta="1"/>
+                    <has_size size="119" delta="1"/>
                 </assert_contents>
             </output>
         </test>
         <test expect_num_outputs="2">
-            <param name="input_reads" value="test1.fastq.gz" ftype="fastq.gz"/>
-            <output name="stats_outfile" file="output1.tabular" ftype="tabular" lines_diff="2"/>
+            <param name="input_reads" value="input1.fastq.gz" ftype="fastq.gz"/>
+            <section name="input_filter">
+                <conditional name="filter_expression">
+                    <param name="filter_selector" value="lq_exp"/>
+                    <param name="length_comparison" value=">"/>
+                    <param name="length_value" value="10"/>
+                    <param name="exp_operator" value="&amp;"/>
+                    <param name="quality_comparison" value=">"/>
+                    <param name="quality_value" value="10"/>
+                </conditional>
+            </section>
+            <output name="stats_outfile" file="output2.tabular" ftype="tabular"/>
             <output name="rd_outfile" ftype="binary">
                 <assert_contents>
-                    <has_size size="128" delta="1"/>
+                    <has_size size="100" delta="1"/>
                 </assert_contents>
             </output>
         </test>
         <test expect_num_outputs="2">
-            <param name="input_reads" value="test2.bam" ftype="bam"/>
+            <param name="input_reads" value="input1.fastq.gz" ftype="fastq.gz"/>
+            <section name="input_compress">
+                <param name="compress_selector" value="yes"/>
+                <param name="homopolymer_compress" value="1"/>
+            </section>
             <section name="output_options">
                 <conditional name="output_type">
                     <param name="type_selector" value="combined_reads"/>
                     <param name="format_selector" value="fastq.gz"/>
                 </conditional>
             </section>
-            <output name="stats_outfile" file="output2.tabular" ftype="tabular"/>
-            <output name="reads_outfile" file="output2.fastq.gz" ftype="fastq.gz"/>
+            <output name="stats_outfile" file="output3.tabular" ftype="tabular"/>
+            <output name="reads_outfile" ftype="fastq.gz" md5="23a14631cb075817967752021deb6ec4">
+                <assert_contents>
+                    <has_size size="159"/>
+                </assert_contents>
+            </output>
         </test>
     </tests>
     <help><![CDATA[
@@ -235,7 +303,7 @@ Retain reads longer than 10 base pairs with average quality greather than 20
 .. _sampling-label:
 
 Sub-sampling
-===========
+============
 
 4. Retain a subsample of the reads by specifying the fraction to be kept. Use the *random seed* option to keep subsampling reproducible.
 
