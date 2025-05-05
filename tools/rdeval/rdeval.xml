@@ -9,10 +9,15 @@
     #set $mangled_inputs = []
     #for $input in $input_reads
         #set $mangled_base = re.sub(r"[^\w\-\s]", "_", str($input.element_identifier))
-        #if str($input.ext).lower().startswith("fastq")
-            #set $mangled_ext = "fastq"
+        #set $input_ext = str($input.ext).lower()
+        #if $input_ext.startswith("fastq")
+            #if $input_ext.endswith(".gz")
+                #set $mangled_ext = "fastq.gz"
+            #else
+                #set $mangled_ext = "fastq"
+            #end if
         #else
-            #set $mangled_ext = str($input.ext)
+            #set $mangled_ext = $input_ext
         #end if
         #set $mangled_input = $mangled_base + "." + $mangled_ext
         #silent $mangled_inputs.append($mangled_input)
