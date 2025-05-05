@@ -9,7 +9,12 @@
     #set $mangled_inputs = []
     #for $input in $input_reads
         #set $mangled_base = re.sub(r"[^\w\-\s]", "_", str($input.element_identifier))
-        #set $mangled_input = $mangled_base + "." + str($input.ext)
+        #if str($input.ext).lower().startswith("fastq")
+            #set $mangled_ext = "fastq"
+        #else
+            #set $mangled_ext = str($input.ext)
+        #end if
+        #set $mangled_input = $mangled_base + "." + $mangled_ext
         #silent $mangled_inputs.append($mangled_input)
         ln -s '$input' '$mangled_input' &&
     #end for
@@ -82,7 +87,7 @@
             <param argument="--include-list" type="data" format="txt" optional="true" label="File containing headers to include"/>
             <param argument="--exclude-list" type="data" format="txt" optional="true" label="File containing headers to exclude"/>
             <conditional name="filter_expression">
-                <param name="filter_selector" type="select" label="Filter using length and/or quality" help="filter help">
+                <param name="filter_selector" type="select" label="Filter using length and/or quality" help="Retain reads matching filter">
                     <option value="no_exp" selected="true">No</option>
                     <option value="l_exp">Read length</option>
                     <option value="q_exp">Average read quality</option>
@@ -268,6 +273,8 @@ What it does
 **rdeval** accepts an arbitrary number of sequencing files and optionally **filters**, **subsamples**, and/or **compresses homopolymers** within the reads. The retained reads can be saved in multiple formats, and metrics on these reads can be stored in a '*sketch*' file. Statistics can then be efficiently retrieved from these sketch files for further processing.
 
 .. image:: pipeline.svg
+   :alt: pipeline diagram
+   :align: left
 
 Filtering
 =========
