@@ -17,38 +17,21 @@
     #end for
     #set $r_vector = "c(" + ",".join(input_file_list) + ")"
     #set $interactive_value = "FALSE"
-    #if $output_format.format_selector == "html" and $output_format.interactive
+    #if $interactive
         #set $interactive_value = "TRUE"
     #end if
-    R -e "rmarkdown::render('figures.Rmd', output_file='$outfile', output_format='${output_format.format_selector}_document', params=list(input_files=$r_vector, interactive='$interactive_value'))"
+    R -e "rmarkdown::render('figures.Rmd', output_file='$outfile', output_format='html_document', params=list(input_files=$r_vector, interactive='$interactive_value'))"
 	]]></command>
     <inputs>
         <param name="input_files" type="data" format="data" multiple="true" label="Input dataset" help="RD files"/>
-        <conditional name="output_format">
-            <param name="format_selector" type="select" label="output format" help="output format">
-                <option value="html" selected="true">html</option>
-                <option value="pdf">pdf</option>
-            </param>
-            <when value="html">
-                <param name="interactive" type="boolean" value="true" label="interactive" help="interactive"/>
-            </when>
-            <when value="pdf"/>
-        </conditional>
+        <param name="interactive" type="boolean" value="true" label="interactive" help="interactive"/>
     </inputs>
     <outputs>
-        <data name="outfile" format="html" label="Rdeval report">
-            <change_format>
-                <when input="output_format" value="pdf" format="pdf"/>
-            </change_format>
-        </data>
+        <data name="outfile" format="html" label="Rdeval report"/>
     </outputs>
     <tests>
         <test expect_num_outputs="1">
             <param name="input_files" value="input1.rd"/>
-            <conditional name="output_format">
-                <param name="format_selector" value="html"/>
-            </conditional>
-
             <output name="outfile" ftype="html">
                 <assert_contents>
                     <has_size size="833000" delta="8330"/>
