@@ -51,8 +51,7 @@
     ##   - nextflow conda environment
     ##   - EGPAx python virtual environment
     source /galaxy/env.bash &&
-    ## use the augmented container EGAPx config
-    ln -s /galaxy/egapx/egapx_config &&
+    python3 /galaxy/scripts/galaxy-resource-config.py &&
     ## run EGAPx
     python3 /galaxy/egapx/ui/egapx.py '$yamlconfig' -e galaxy -o 'egapx_out' &&
     ## hack to support 0.2-alpha
