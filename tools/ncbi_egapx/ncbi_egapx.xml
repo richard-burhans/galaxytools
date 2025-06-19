@@ -214,10 +214,6 @@ $row
             <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
             <filter>developer['collect_star_bams']</filter>
         </collection>
-        <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
-            <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
-            <filter>developer['collect_star_bams']</filter>
-        </collection>
     </outputs>
     <tests>
         <test expect_num_outputs="20" expect_test_failure="true">
