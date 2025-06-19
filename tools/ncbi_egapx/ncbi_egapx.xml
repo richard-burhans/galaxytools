@@ -208,7 +208,7 @@ $row
             <data name="run_timeline" format="html" label="Nextflow execution timeline" from_work_dir="egapx_out/run.timeline.html"/>
             <data name="nextflow_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow.log"/>
             <data name="run_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/run.trace.txt"/>
-           <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
+            <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
         </collection>
         <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
             <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
