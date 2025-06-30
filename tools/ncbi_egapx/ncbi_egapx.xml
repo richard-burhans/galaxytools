@@ -20,23 +20,47 @@
             #set $genome_pathname = "genome_" + re.sub('[^\w\-\s]', '_', str($genome.fields.element_identifier)) + "." + $genome.fields.ext
             ln -s '$genome.fields.path' '$genome_pathname' &&
         #end if
-        #if $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
+        #if $cond_input_style.cond_short_reads_style.short_reads_style == "history"
             #import re
             mkdir -p reads &&
-            #for $idx, $read in enumerate($cond_input_style.cond_rnaseq_style.rnaseq)
+            #for $idx, $read in enumerate($cond_input_style.cond_short_reads_style.short_reads)
                 #if $read
                     #set $read_pathname = "reads/" + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
                     ln -s '$read' '$read_pathname' &&
                 #end if
             #end for
-            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_rnaseq_style.reads_lists)
-                #for $idx, $collection in enumerate($repeat_entry.rnaseq_single)
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_short_reads_style.reads_lists)
+                #for $idx, $collection in enumerate($repeat_entry.short_reads_single)
                     #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
                     ln -s '$collection' '$read_pathname' &&
                 #end for
             #end for
-            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_rnaseq_style.reads_paired_lists)
-                #for $idx, $collection in enumerate($repeat_entry.rnaseq_paired)
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_short_reads_style.reads_paired_lists)
+                #for $idx, $collection in enumerate($repeat_entry.short_reads_paired)
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + $re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
+                    ln -s '${collection.forward}' '$read_pathname' &&
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
+                    ln -s '${collection.reverse}' '$read_pathname' &&
+                #end for
+            #end for
+        #end if
+        #if $cond_input_style.cond_long_reads_style.long_reads_style == "history"
+            #import re
+            mkdir -p reads &&
+            #for $idx, $read in enumerate($cond_input_style.cond_long_reads_style.long_reads)
+                #if $read
+                    #set $read_pathname = "reads/" + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
+                    ln -s '$read' '$read_pathname' &&
+                #end if
+            #end for
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_long_reads_style.reads_lists)
+                #for $idx, $collection in enumerate($repeat_entry.long_reads_single)
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
+                    ln -s '$collection' '$read_pathname' &&
+                #end for
+            #end for
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_long_reads_style.reads_paired_lists)
+                #for $idx, $collection in enumerate($repeat_entry.long_reads_paired)
                     #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + $re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
                     ln -s '${collection.forward}' '$read_pathname' &&
                     #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
@@ -64,23 +88,47 @@
          <environment_variable name="NXF_DEBUG">3</environment_variable>
     </environment_variables>
     <configfiles>
-        <configfile name="reads_config"><![CDATA[#slurp
-        #if $cond_input_style.input_style == "fillform" and $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
+        <configfile name="short_reads_config"><![CDATA[#slurp
+        #if $cond_input_style.input_style == "fillform" and $cond_input_style.cond_short_reads_style.short_reads_style == "history"
             #import re
-            #for $idx, $read in enumerate($cond_input_style.cond_rnaseq_style.rnaseq)
+            #for $idx, $read in enumerate($cond_input_style.cond_short_reads_style.short_reads)
                 #if $read
                     #set $read_pathname = "reads/" + str($idx) + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
 ${idx}_${read.name} $read_pathname
                 #end if
             #end for
-            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_rnaseq_style.reads_lists)
-                #for $idx, $collection in enumerate($repeat_entry.rnaseq_single)
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_short_reads_style.reads_lists)
+                #for $idx, $collection in enumerate($repeat_entry.short_reads_single)
                     #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
 ${repeat_idx}${idx}_${collection.name} $read_pathname
                 #end for
             #end for
-            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_rnaseq_style.reads_paired_lists)
-                #for $idx, $collection in enumerate($repeat_entry.rnaseq_paired)
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_short_reads_style.reads_paired_lists)
+                #for $idx, $collection in enumerate($repeat_entry.short_reads_paired)
+                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
+                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
+${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_pathname
+                #end for
+            #end for
+        #end if
+        #silent pass]]></configfile>
+        <configfile name="long_reads_config"><![CDATA[#slurp
+        #if $cond_input_style.input_style == "fillform" and $cond_input_style.cond_long_reads_style.long_reads_style == "history"
+            #import re
+            #for $idx, $read in enumerate($cond_input_style.cond_long_reads_style.long_reads)
+                #if $read
+                    #set $read_pathname = "reads/" + str($idx) + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
+${idx}_${read.name} $read_pathname
+                #end if
+            #end for
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_long_reads_style.reads_lists)
+                #for $idx, $collection in enumerate($repeat_entry.long_reads_single)
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
+${repeat_idx}${idx}_${collection.name} $read_pathname
+                #end for
+            #end for
+            #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_long_reads_style.reads_paired_lists)
+                #for $idx, $collection in enumerate($repeat_entry.long_reads_paired)
                     #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
                     #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
 ${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_pathname
@@ -101,13 +149,22 @@ ${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_path
 # yaml generated by ncbi_egapx.xml
 genome: $genome_value
 taxid: $taxid
-            #if $cond_input_style.cond_rnaseq_style.rnaseq_style == "history"
-reads: $reads_config
+            #if $cond_input_style.cond_short_reads_style.short_reads_style == "history"
+short_reads: $short_reads_config
             #else
-reads:
-                #set reads_values = $rnaseq.split()
-                #for $read in [str(rv).strip() for rv in $reads_values]
-  - $read
+short_reads:
+                #set short_reads_values = $short_reads.split()
+                #for $short_read in [str(rv).strip() for rv in $short_reads_values]
+  - $short_read
+                #end for
+            #end if
+            #if $cond_input_style.cond_long_reads_style.long_reads_style == "history"
+long_reads: $long_reads_config
+            #else
+long_reads:
+                #set long_reads_values = $long_reads.split()
+                #for $long_read in [str(rv).strip() for rv in $long_reads_values]
+  - $long_read
                 #end for
             #end if
             #if str($cond_input_style.proteins) != "None"
@@ -151,22 +208,42 @@ $row
                     </when>
                 </conditional>
                 <param name="taxid" type="integer" min="0" value="0" label="NCBI Taxon ID" help="Used to identify the HMM model files needed"/>
-                <conditional name="cond_rnaseq_style">
-                    <param name="rnaseq_style" type="select" label="RNA sequence data source" help="Select RNAseq input data from history or input a list of SRA identifiers or remote URI">
-                        <option value="history" selected="True">Select one or more RNA-seq fastq datasets from the current history</option>
-                        <option value="list">Type in a list of SRA identifiers and/or remote RNA-seq FASTA URI</option>
+                <conditional name="cond_short_reads_style">
+                    <param name="short_reads_style" type="select" label="short RNA-seq sequence data source" help="Select short RNA-seq input data from history or input a list of SRA identifiers or remote URI">
+                        <option value="history" selected="True">Select one or more short RNA-seq fastq datasets from the current history</option>
+                        <option value="list">Type in a list of SRA identifiers and/or remote short RNA-seq FASTA URI</option>
                     </param>
                     <when value="history">
-                        <param name="rnaseq" type="data" format="fastqsanger,fastqsanger.gz" multiple="true" optional="true" label="Select multiple RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                        <param name="short_reads" type="data" format="fastqsanger,fastqsanger.gz" multiple="true" optional="true" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
                         <repeat name="reads_lists" title="Single-end reads" min="0">
-                            <param name="rnaseq_single" type="data_collection" format="fastqsanger,fastqsanger.gz" collection_type="list" label="Select multiple RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                            <param name="short_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz" collection_type="list" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
                         </repeat>
                         <repeat name="reads_paired_lists" title="Paired-end reads" min="0">
-                            <param name="rnaseq_paired" type="data_collection" format="fastqsanger,fastqsanger.gz" collection_type="list:paired" label="Select multiple RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                            <param name="short_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz" collection_type="list:paired" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
                         </repeat>
                     </when>
                     <when value="list">
-                        <param name="rnaseq" type="text" area="true" label="List all required individual RNA-seq URI or SRA identifiers, separated by spaces or newlines" help="Either a working URI for a RNA-seq FASTA, or a bare SRA identifier will work - can be mixed">
+                        <param name="short_reads" type="text" area="true" label="List all required individual short RNA-seq URI or SRA identifiers, separated by spaces or newlines" help="Either a working URI for a short RNA-seq FASTA, or a bare SRA identifier will work - can be mixed">
+                            <validator type="empty_field"/>
+                        </param>
+                    </when>
+                </conditional>
+                <conditional name="cond_long_reads_style">
+                    <param name="long_reads_style" type="select" label="long RNA-seq sequence data source" help="Select long RNA-seq input data from history or input a list of SRA identifiers or remote URI">
+                        <option value="history" selected="True">Select one or more long RNA-seq fastq datasets from the current history</option>
+                        <option value="list">Type in a list of SRA identifiers and/or remote long RNA-seq FASTA URI</option>
+                    </param>
+                    <when value="history">
+                        <param name="long_reads" type="data" format="fastqsanger,fastqsanger.gz" multiple="true" optional="true" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                        <repeat name="reads_lists" title="Single-end reads" min="0">
+                            <param name="long_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz" collection_type="list" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                        </repeat>
+                        <repeat name="reads_paired_lists" title="Paired-end reads" min="0">
+                            <param name="long_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz" collection_type="list:paired" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration"/>
+                        </repeat>
+                    </when>
+                    <when value="list">
+                        <param name="long_reads" type="text" area="true" label="List all required individual long RNA-seq URI or SRA identifiers, separated by spaces or newlines" help="Either a working URI for a long RNA-seq FASTA, or a bare SRA identifier will work - can be mixed">
                             <validator type="empty_field"/>
                         </param>
                     </when>
@@ -190,25 +267,29 @@ $row
     <outputs>
         <data name="complete_genomic_gff" format="gff" label="Final annotation for ${on_string}" from_work_dir="egapx_out/complete.genomic.gff"/>
         <collection name="output_files" type="list" label="EGAPx output for ${on_string}">
-            <data name="complete_genomic_gtf" format="gtf" label="Final annotation" from_work_dir="egapx_out/complete.genomic.gtf"/>
-            <data name="complete_genomic_fna" format="fasta" label="Full genome sequences" from_work_dir="egapx_out/complete.genomic.fna"/>
-            <data name="complete_cds" format="fasta" label="Annotated CDS" from_work_dir="egapx_out/complete.cds.fna"/>
-            <data name="complete_transcripts" format="fasta" label="Annotated transcripts" from_work_dir="egapx_out/complete.transcripts.fna"/>
-            <data name="complete_proteins" format="fasta" label="Annotated proteins" from_work_dir="egapx_out/complete.proteins.faa"/>
             <data name="annotated_genome" format="asn1" label="Final annotation" from_work_dir="egapx_out/annotated_genome.asn"/>
-            <data name="accept_ftable_annot" format="txt" label="Accepted annotation models" from_work_dir="egapx_out/annot_builder_output/accept.ftable_annot"/>
-            <data name="annotation_data_cmt" format="tabular" label="Structured Comment" from_work_dir="egapx_out/annotation_data.cmt"/>
+            <data name="annotation_data" format="tabular" label="Annotation structured comment" from_work_dir="egapx_out/annotation_data.cmt"/>
+            <data name="gnomon_accepted" format="txt" label="Gnomon accepted annotation models" from_work_dir="egapx_out/annot_builder_output/accept.ftable_annot"/>
+            <data name="complete_cds" format="fasta" label="Annotated CDS" from_work_dir="egapx_out/complete.cds.fna"/>
+            <data name="complete_genomic_fna" format="fasta" label="Full genome sequences" from_work_dir="egapx_out/complete.genomic.fna"/>
+            <data name="complete_genomic_gtf" format="gtf" label="Final annotation" from_work_dir="egapx_out/complete.genomic.gtf"/>
+            <data name="complete_proteins" format="fasta" label="Annotated protein products" from_work_dir="egapx_out/complete.proteins.faa"/>
+            <data name="complete_transcripts" format="fasta" label="Annotated transcripts" from_work_dir="egapx_out/complete.transcripts.fna"/>
+            <data name="gnomon_contam_report" format="tabular" label="Gnomon contamination report" from_work_dir="egapx_out/GNOMON/contam_rpt.tsv"/>
+            <data name="gnomon_quality_report" format="tabular" label="Gnomon quality report" from_work_dir="egapx_out/GNOMON/new.gnomon_quality_report.txt"/>
+            <data name="gnomon_report" format="txt" label="Gnomon report" from_work_dir="egapx_out/GNOMON/new.gnomon_report.txt"/>
+            <data name="sra_metadata" format="tabular" label="SRA run metadata" from_work_dir="egapx_out/sra_metadata.dat"/>
             <data name="feature_counts" format="xml" label="Feature counts" from_work_dir="egapx_out/stats/feature_counts.xml"/>
             <data name="feature_stats" format="xml" label="Feature stats" from_work_dir="egapx_out/stats/feature_stats.xml"/>
-            <data name="all_unannotated_val" format="xml" label="" from_work_dir="egapx_out/validated/all_unannotated.val"/>
-            <data name="genome_val" format="xml" label="" from_work_dir="egapx_out/validated/genome.val"/>
+            <data name="all_unannotated_val" format="xml" label="all_unannotated" from_work_dir="egapx_out/validated/all_unannotated.val"/>
+            <data name="genome_val" format="xml" label="all_unannotated" from_work_dir="egapx_out/validated/genome.val"/>
         </collection>
         <collection name="nextflow_stats" type="list" label="EGAPx nextflow stats for ${on_string}">
-            <data name="run_report" format="html" label="Nextflow execution report" from_work_dir="egapx_out/run.report.html"/>
-            <data name="run_timeline" format="html" label="Nextflow execution timeline" from_work_dir="egapx_out/run.timeline.html"/>
-            <data name="nextflow_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow.log"/>
-            <data name="run_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/run.trace.txt"/>
-            <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/run_params.yaml"/>
+            <data name="nextflow_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow/nextflow.log"/>
+            <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/nextflow/run_params.yaml"/>
+            <data name="run_report" format="html" label="Nextflow execution report" from_work_dir="egapx_out/nextflow/run.report.html"/>
+            <data name="run_timeline" format="html" label="Nextflow execution timeline" from_work_dir="egapx_out/nextflow/run.timeline.html"/>
+            <data name="run_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/nextflow/run.trace.txt"/>
         </collection>
         <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
             <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
@@ -224,9 +305,9 @@ $row
                     <param name="uri" value="https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz"/>
                 </conditional>
                 <param name="taxid" value="6954"/>
-                <conditional name="cond_rnaseq_style">
-                    <param name="rnaseq_style" value="list"/>
-                    <param name="rnaseq" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_2.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_2.gz"/>
+                <conditional name="cond_short_reads_style">
+                    <param name="short_reads_style" value="list"/>
+                    <param name="short_reads" value="https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572_2.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_1.gz https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248_2.gz"/>
                 </conditional>
             </conditional>
             <section name="developer">
@@ -292,7 +373,7 @@ input_D_farinae_small.yaml
 
   genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz
   taxid: 6954
-  reads:
+  short_reads:
     - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.1
     - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.2
     - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.1
@@ -304,7 +385,7 @@ input_Gavia_stellata.yaml
 ::
 
   genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/030/936/135/GCF_030936135.1_bGavSte3.hap2/GCF_030936135.1_bGavSte3.hap2_genomic.fna.gz
-  reads: txid37040[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession]
+  short_reads: txid37040[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession]
   taxid: 37040
 
 input_C_longicornis.yaml
@@ -312,7 +393,7 @@ input_C_longicornis.yaml
 ::
 
   genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/029//603/195/GCF_029603195.1_ASM2960319v2/GCF_029603195.1_ASM2960319v2_genomic.fna.gz
-  reads: txid2530218[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession]
+  short_reads: txid2530218[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession]
   taxid: 2530218
 
 Purpose
@@ -348,7 +429,7 @@ EGAPx has dependencies in and outside of its execution path that include several
 
 ::
 
-   reads:
+   short_reads:
      - SRR8506572
      - SRR9005248
 
@@ -357,7 +438,7 @@ EGAPx has dependencies in and outside of its execution path that include several
 
 ::
 
-  reads: 'txid6954[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession] AND (SRR8506572[Accession] OR SRR9005248[Accession] )'
+  short_reads: 'txid6954[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession] AND (SRR8506572[Accession] OR SRR9005248[Accession] )'
 
 
 **Note:** Both the above examples will have more RNA-seq data than the `input_D_farinae_small.yaml` example. To make sure the entrez query does not produce a large number of SRA runs, please run it first at the [NCBI SRA page](https://www.ncbi.nlm.nih.gov/sra). If there are too many SRA runs, then select a few of them and list it in the input yaml.

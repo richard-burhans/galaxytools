@@ -4,8 +4,8 @@
             <container type="docker">quay.io/galaxy/egapx:@TOOL_VERSION@-alpha</container>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">0.3.2</token>
-    <token name="@VERSION_SUFFIX@">10</token>
+    <token name="@TOOL_VERSION@">0.4.0</token>
+    <token name="@VERSION_SUFFIX@">0</token>
     <token name="@PROFILE@">23.0</token>
     <xml name="edam_ontology">
         <edam_operations>
@@ -39,12 +39,17 @@
             </assert_contents>
         </output>
         <output_collection name="output_files" type="list">
-            <element name="complete_genomic_gtf" ftype="gtf">
+            <element name="annotated_genome" ftype="asn1">
                 <assert_contents>
                     <has_size min="1"/>
                 </assert_contents>
             </element>
-            <element name="complete_genomic_fna" ftype="fasta">
+            <element name="annotation_data" ftype="tabular">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </element>
+            <element name="gnomon_accepted" ftype="txt">
                 <assert_contents>
                     <has_size min="1"/>
                 </assert_contents>
@@ -54,7 +59,12 @@
                     <has_size min="1"/>
                 </assert_contents>
             </element>
-            <element name="complete_transcripts" ftype="fasta">
+            <element name="complete_genomic_fna" ftype="fasta">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </element>
+            <element name="complete_genomic_gtf" ftype="gtf">
                 <assert_contents>
                     <has_size min="1"/>
                 </assert_contents>
@@ -64,17 +74,27 @@
                     <has_size min="1"/>
                 </assert_contents>
             </element>
-            <element name="annotated_genome" ftype="asn1">
+            <element name="complete_transcripts" ftype="fasta">
                 <assert_contents>
                     <has_size min="1"/>
                 </assert_contents>
             </element>
-            <element name="accept_ftable_annot" ftype="txt">
+            <element name="gnomon_contam_report" ftype="fasta">
                 <assert_contents>
                     <has_size min="1"/>
                 </assert_contents>
             </element>
-            <element name="annotation_data_cmt" ftype="tabular">
+            <element name="gnomon_quality_report" ftype="fasta">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </element>
+            <element name="gnomon_report" ftype="txt">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </element>
+            <element name="sra_metadata" ftype="binary">
                 <assert_contents>
                     <has_size min="1"/>
                 </assert_contents>
@@ -89,6 +109,11 @@
                     <is_valid_xml/>
                 </assert_contents>
             </element>
+            <element name="all_unannotated_val" ftype="xml">
+                <assert_contents>
+                    <is_valid_xml/>
+                </assert_contents>
+            </element>
             <element name="genome_val" ftype="xml">
                 <assert_contents>
                     <is_valid_xml/>
@@ -96,6 +121,16 @@
             </element>
         </output_collection>
         <output_collection name="nextflow_stats" type="list">
+            <element name="nextflow_log" ftype="txt">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </element>
+            <element name="run_params" ftype="yaml">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </element>
             <element name="run_report" ftype="html">
                 <assert_contents>
                     <has_size min="1"/>
@@ -106,17 +141,7 @@
                     <has_size min="1"/>
                 </assert_contents>
             </element>
-            <element name="nextflow_log" ftype="txt">
-                <assert_contents>
-                    <has_size min="1"/>
-                </assert_contents>
-            </element>
             <element name="run_trace" ftype="tabular">
-                <assert_contents>
-                    <has_size min="1"/>
-                </assert_contents>
-            </element>
-            <element name="run_params" ftype="yaml">
                 <assert_contents>
                     <has_size min="1"/>
                 </assert_contents>
