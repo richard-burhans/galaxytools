@@ -30,7 +30,7 @@
     #for $input in $mangled_inputs
         '$input'
     #end for
-	#if $expected_gsize
+	#if int($expected_gsize) != 0
 		'$expected_gsize'
 	#end if
 	#if $input_filter.include_list
@@ -87,7 +87,7 @@
 	]]></command>
     <inputs>
         <param argument="--input-reads" type="data" format="bam,cram,fasta,fasta.gz,fastq,fastq.gz" multiple="true" label="Input dataset" help="BAM, CRAM, FASTA, FASTQ, or RD files"/>
-        <param name="expected_gsize" type="integer" label="Expected Genome Size" optional="true" help="Integer (e.g., 3000000000 for human)."/>
+        <param name="expected_gsize" type="integer" min="0" value="0" optional="true" label="Expected Genome Size" help="Integer (e.g., 3000000000 for human)."/>
         <section name="input_filter" title="Filter input reads" expanded="false">
             <param argument="--include-list" type="data" format="txt" optional="true" label="File containing headers to include"/>
             <param argument="--exclude-list" type="data" format="txt" optional="true" label="File containing headers to exclude"/>
