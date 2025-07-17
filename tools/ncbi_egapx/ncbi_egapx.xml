@@ -268,28 +268,30 @@ $row
         <data name="complete_genomic_gff" format="gff" label="Final annotation for ${on_string}" from_work_dir="egapx_out/complete.genomic.gff"/>
         <collection name="output_files" type="list" label="EGAPx output for ${on_string}">
             <data name="annotated_genome" format="asn1" label="Final annotation" from_work_dir="egapx_out/annotated_genome.asn"/>
-            <data name="annotation_data" format="tabular" label="Annotation structured comment" from_work_dir="egapx_out/annotation_data.cmt"/>
-            <data name="gnomon_accepted" format="txt" label="Gnomon accepted annotation models" from_work_dir="egapx_out/annot_builder_output/accept.ftable_annot"/>
-            <data name="complete_cds" format="fasta" label="Annotated CDS" from_work_dir="egapx_out/complete.cds.fna"/>
-            <data name="complete_genomic_fna" format="fasta" label="Full genome sequences" from_work_dir="egapx_out/complete.genomic.fna"/>
             <data name="complete_genomic_gtf" format="gtf" label="Final annotation" from_work_dir="egapx_out/complete.genomic.gtf"/>
-            <data name="complete_proteins" format="fasta" label="Annotated protein products" from_work_dir="egapx_out/complete.proteins.faa"/>
+            <data name="complete_genomic_fna" format="fasta" label="Full genome sequences" from_work_dir="egapx_out/complete.genomic.fna"/>
+            <data name="complete_cds" format="fasta" label="Annotated CDS" from_work_dir="egapx_out/complete.cds.fna"/>
             <data name="complete_transcripts" format="fasta" label="Annotated transcripts" from_work_dir="egapx_out/complete.transcripts.fna"/>
-            <data name="gnomon_contam_report" format="tabular" label="Gnomon contamination report" from_work_dir="egapx_out/GNOMON/contam_rpt.tsv"/>
-            <data name="gnomon_quality_report" format="tabular" label="Gnomon quality report" from_work_dir="egapx_out/GNOMON/new.gnomon_quality_report.txt"/>
-            <data name="gnomon_report" format="txt" label="Gnomon report" from_work_dir="egapx_out/GNOMON/new.gnomon_report.txt"/>
+            <data name="complete_proteins" format="fasta" label="Annotated protein products" from_work_dir="egapx_out/complete.proteins.faa"/>
+            <data name="annotation_data" format="tabular" label="Annotation structured comment" from_work_dir="egapx_out/annotation_data.cmt"/>
             <data name="sra_metadata" format="tabular" label="SRA run metadata" from_work_dir="egapx_out/sra_metadata.dat"/>
-            <data name="feature_counts" format="xml" label="Feature counts" from_work_dir="egapx_out/stats/feature_counts.xml"/>
-            <data name="feature_stats" format="xml" label="Feature stats" from_work_dir="egapx_out/stats/feature_stats.xml"/>
-            <data name="all_unannotated_val" format="xml" label="all_unannotated" from_work_dir="egapx_out/validated/all_unannotated.val"/>
-            <data name="genome_val" format="xml" label="all_unannotated" from_work_dir="egapx_out/validated/genome.val"/>
+            <data name="gnomon_accept_ftable_annot" format="txt" label="Gnomon accepted annotation models" from_work_dir="egapx_out/annot_builder_output/accept.ftable_annot"/>
+            <data name="gnomon_contam_rpt" format="tabular" label="Gnomon contamination report" from_work_dir="egapx_out/GNOMON/contam_rpt.tsv"/>
+            <data name="gnomon_report" format="txt" label="Gnomon report" from_work_dir="egapx_out/GNOMON/new.gnomon_report.txt"/>
+            <data name="gnomon_quality_report" format="tabular" label="Gnomon quality report" from_work_dir="egapx_out/GNOMON/new.gnomon_quality_report.txt"/>
+            <data name="busco_report" format="txt" label="BUSCO report" from_work_dir="egapx_out/busco/short_summary*.txt"/>
+            <data name="busco_report_json" format="json" label="BUSCO report (json)" from_work_dir="egapx_out/busco/short_summary*.json"/>
+            <data name="stats_feature_counts" format="xml" label="Feature counts" from_work_dir="egapx_out/stats/feature_counts.xml"/>
+            <data name="stats_feature_stats" format="xml" label="Feature stats" from_work_dir="egapx_out/stats/feature_stats.xml"/>
+            <data name="validated_all_unannotated" format="xml" label="validation all_unannotated" from_work_dir="egapx_out/validated/all_unannotated.val"/>
+            <data name="validated_genome" format="xml" label="valudation genome" from_work_dir="egapx_out/validated/genome.val"/>
         </collection>
         <collection name="nextflow_stats" type="list" label="EGAPx nextflow stats for ${on_string}">
             <data name="nextflow_log" format="txt" label="Nextflow execution log" from_work_dir="egapx_out/nextflow/nextflow.log"/>
-            <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/nextflow/run_params.yaml"/>
             <data name="run_report" format="html" label="Nextflow execution report" from_work_dir="egapx_out/nextflow/run.report.html"/>
             <data name="run_timeline" format="html" label="Nextflow execution timeline" from_work_dir="egapx_out/nextflow/run.timeline.html"/>
             <data name="run_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/nextflow/run.trace.txt"/>
+            <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/nextflow/run_params.yaml"/>
         </collection>
         <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
             <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
@@ -297,7 +299,7 @@ $row
         </collection>
     </outputs>
     <tests>
-        <test expect_num_outputs="20" expect_test_failure="true">
+        <test expect_num_outputs="27" expect_test_failure="true">
             <conditional name="cond_input_style">
                 <param name="input_style" value="fillform"/>
                 <conditional name="cond_genome_style">
@@ -315,7 +317,7 @@ $row
             </section>
             <expand macro="test_outputs"/>
         </test>
-        <test expect_num_outputs="21" expect_test_failure="true">
+        <test expect_num_outputs="27" expect_test_failure="true">
             <conditional name="cond_input_style">
                 <param name="input_style" value="history"/>
                 <param name="yamlin" value="input.yaml"/>
