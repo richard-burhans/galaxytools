@@ -77,7 +77,11 @@
     source /galaxy/env.bash &&
     python3 /galaxy/scripts/galaxy-resource-config.py &&
     ## run EGAPx
-    python3 /galaxy/egapx/ui/egapx.py '$yamlconfig' -e galaxy -o 'egapx_out' &&
+    python3 /galaxy/egapx/ui/egapx.py
+    #if $developer.query_limit.query_limit_selector == "false"
+        --force
+    #end if
+    '$yamlconfig' -e galaxy -o 'egapx_out' &&
     ## hack to support 0.2-alpha
     if [ -e egapx_out/accept.gff ]; then ln -s accept.gff egapx_out/complete.genomic.gff; fi
     #if $developer.collect_star_bams
@@ -86,6 +90,7 @@
     ]]></command>
     <environment_variables>
          <environment_variable name="NXF_DEBUG">3</environment_variable>
+         <environment_variable name="EGAPX_RNASEQ_QUERY_LIMIT">$getVar('developer.query_limit.rnaseq_query_limit', '20')</environment_variable>
     </environment_variables>
     <configfiles>
         <configfile name="short_reads_config"><![CDATA[#slurp
@@ -262,6 +267,16 @@ $row
         </conditional>
         <section name="developer" title="Developer options" expanded="false">
             <param name="collect_star_bams" type="boolean" checked="false" label="Collect BAM output from STAR"/>
+            <conditional name="query_limit">
+                <param name="query_limit_selector" type="select" label="Enforce SRA query limit">
+                    <option value="true" selected="True">Yes</option>
+                    <option value="false">No</option>
+                </param>
+                <when value="true">
+                    <param name="rnaseq_query_limit" type="integer" min="0" value="20" label="SRA query limit"/>
+                </when>
+                <when value="false"/>
+            </conditional>
         </section>
     </inputs>
     <outputs>
@@ -314,6 +329,10 @@ $row
             </conditional>
             <section name="developer">
                 <param name="collect_star_bams" value="true"/>
+                <conditional name="query_limit">
+                    <param name="query_limit_selector" value="true"/>
+                    <param name="rnaseq_query_limit" value="20"/>
+                </conditional>
             </section>
             <expand macro="test_outputs"/>
         </test>
@@ -324,6 +343,10 @@ $row
             </conditional>
             <section name="developer">
                 <param name="collect_star_bams" value="true"/>
+                <conditional name="query_limit">
+                    <param name="query_limit_selector" value="true"/>
+                    <param name="rnaseq_query_limit" value="20"/>
+                </conditional>
             </section>
             <expand macro="test_outputs"/>
         </test>
