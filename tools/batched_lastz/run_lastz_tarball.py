@@ -2,6 +2,8 @@
 
 import argparse
 import concurrent.futures
+import contextlib
+import gzip
 import json
 import multiprocessing
 import os
@@ -14,6 +16,16 @@ import tarfile
 import tempfile
 import time
 import typing
+
+
+@contextlib.contextmanager
+def open_file(filename: str):
+    if filename.endswith(".gz"):
+        with gzip.open(filename, "wt", compresslevel=6) as f:
+            yield f
+    else:
+        with open(filename, "w") as f:
+            yield f
 
 
 lastz_output_format_regex = re.compile(
@@ -214,7 +226,7 @@ class BatchTar:
         except FileNotFoundError:
             sys.exit(f"ERROR: input tarball missing galaxy/format.txt: {self.pathname}")
 
-        if format_name in ["bam", "maf"]:
+        if format_name in ["axt", "bam", "maf"]:
             self.format_name = format_name
         elif format_name == "differences":
             self.format_name = "interval"
@@ -341,10 +353,12 @@ class TarRunner:
             sys.exit(f"ERROR: expecting a single output file, found {num_output_files}")
 
         final_output_format = self.batch_tar.final_output_format()
+        if final_output_format in ["axt", "maf"]:
+            final_output_format = f"{final_output_format}.gz"
 
         for file_type, file_list in self.output_files.items():
-            with open(f"output.{final_output_format}", "w") as ofh:
-                if final_output_format == "maf":
+            with open_file(f"output.{final_output_format}") as ofh:
+                if final_output_format == "maf.gz":
                     print("##maf version=1", file=ofh)
 
                 for filename in file_list:
