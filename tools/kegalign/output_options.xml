@@ -8,6 +8,7 @@
                     <option value="general_full">Customized general (--format=general[:fields])</option>
                     <option value="maf" selected="true">MAF (--format=maf)</option>
                     <option value="axt">axt (--format=axt)</option>
+                    <option value="lav">lav (--format=lav)</option>
                     <option value="blastn">blastn (--format=BLASTN)</option>
                     <option value="differences">Differences (--format=differences)</option>
                 </param>
@@ -88,6 +89,12 @@
                     <param name="axt_type" type="select" display="radio" argument="--format=axt" label="Select axt flavor" help="axt is a pairwise alignment format popular at UCSC and PSU">
                         <option value="axt" selected="true">axt</option>
                         <option value="axt+">axt with additional stats (axt+)</option>
+                    </param>
+                </when>
+                <when value="lav">
+                    <param name="lav_type" type="select" display="radio" argument="--format=lav" label="Select lav flavor" help="LAV is a compact alignment format defined by BLASTZ">
+                        <option value="lav" selected="true">lav</option>
+                        <option value="lav+text">lav with additional textual output for each alignment block (lav+text)</option>
                     </param>
                 </when>
                 <when value="blastn">
