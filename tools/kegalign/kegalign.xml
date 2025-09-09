@@ -100,6 +100,8 @@ python '$__tool_directory__/runner.py'
     --format '$output_options.format.maf_type'
 #else if str($output_options.format.format_selector) == "axt"
     --format '$output_options.format.axt_type'
+#else if str($output_options.format.format_selector) == "lav"
+    --format '$output_options.format.lav_type'
 #else if str($output_options.format.format_selector) == "blastn"
     --format=BLASTN-
 #else if str($output_options.format.format_selector) == "differences"
