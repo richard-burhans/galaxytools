@@ -12,9 +12,15 @@
             '--input=$input'
             '--output=$output'
             --parallel=\${GALAXY_SLOTS:-2}
+        #if $developer.debug_enabled
+            --debug
+        #end if
     ]]></command>
     <inputs>
         <param argument="--input" type="data" format="tgz" label="Tarball"/>
+        <section name="developer" title="Developer options" expanded="false">
+            <param name="debug_enabled" type="boolean" checked="false" label="Print debug messages"/>
+        </section>
     </inputs>
     <outputs>
         <data name="output" label="Batched LASTZ on ${on_string}" format="auto" />

@@ -226,10 +226,23 @@ class BatchTar:
         except FileNotFoundError:
             sys.exit(f"ERROR: input tarball missing galaxy/format.txt: {self.pathname}")
 
-        if format_name in ["axt", "bam", "maf"]:
-            self.format_name = format_name
-        elif format_name == "differences":
-            self.format_name = "interval"
+        format_map = {
+            "axt": "axt",
+            "axt+": "axt",
+            "cigar": "cigar",
+            "differences": "interval",
+            "lav": "lav",
+            "lav+text": "lav",
+            "maf": "maf",
+            "maf+": "maf",
+            "maf-": "maf",
+            "sam": "sam",
+            "sam-": "sam",
+            "softsam": "sam",
+            "softsam-": "sam"
+        }
+
+        self.format_name = format_map.get(format_name, "tabular")
 
 
 class TarRunner:
@@ -336,6 +349,8 @@ class TarRunner:
             while not output_queue.empty():
                 run_time = output_queue.get()
                 run_times.append(run_time)
+                if self.debug:
+                    print(f"lastz took {run_time}", file=sys.stderr, flush=True)
 
             if found_falures:
                 sys.exit("lastz command failed")
