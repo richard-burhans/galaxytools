@@ -255,19 +255,8 @@ class bashCommandLineFile:
         return command_dict
 
     def _write_format(self) -> None:
-        if self.args.format_selector == "bam":
-            format_name = "bam"
-        elif self.args.format_selector == "maf":
-            format_name = "maf"
-        elif self.args.format_selector == "differences":
-            format_name = "interval"
-        elif self.args.format_selector in ["axt", "axtplus"]:
-            format_name = "axt"
-        else:
-            format_name = "tabular"
-
         with open("format.txt", "w") as ofh:
-            print(f"{format_name}", file=ofh)
+            print(f"{self.args.format_selector}", file=ofh)
 
         self.package_file.add_format("format.txt")
 
