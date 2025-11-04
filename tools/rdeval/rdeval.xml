@@ -80,7 +80,9 @@
     #else if $output_type == "combined_reads"
         -o 'output.${output_options.output_type.format_selector}'
     #end if
+	#if $output_options.verbose
 		--verbose
+	#end if
 		--tabular
 		--threads \${GALAXY_SLOTS:-2}
 		> '$stats_outfile'
@@ -164,6 +166,7 @@
             </when>
         </conditional>
         <section name="output_options" title="Output options">
+            <param argument="--verbose" type="boolean" checked="false" label="Verbose output" help="Enable verbose logging"/>
             <conditional name="stats_flavor">
                 <param name="flavor_selector" type="select" label="Stats output">
                     <option value="stats" selected="true">Stats</option>
