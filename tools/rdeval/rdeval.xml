@@ -266,12 +266,48 @@
                 </assert_contents>
             </output>
         </test>
+        <test expect_num_outputs="2">
+            <param name="input_reads">
+                <collection type="list">
+                    <element name="sample1" value="input1.fastq.gz" ftype="fastq.gz"/>
+                    <element name="sample2" value="input2.fastq.gz" ftype="fastq.gz"/>
+                </collection>
+            </param>
+            <output_collection name="stats_outfile" type="list" count="2">
+                <element name="sample1">
+                    <assert_contents>
+                        <has_text text="input1"/>
+                        <has_n_columns n="10"/>
+                    </assert_contents>
+                </element>
+                <element name="sample2">
+                    <assert_contents>
+                        <has_text text="input2"/>
+                        <has_n_columns n="10"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+            <output_collection name="rd_outfile" type="list" count="2">
+                <element name="sample1" ftype="binary">
+                    <assert_contents>
+                        <has_size size="119" delta="1"/>
+                    </assert_contents>
+                </element>
+                <element name="sample2" ftype="binary">
+                    <assert_contents>
+                        <has_size size="119" delta="1"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
     </tests>
     <help><![CDATA[
 What it does
 ============
 
-**rdeval** accepts an arbitrary number of sequencing files and optionally **filters**, **subsamples**, and/or **compresses homopolymers** within the reads. The retained reads can be saved in multiple formats, and metrics on these reads can be stored in a '*sketch*' file. Statistics can then be efficiently retrieved from these sketch files for further processing.
+**rdeval** processes sequencing files and optionally **filters**, **subsamples**, and/or **compresses homopolymers** within the reads. The retained reads can be saved in multiple formats, and metrics on these reads can be stored in a '*sketch*' file. Statistics can then be efficiently retrieved from these sketch files for further processing.
+
+When provided with a collection of files, this tool processes each file individually and produces corresponding output collections. This allows for efficient parallel processing of multiple samples while maintaining individual file tracking and error handling.
 
 .. image:: pipeline.svg
    :alt: pipeline diagram
