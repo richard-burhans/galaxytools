@@ -6,30 +6,23 @@
     <expand macro="requirements"/>
     <command detect_errors="exit_code"><![CDATA[
     #import re
-    #set $mangled_inputs = []
-    #for $input in $input_reads
-        #set $mangled_base = re.sub(r"[^\w\-\s]", "_", str($input.element_identifier))
-        #set $input_ext = str($input.ext).lower()
-        #if $input_ext.startswith("fastq")
-            #if $input_ext.endswith(".gz")
-                #set $mangled_ext = "fastq.gz"
-            #else
-                #set $mangled_ext = "fastq"
-            #end if
+    #set $mangled_base = re.sub(r"[^\w\-\s]", "_", str($input_reads.element_identifier))
+    #set $input_ext = str($input_reads.ext).lower()
+    #if $input_ext.startswith("fastq")
+        #if $input_ext.endswith(".gz")
+            #set $mangled_ext = "fastq.gz"
         #else
-            #set $mangled_ext = $input_ext
+            #set $mangled_ext = "fastq"
         #end if
-        #set $mangled_input = $mangled_base + "." + $mangled_ext
-        #silent $mangled_inputs.append($mangled_input)
-        ln -s '$input' '$mangled_input' &&
-    #end for
-    #if $output_options.output_type.type_selector == "combined_reads"
-        ln -s '$reads_outfile' 'output.${output_type.format_selector}' &&
+    #else
+        #set $mangled_ext = $input_ext
     #end if
-	rdeval --input-reads
-    #for $input in $mangled_inputs
-        '$input'
-    #end for
+    #set $mangled_input = $mangled_base + "." + $mangled_ext
+    ln -s '$input_reads' '$mangled_input' &&
+    #if $output_options.output_type.type_selector == "combined_reads"
+        ln -s '$reads_outfile' 'output.${output_options.output_type.format_selector}' &&
+    #end if
+	rdeval --input-reads '$mangled_input'
 	#if int($expected_gsize) != 0
 		'$expected_gsize'
 	#end if
@@ -86,7 +79,7 @@
 		> '$stats_outfile'
 	]]></command>
     <inputs>
-        <param argument="--input-reads" type="data" format="bam,cram,fasta,fasta.gz,fastq,fastq.gz" multiple="true" label="Input dataset" help="BAM, CRAM, FASTA, FASTQ, or RD files"/>
+        <param argument="--input-reads" type="data" format="bam,cram,fasta,fasta.gz,fastq,fastq.gz" label="Input dataset" help="BAM, CRAM, FASTA, FASTQ, or RD files"/>
         <param name="expected_gsize" type="integer" min="0" value="0" optional="true" label="Expected Genome Size" help="Integer (e.g., 3000000000 for human)."/>
         <section name="input_filter" title="Filter input reads" expanded="false">
             <param argument="--include-list" type="data" format="txt" optional="true" label="File containing headers to include"/>
