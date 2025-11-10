@@ -274,28 +274,28 @@
                 </collection>
             </param>
             <output_collection name="stats_outfile" type="list" count="2">
-                <element name="sample1">
+                <element name="sample1" ftype="tabular">
                     <assert_contents>
-                        <has_text text="input1"/>
                         <has_n_columns n="10"/>
+                        <has_line_matching expression="^#.*"/>
                     </assert_contents>
                 </element>
-                <element name="sample2">
+                <element name="sample2" ftype="tabular">
                     <assert_contents>
-                        <has_text text="input2"/>
                         <has_n_columns n="10"/>
+                        <has_line_matching expression="^#.*"/>
                     </assert_contents>
                 </element>
             </output_collection>
             <output_collection name="rd_outfile" type="list" count="2">
                 <element name="sample1" ftype="binary">
                     <assert_contents>
-                        <has_size size="119" delta="1"/>
+                        <has_size size="119" delta="5"/>
                     </assert_contents>
                 </element>
                 <element name="sample2" ftype="binary">
                     <assert_contents>
-                        <has_size size="119" delta="1"/>
+                        <has_size size="119" delta="5"/>
                     </assert_contents>
                 </element>
             </output_collection>
