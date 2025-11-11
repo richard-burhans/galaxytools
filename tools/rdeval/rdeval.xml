@@ -267,38 +267,18 @@
             </output>
         </test>
         <test expect_num_outputs="2">
-            <param name="input_reads">
-                <collection type="list">
-                    <element name="sample1" value="input1.fastq.gz" ftype="fastq.gz"/>
-                    <element name="sample2" value="input2.fastq.gz" ftype="fastq.gz"/>
-                </collection>
-            </param>
-            <output_collection name="stats_outfile" type="list" count="2">
-                <element name="sample1" ftype="tabular">
-                    <assert_contents>
-                        <has_n_columns n="10"/>
-                        <has_line_matching expression="^#.*"/>
-                    </assert_contents>
-                </element>
-                <element name="sample2" ftype="tabular">
-                    <assert_contents>
-                        <has_n_columns n="10"/>
-                        <has_line_matching expression="^#.*"/>
-                    </assert_contents>
-                </element>
-            </output_collection>
-            <output_collection name="rd_outfile" type="list" count="2">
-                <element name="sample1" ftype="binary">
-                    <assert_contents>
-                        <has_size size="119" delta="5"/>
-                    </assert_contents>
-                </element>
-                <element name="sample2" ftype="binary">
-                    <assert_contents>
-                        <has_size size="119" delta="5"/>
-                    </assert_contents>
-                </element>
-            </output_collection>
+            <param name="input_reads" value="input2.fastq.gz" ftype="fastq.gz"/>
+            <output name="stats_outfile" ftype="tabular">
+                <assert_contents>
+                    <has_line_matching expression="^# reads\t5$"/>
+                    <has_line_matching expression="^Average read length\t10\.00$"/>
+                </assert_contents>
+            </output>
+            <output name="rd_outfile" ftype="binary">
+                <assert_contents>
+                    <has_size size="119" delta="5"/>
+                </assert_contents>
+            </output>
         </test>
     </tests>
     <help><![CDATA[
