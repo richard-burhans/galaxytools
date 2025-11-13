@@ -6,30 +6,23 @@
     <expand macro="requirements"/>
     <command detect_errors="exit_code"><![CDATA[
     #import re
-    #set $mangled_inputs = []
-    #for $input in $input_reads
-        #set $mangled_base = re.sub(r"[^\w\-\s]", "_", str($input.element_identifier))
-        #set $input_ext = str($input.ext).lower()
-        #if $input_ext.startswith("fastq")
-            #if $input_ext.endswith(".gz")
-                #set $mangled_ext = "fastq.gz"
-            #else
-                #set $mangled_ext = "fastq"
-            #end if
+    #set $mangled_base = re.sub(r"[^\w\-\s]", "_", str($input_reads.element_identifier))
+    #set $input_ext = str($input_reads.ext).lower()
+    #if $input_ext.startswith("fastq")
+        #if $input_ext.endswith(".gz")
+            #set $mangled_ext = "fastq.gz"
         #else
-            #set $mangled_ext = $input_ext
+            #set $mangled_ext = "fastq"
         #end if
-        #set $mangled_input = $mangled_base + "." + $mangled_ext
-        #silent $mangled_inputs.append($mangled_input)
-        ln -s '$input' '$mangled_input' &&
-    #end for
-    #if $output_options.output_type.type_selector == "combined_reads"
-        ln -s '$reads_outfile' 'output.${output_type.format_selector}' &&
+    #else
+        #set $mangled_ext = $input_ext
     #end if
-	rdeval --input-reads
-    #for $input in $mangled_inputs
-        '$input'
-    #end for
+    #set $mangled_input = $mangled_base + "." + $mangled_ext
+    ln -s '$input_reads' '$mangled_input' &&
+    #if $output_options.output_type.type_selector == "combined_reads"
+        ln -s '$reads_outfile' 'output.${output_options.output_type.format_selector}' &&
+    #end if
+	rdeval --input-reads '$mangled_input'
 	#if int($expected_gsize) != 0
 		'$expected_gsize'
 	#end if
@@ -88,7 +81,7 @@
 		> '$stats_outfile'
 	]]></command>
     <inputs>
-        <param argument="--input-reads" type="data" format="bam,cram,fasta,fasta.gz,fastq,fastq.gz" multiple="true" label="Input dataset" help="BAM, CRAM, FASTA, FASTQ, or RD files"/>
+        <param argument="--input-reads" type="data" format="bam,cram,fasta,fasta.gz,fastq,fastq.gz" label="Input dataset" help="BAM, CRAM, FASTA, FASTQ, or RD files"/>
         <param name="expected_gsize" type="integer" min="0" value="0" optional="true" label="Expected Genome Size" help="Integer (e.g., 3000000000 for human)."/>
         <section name="input_filter" title="Filter input reads" expanded="false">
             <param argument="--include-list" type="data" format="txt" optional="true" label="File containing headers to include"/>
@@ -273,12 +266,28 @@
                 </assert_contents>
             </output>
         </test>
+        <test expect_num_outputs="2">
+            <param name="input_reads" value="input2.fastq.gz" ftype="fastq.gz"/>
+            <output name="stats_outfile" ftype="tabular">
+                <assert_contents>
+                    <has_line_matching expression="^# reads\t5$"/>
+                    <has_line_matching expression="^Average read length\t10\.00$"/>
+                </assert_contents>
+            </output>
+            <output name="rd_outfile" ftype="binary">
+                <assert_contents>
+                    <has_size size="119" delta="5"/>
+                </assert_contents>
+            </output>
+        </test>
     </tests>
     <help><![CDATA[
 What it does
 ============
 
-**rdeval** accepts an arbitrary number of sequencing files and optionally **filters**, **subsamples**, and/or **compresses homopolymers** within the reads. The retained reads can be saved in multiple formats, and metrics on these reads can be stored in a '*sketch*' file. Statistics can then be efficiently retrieved from these sketch files for further processing.
+**rdeval** processes sequencing files and optionally **filters**, **subsamples**, and/or **compresses homopolymers** within the reads. The retained reads can be saved in multiple formats, and metrics on these reads can be stored in a '*sketch*' file. Statistics can then be efficiently retrieved from these sketch files for further processing.
+
+When provided with a collection of files, this tool processes each file individually and produces corresponding output collections. This allows for efficient parallel processing of multiple samples while maintaining individual file tracking and error handling.
 
 .. image:: pipeline.svg
    :alt: pipeline diagram
