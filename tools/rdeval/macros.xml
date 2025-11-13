@@ -5,7 +5,7 @@
         </requirements>
     </xml>
     <token name="@TOOL_VERSION@">0.0.7</token>
-    <token name="@VERSION_SUFFIX@">6</token>
+    <token name="@VERSION_SUFFIX@">7</token>
     <token name="@PROFILE@">23.02</token>
     <xml name="citations">
         <citations>
