@@ -277,6 +277,7 @@ $row
                 </when>
                 <when value="false"/>
             </conditional>
+            <param label="Gigabase pairs" name="gigabase_pairs" type="integer" size="3" min="1" max="8" value="1" help="Approximate gigabase pair count for scheduling hints" />
         </section>
     </inputs>
     <outputs>
