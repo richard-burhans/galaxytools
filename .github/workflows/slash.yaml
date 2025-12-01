@@ -11,5 +11,6 @@ jobs:
         uses: peter-evans/slash-command-dispatch@v5
         with:
           token: ${{ secrets.PAT }}
+          comment-id: ${{ github.event.client_payload.github.payload.comment.id }}
           commands: |
             run-all-tool-tests
