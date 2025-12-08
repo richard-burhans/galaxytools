@@ -34,13 +34,15 @@
     #end if
     #set $filter_exp_type = $input_filter.filter_expression.filter_selector
     #if $filter_exp_type != "no_exp"
-        #set $l_exp = "l" + str($input_filter.filter_expression.length_comparison) + str($input_filter.filter_expression.length_value)
-        #set $q_exp = "q" + str($input_filter.filter_expression.quality_comparison) + str($input_filter.filter_expression.quality_value)
         #if $filter_exp_type == "l_exp"
+            #set $l_exp = "l" + str($input_filter.filter_expression.length_comparison) + str($input_filter.filter_expression.length_value)
             #set $filter_exp = $l_exp
         #else if $filter_exp_type == "q_exp"
+            #set $q_exp = "q" + str($input_filter.filter_expression.quality_comparison) + str($input_filter.filter_expression.quality_value)
             #set $filter_exp = $q_exp
         #else if $filter_exp_type == "lq_exp"
+            #set $q_exp = "q" + str($input_filter.filter_expression.quality_comparison) + str($input_filter.filter_expression.quality_value)
+            #set $l_exp = "l" + str($input_filter.filter_expression.length_comparison) + str($input_filter.filter_expression.length_value)
             #set $filter_exp = $l_exp + str($input_filter.filter_expression.exp_operator) + $q_exp
         #end if
         --filter '$filter_exp'
