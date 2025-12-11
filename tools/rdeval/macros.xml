@@ -4,8 +4,15 @@
             <requirement type="package" version="@TOOL_VERSION@">rdeval</requirement>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">0.0.7</token>
-    <token name="@VERSION_SUFFIX@">8</token>
+    <xml name="requirements_report">
+        <requirements>
+            <requirement type="package" version="@TOOL_VERSION@">rdeval</requirement>
+            <requirement type="package" version="1.2.0">r-cowplot</requirement>
+            <requirement type="package" version="2.30">r-rmarkdown</requirement>
+        </requirements>
+    </xml>
+    <token name="@TOOL_VERSION@">0.0.8</token>
+    <token name="@VERSION_SUFFIX@">0</token>
     <token name="@PROFILE@">23.02</token>
     <xml name="citations">
         <citations>
