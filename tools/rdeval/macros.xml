@@ -9,6 +9,7 @@
             <requirement type="package" version="@TOOL_VERSION@">rdeval</requirement>
             <requirement type="package" version="1.2.0">r-cowplot</requirement>
             <requirement type="package" version="2.30">r-rmarkdown</requirement>
+            <requirement type="package" version="0.5.2">r-ggnewscale</requirement>
         </requirements>
     </xml>
     <token name="@TOOL_VERSION@">0.0.8</token>
