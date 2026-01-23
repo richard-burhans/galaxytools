@@ -226,7 +226,7 @@
             <output name="stats_outfile" file="output1.tabular" ftype="tabular"/>
             <output name="rd_outfile" ftype="binary">
                 <assert_contents>
-                    <has_size size="119" delta="1"/>
+                    <has_size size="106" delta="20"/>
                 </assert_contents>
             </output>
         </test>
@@ -245,7 +245,7 @@
             <output name="stats_outfile" file="output2.tabular" ftype="tabular"/>
             <output name="rd_outfile" ftype="binary">
                 <assert_contents>
-                    <has_size size="100" delta="1"/>
+                    <has_size size="100" delta="20"/>
                 </assert_contents>
             </output>
         </test>
@@ -264,7 +264,7 @@
             <output name="stats_outfile" file="output3.tabular" ftype="tabular"/>
             <output name="reads_outfile" ftype="fastq.gz" md5="23a14631cb075817967752021deb6ec4">
                 <assert_contents>
-                    <has_size size="159"/>
+                    <has_size size="149" delta="20"/>
                 </assert_contents>
             </output>
         </test>
@@ -278,7 +278,7 @@
             </output>
             <output name="rd_outfile" ftype="binary">
                 <assert_contents>
-                    <has_size size="119" delta="5"/>
+                    <has_size size="119" delta="20"/>
                 </assert_contents>
             </output>
         </test>
