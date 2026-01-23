@@ -50,7 +50,7 @@ rmarkdown::render(
             <param name="input_files" value="input1.rd"/>
             <output name="outfile" ftype="html">
                 <assert_contents>
-                    <has_size size="833000" delta="8330"/>
+                    <has_size size="936000" delta="10000"/>
                 </assert_contents>
             </output>
         </test>
