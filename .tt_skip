@@ -1,2 +1,1 @@
 # add paths to tool repositories that should be ignored by CI
-tools/ncbi_egapx
