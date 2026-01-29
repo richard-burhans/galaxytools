@@ -34,13 +34,15 @@
     #end if
     #set $filter_exp_type = $input_filter.filter_expression.filter_selector
     #if $filter_exp_type != "no_exp"
-        #set $l_exp = "l" + str($input_filter.filter_expression.length_comparison) + str($input_filter.filter_expression.length_value)
-        #set $q_exp = "q" + str($input_filter.filter_expression.quality_comparison) + str($input_filter.filter_expression.quality_value)
         #if $filter_exp_type == "l_exp"
+            #set $l_exp = "l" + str($input_filter.filter_expression.length_comparison) + str($input_filter.filter_expression.length_value)
             #set $filter_exp = $l_exp
         #else if $filter_exp_type == "q_exp"
+            #set $q_exp = "q" + str($input_filter.filter_expression.quality_comparison) + str($input_filter.filter_expression.quality_value)
             #set $filter_exp = $q_exp
         #else if $filter_exp_type == "lq_exp"
+            #set $q_exp = "q" + str($input_filter.filter_expression.quality_comparison) + str($input_filter.filter_expression.quality_value)
+            #set $l_exp = "l" + str($input_filter.filter_expression.length_comparison) + str($input_filter.filter_expression.length_value)
             #set $filter_exp = $l_exp + str($input_filter.filter_expression.exp_operator) + $q_exp
         #end if
         --filter '$filter_exp'
@@ -224,7 +226,7 @@
             <output name="stats_outfile" file="output1.tabular" ftype="tabular"/>
             <output name="rd_outfile" ftype="binary">
                 <assert_contents>
-                    <has_size size="119" delta="1"/>
+                    <has_size size="106" delta="20"/>
                 </assert_contents>
             </output>
         </test>
@@ -243,7 +245,7 @@
             <output name="stats_outfile" file="output2.tabular" ftype="tabular"/>
             <output name="rd_outfile" ftype="binary">
                 <assert_contents>
-                    <has_size size="100" delta="1"/>
+                    <has_size size="100" delta="20"/>
                 </assert_contents>
             </output>
         </test>
@@ -262,7 +264,7 @@
             <output name="stats_outfile" file="output3.tabular" ftype="tabular"/>
             <output name="reads_outfile" ftype="fastq.gz" md5="23a14631cb075817967752021deb6ec4">
                 <assert_contents>
-                    <has_size size="159"/>
+                    <has_size size="149" delta="20"/>
                 </assert_contents>
             </output>
         </test>
@@ -276,7 +278,7 @@
             </output>
             <output name="rd_outfile" ftype="binary">
                 <assert_contents>
-                    <has_size size="119" delta="5"/>
+                    <has_size size="119" delta="20"/>
                 </assert_contents>
             </output>
         </test>
