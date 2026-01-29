@@ -172,8 +172,29 @@ long_reads:
   - $long_read
                 #end for
             #end if
-            #if str($cond_input_style.proteins) != "None"
+protein_aligner_name: $cond_input_style.protein_aligner_name
+            #if str($cond_input_style.cond_protein_set.protein_set) == "automatic"
+                #if str($cond_input_style.cond_protein_set.proteins_best_n_orgs) != "0":
+proteins_best_n_orgs: $cond_input_style.cond_protein_set.proteins_best_n_orgs
+                #end if
+                #if str($cond_input_style.cond_protein_set.additional_proteins) != "None"
+additional_proteins: $cond_input_style.cond_protein_set.additional_proteins
+                #end if
+                #if str($cond_input_style.cond_protein_set.proteins_deny_taxids) not in ["", "None"]
+proteins_deny_taxids: $cond_input_style.cond_protein_set.proteins_deny_taxids
+                #end if
+            #else if str($cond_input_style.cond_protein_set.protein_set) == "custom"
+                #if str($cond_input_style.proteins) != "None"
 proteins: $cond_input_style.proteins
+                #end if
+            #end if
+            #if $cond_input_style.trnascan_enabled
+trnascan:
+  enabled: true
+            #end if
+            #if $cond_input_style.cmsearch_enabled
+cmsearch:
+  enabled: true
             #end if
             #if str($cond_input_style.extra) != "None"
                 #for row in str($cond_input_style.extra).strip().split("\n")
@@ -253,7 +274,33 @@ $row
                         </param>
                     </when>
                 </conditional>
-                <param name="proteins" type="data" format="fasta,fasta.gz" optional="true" label="Select a protein set"/>
+                <param name="protein_aligner_name" type="select" label="Select a protein aligner.">
+                    <option value="miniprot" selected="True">miniprot</option>
+                    <option value="prosplign">prosplign</option>
+                </param>
+                <conditional name="cond_protein_set">
+                    <param name="protein_set" type="select" label="Select a protein set.">
+                        <option value="automatic" selected="True">Use automatically retrieved protein set.</option>
+                        <option value="custom">Supply a custom protein set.</option>
+                    </param>
+                    <when value="automatic">
+                        <param name="proteins_best_n_orgs" type="integer" min="0" value="0" label="Select the number of protein sets to be retrieved and aligned (0 for automatic)."/>
+                        <param name="additional_proteins" type="data" format="fasta,fasta.gz" optional="true" label="Additional potein set to inclue."/>
+                        <param name="proteins_deny_taxids" type="text" value="" optional="true" label="Taxonomic identifier(s) to exclude" help="Multiple tax-ids may be provided as a comma-separated list.">
+                            <validator type="regex" message="comma separated integers">^\s*\d+\s*(,\s*\d+\s*)*$</validator>
+                            <sanitizer invalid_char="">
+                                <valid initial="string.digits">
+                                    <add value=","/>
+                                </valid>
+                            </sanitizer>
+                        </param>
+                    </when>
+                    <when value="custom">
+                        <param name="proteins" type="data" format="fasta,fasta.gz" optional="true" label="Select a protein set"/>
+                    </when>
+                </conditional>
+                <param name="trnascan_enabled" type="boolean" checked="false" label="Enable prediction of tRNA features using tRNAscan."/>
+                <param name="cmsearch_enabled" type="boolean" checked="false" label="Enable prediction of rRNAs, snoRNAs and snRNAs by searching the RFAM database using cmsearch distributed in Infernal."/>
                 <param name="extra" type="text" area="true" optional="true" label="Additional yaml to append to the egapx.yaml configuration"
                     help="Not normally needed but useful for testing additional configuration elements">
                     <sanitizer invalid_char="">
