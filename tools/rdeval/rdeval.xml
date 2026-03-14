@@ -23,7 +23,7 @@
         ln -s '$reads_outfile' 'output.${output_options.output_type.format_selector}' &&
     #end if
 	rdeval --input-reads '$mangled_input'
-	#if int($expected_gsize) != 0
+	#if $expected_gsize and int($expected_gsize) != 0
 		'$expected_gsize'
 	#end if
 	#if $input_filter.include_list
