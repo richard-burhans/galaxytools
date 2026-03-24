@@ -13,7 +13,7 @@
             <requirement type="package" version="2.3">r-gridextra</requirement>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">0.0.8</token>
+    <token name="@TOOL_VERSION@">0.0.9</token>
     <token name="@VERSION_SUFFIX@">0</token>
     <token name="@PROFILE@">23.02</token>
     <xml name="citations">

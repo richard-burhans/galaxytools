@@ -9,5 +9,4 @@ long_description: |
     between formats.
 name: rdeval
 owner: richard-burhans
-remote_repository_url: https://github.com/vgl-hub/rdeval
-type: unrestricted
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/rdeval

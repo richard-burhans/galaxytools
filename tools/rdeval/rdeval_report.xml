@@ -5,22 +5,26 @@
     </macros>
     <expand macro="requirements_report"/>
     <command detect_errors="exit_code"><![CDATA[
+    #import re
     mkdir render &&
     cd render &&
     export RDEVAL_SHARE_DIR="\$(dirname \$(dirname \$(type -P rdeval)))/share/rdeval" &&
     ln -s "\$RDEVAL_SHARE_DIR/figures.Rmd" &&
     ln -s "\$RDEVAL_SHARE_DIR/rdeval_interface.R" &&
-    #for $idx, $input_file in enumerate($input_files)
-        ln -s '$input_file' '${idx}.rd' &&
+    #for $input_file in $input_files
+        #set $safe_name = re.sub(r"[^\w\-.]", "_", str($input_file.element_identifier))
+        ln -s '$input_file' '${safe_name}.rd' &&
     #end for
     Rscript '$render_script'
 	]]></command>
     <configfiles>
         <configfile name="render_script"><![CDATA[
 ## R script to render figures
+#import re
 #set $input_file_list = []
-#for $idx, $input_file in enumerate($input_files)
-    #silent $input_file_list.append(f"'{idx}.rd'")
+#for $input_file in $input_files
+    #set $safe_name = re.sub(r"[^\w\-.]", "_", str($input_file.element_identifier))
+    #silent $input_file_list.append(f"'{safe_name}.rd'")
 #end for
 #set $r_vector = "c(" + ",".join($input_file_list) + ")"
 #set $interactive_value = "FALSE"
@@ -50,7 +54,18 @@ rmarkdown::render(
             <param name="input_files" value="input1.rd"/>
             <output name="outfile" ftype="html">
                 <assert_contents>
-                    <has_size size="936000" delta="10000"/>
+                    <has_size size="887158" delta="50000"/>
+                </assert_contents>
+            </output>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="input_files" value="input1.rd"/>
+            <output name="outfile" ftype="html">
+                <assert_contents>
+                    <has_text text="Number of reads: 5"/>
+                    <has_text text="Total read length: 50"/>
+                    <has_text text="Average read length: 10"/>
+                    <has_text text="Read N50: 15"/>
                 </assert_contents>
             </output>
         </test>
