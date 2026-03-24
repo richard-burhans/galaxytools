@@ -9,5 +9,5 @@ long_description: |
     between formats.
 name: rdeval
 owner: richard-burhans
-remote_repository_url: https://github.com/vgl-hub/rdeval
+remote_repository_url: https://toolshed.g2.bx.psu.edu/repos/richard-burhans/rdeval
 type: unrestricted
