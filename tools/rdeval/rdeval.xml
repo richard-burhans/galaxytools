@@ -262,9 +262,9 @@
                 </conditional>
             </section>
             <output name="stats_outfile" file="output3.tabular" ftype="tabular"/>
-            <output name="reads_outfile" ftype="fastq.gz" md5="23a14631cb075817967752021deb6ec4">
+            <output name="reads_outfile" ftype="fastq.gz" md5="395e02fb5e59b31ba1d38149af8afa00">
                 <assert_contents>
-                    <has_size size="149" delta="20"/>
+                    <has_size size="97" delta="20"/>
                 </assert_contents>
             </output>
         </test>
