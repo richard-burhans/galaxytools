@@ -7,6 +7,7 @@
         <import>seeding_options.xml</import>
         <import>ungapped_extension_options.xml</import>
         <import>gapped_extension_options.xml</import>
+        <import>interpolation_options.xml</import>
         <import>output_options.xml</import>
         <import>system_options.xml</import>
     </macros>
@@ -87,7 +88,13 @@ python '$__tool_directory__/runner.py'
     --notrivial
 #end if
 
-## Output Options -----------------------------------------------------
+## Interpolation Options -----------------------------------------------
+
+#if int($interpolation_options.inner) < 0
+    --inner='$interpolation_options.inner'
+#end if
+
+## Output Options ------------------------------------------------------
 
 #if str($output_options.format.format_selector) == "bam"
     --format '$output_options.format.bam_options'
@@ -120,7 +127,7 @@ python '$__tool_directory__/runner.py'
 ##      Rscript $r_plot > /dev/null 2>&1
 ##  .end if
 
-## System Options -----------------------------------------------------
+## System Options ------------------------------------------------------
 
     --wga_chunk_size '$system_options.wga_chunk_size'
     --lastz_interval_size '$system_options.lastz_interval_size'
@@ -130,7 +137,7 @@ python '$__tool_directory__/runner.py'
     --debug
 #end if
 
-## Package Output ----------------------------------------------------
+## Package Output ------------------------------------------------------
 
 &&
 python '$__tool_directory__/package_output.py'
@@ -149,6 +156,7 @@ python '$__tool_directory__/package_output.py'
         <expand macro="seeding_options"/>
         <expand macro="ungapped_extension_options"/>
         <expand macro="gapped_extension_options"/>
+        <expand macro="interpolation_options"/>
         <expand macro="output_options"/>
         <expand macro="system_options"/>
     </inputs>
