@@ -19,6 +19,16 @@ SENTINEL_VALUE: typing.Final = "SENTINEL"
 RUSAGE_ATTRS: typing.Final = ["ru_utime", "ru_stime", "ru_maxrss", "ru_minflt", "ru_majflt", "ru_inblock", "ru_oublock", "ru_nvcsw", "ru_nivcsw"]
 
 
+def inject_inner(line: str, inner: typing.Optional[int]) -> str:
+    if inner is None or " --inner=" in line:
+        return line
+
+    if " --segments=" not in line:
+        sys.exit(f"Unable to inject --inner into unexpected lastz command: {line}")
+
+    return line.replace(" --segments=", f" --inner={inner} --segments=", 1)
+
+
 class LastzCommands:
     def __init__(self) -> None:
         self.commands: dict[str, LastzCommand] = {}
@@ -37,7 +47,7 @@ class LastzCommands:
 
 
 class LastzCommand:
-    lastz_command_regex = re.compile(r"lastz (.+?)?ref\.2bit\[nameparse=darkspace\]\[multiple\]\[subset=ref_block(\d+)\.name\] (.+?)?query\.2bit\[nameparse=darkspace\]\[subset=query_block(\d+)\.name] --format=(\S+) --ydrop=(\d+) --gappedthresh=(\d+) --strand=(minus|plus)(?: --ambiguous=(\S+))?(?: --(notrivial))?(?: --scores=(\S+))? --segments=tmp(\d+)\.block(\d+)\.r(\d+)\.(minus|plus)(?:\.split(\d+))?\.segments --output=tmp(\d+)\.block(\d+)\.r(\d+)\.(minus|plus)(?:\.split(\d+))?\.(\S+) 2> tmp(\d+)\.block(\d+)\.r(\d+)\.(minus|plus)(?:\.split(\d+))?\.err")
+    lastz_command_regex = re.compile(r"lastz (.+?)?ref\.2bit\[nameparse=darkspace\]\[multiple\]\[subset=ref_block(\d+)\.name\] (.+?)?query\.2bit\[nameparse=darkspace\]\[subset=query_block(\d+)\.name] --format=(\S+) --ydrop=(\d+) --gappedthresh=(\d+) --strand=(minus|plus)(?: --inner=(\d+))?(?: --ambiguous=(\S+))?(?: --(notrivial))?(?: --scores=(\S+))? --segments=tmp(\d+)\.block(\d+)\.r(\d+)\.(minus|plus)(?:\.split(\d+))?\.segments --output=tmp(\d+)\.block(\d+)\.r(\d+)\.(minus|plus)(?:\.split(\d+))?\.(\S+) 2> tmp(\d+)\.block(\d+)\.r(\d+)\.(minus|plus)(?:\.split(\d+))?\.err")
 
     def __init__(self, line: str) -> None:
         self.line = line
@@ -50,6 +60,7 @@ class LastzCommand:
         self.output_format: str = ''
         self.ydrop: int = 0
         self.gappedthresh: int = 0
+        self.inner: int | None = None
         self.strand: int | None = None
         self.ambiguous: bool = False
         self.nontrivial: bool = False
@@ -91,25 +102,30 @@ class LastzCommand:
             f"--strand={strand}"
         ]
 
-        ambiguous = match.group(9)
+        inner = match.group(9)
+        if inner is not None:
+            self.inner = int(inner)
+            self.args.append(f"--inner={self.inner}")
+
+        ambiguous = match.group(10)
         if ambiguous is not None:
             self.ambiguous = True
             self.args.append(f"--ambiguous={ambiguous}")
 
-        nontrivial = match.group(10)
+        nontrivial = match.group(11)
         if nontrivial is not None:
             self.nontrivial = True
             self.args.append("--nontrivial")
 
-        scoring = match.group(11)
+        scoring = match.group(12)
         if scoring is not None:
             self.scoring = scoring
             self.args.append(f"--scoring={scoring}")
 
-        tmp_no = int(match.group(12))
-        block_no = int(match.group(13))
-        r_no = int(match.group(14))
-        split = match.group(16)
+        tmp_no = int(match.group(13))
+        block_no = int(match.group(14))
+        r_no = int(match.group(15))
+        split = match.group(17)
 
         base_filename = f"tmp{tmp_no}.block{block_no}.r{r_no}.{strand}"
 
@@ -384,7 +400,7 @@ def run_kegalign(args: argparse.Namespace, num_sentinel: int, kegalign_args: lis
 
     # use the currently existing output file if it exists
     if args.debug:
-        skip_kegalign = load_kegalign_output("lastz-commands.txt", kegalign_q)
+        skip_kegalign = load_kegalign_output("lastz-commands.txt", args.inner, kegalign_q)
 
     if not skip_kegalign:
         run_args = ["kegalign"]
@@ -400,6 +416,7 @@ def run_kegalign(args: argparse.Namespace, num_sentinel: int, kegalign_args: lis
         process = subprocess.run(run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, text=True)
 
         for line in process.stdout.splitlines():
+            line = inject_inner(line, args.inner)
             commands.add(line)
             kegalign_q.put(line)
 
@@ -424,7 +441,7 @@ def run_kegalign(args: argparse.Namespace, num_sentinel: int, kegalign_args: lis
     return skip_kegalign
 
 
-def load_kegalign_output(filename: str, kegalign_q: queue.Queue[str]) -> bool:
+def load_kegalign_output(filename: str, inner: typing.Optional[int], kegalign_q: queue.Queue[str]) -> bool:
     load_success = False
 
     r_beg = resource.getrusage(resource.RUSAGE_SELF)
@@ -434,6 +451,7 @@ def load_kegalign_output(filename: str, kegalign_q: queue.Queue[str]) -> bool:
         with open(filename) as f:
             for line in f:
                 line = line.rstrip("\n")
+                line = inject_inner(line, inner)
                 kegalign_q.put(line)
         load_success = True
     except FileNotFoundError:
@@ -458,6 +476,7 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser.add_argument("--diagonal-partition", action="store_true", help="run diagonal partition optimization")
     parser.add_argument("--nogapped", action="store_true", help="don't perform gapped extension stage")
     parser.add_argument("--markend", action="store_true", help="write a marker line just before completion")
+    parser.add_argument("--inner", type=int, help="pass --inner to LASTZ command generation and execution")
     parser.add_argument("--num-gpu", default=-1, type=int, help="number of GPUs to use (default: %(default)s [use all GPUs])")
     parser.add_argument("--num-cpu", default=-1, type=int, help="number of CPUs to use (default: %(default)s [use all CPUs])")
     parser.add_argument("--debug", action="store_true", help="print debug messages")
