@@ -30,7 +30,7 @@
     </environment_variables>
     <inputs>
         <param name="input_config" type="data" format="yaml" label="EGAPx configuration YAML file to pass to Nextflow"/>
-        <param name="input_cache" type="data" format="egapx_local_cache" label="EGAPx local cache"/>
+        <param name="input_cache" type="data" format="directory" label="EGAPx local cache"/>
         <section name="developer" title="Developer options" expanded="false">
             <param name="collect_star_bams" type="boolean" checked="false" label="Collect BAM output from STAR"/>
             <conditional name="query_limit">
