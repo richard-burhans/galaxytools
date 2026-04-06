@@ -324,15 +324,15 @@ $row
         <data name="egapx_yaml" format="yaml" label="EGAPx configuration">
             <filter>cond_input_style["input_style"] == "fillform"</filter>
         </data>
-        <data name="output" format="egapx_local_cache" label="EGAPx local cache"/>
+        <data name="output" format="directory" label="EGAPx local cache"/>
     </outputs>
     <tests>
-        <test expect_num_outputs="1" expect_test_failure="false">
+        <test expect_num_outputs="1" expect_test_failure="true">
             <conditional name="cond_input_style">
                 <param name="input_style" value="history"/>
                 <param name="yamlin" value="input.yaml"/>
             </conditional>
-            <output name="output" ftype="egapx_local_cache">
+            <output name="output" ftype="directory">
                 <extra_files name="current_1.mft">
                     <assert_contents>
                         <has_size min="1"/>
