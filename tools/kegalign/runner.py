@@ -416,17 +416,17 @@ def run_kegalign(args: argparse.Namespace, num_sentinel: int, kegalign_args: lis
 
         process = subprocess.run(run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, text=True)
 
-        for line in process.stdout.splitlines():
-            line = inject_inner(line, args.inner)
-            commands.add(line)
-            kegalign_q.put(line)
-
         if len(process.stderr) != 0:
             for line in process.stderr.splitlines():
                 print(line, file=sys.stderr, flush=True)
 
         if process.returncode != 0:
             sys.exit(f"Error: kegalign exited with returncode {process.returncode}")
+
+        for line in process.stdout.splitlines():
+            line = inject_inner(line, args.inner)
+            commands.add(line)
+            kegalign_q.put(line)
 
         if args.debug:
             ns: int = time.monotonic_ns() - beg
