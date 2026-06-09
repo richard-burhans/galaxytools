@@ -23,10 +23,11 @@ def inject_inner(line: str, inner: typing.Optional[int]) -> str:
     if inner is None or " --inner=" in line:
         return line
 
-    if " --segments=" not in line:
+    new_line, count = re.subn(r"( --strand=(?:minus|plus))", rf"\1 --inner={inner}", line, count=1)
+    if count == 0:
         sys.exit(f"Unable to inject --inner into unexpected lastz command: {line}")
 
-    return line.replace(" --segments=", f" --inner={inner} --segments=", 1)
+    return new_line
 
 
 class LastzCommands:
@@ -415,17 +416,17 @@ def run_kegalign(args: argparse.Namespace, num_sentinel: int, kegalign_args: lis
 
         process = subprocess.run(run_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, text=True)
 
-        for line in process.stdout.splitlines():
-            line = inject_inner(line, args.inner)
-            commands.add(line)
-            kegalign_q.put(line)
-
         if len(process.stderr) != 0:
             for line in process.stderr.splitlines():
                 print(line, file=sys.stderr, flush=True)
 
         if process.returncode != 0:
             sys.exit(f"Error: kegalign exited with returncode {process.returncode}")
+
+        for line in process.stdout.splitlines():
+            line = inject_inner(line, args.inner)
+            commands.add(line)
+            kegalign_q.put(line)
 
         if args.debug:
             ns: int = time.monotonic_ns() - beg
