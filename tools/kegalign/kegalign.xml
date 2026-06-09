@@ -10,6 +10,7 @@
         <import>interpolation_options.xml</import>
         <import>output_options.xml</import>
         <import>system_options.xml</import>
+        <import>alignment_type_option.xml</import>
     </macros>
     <expand macro="edam_ontology"/>
     <expand macro="requirements"/>
@@ -159,6 +160,9 @@ python '$__tool_directory__/package_output.py'
         <expand macro="interpolation_options"/>
         <expand macro="output_options"/>
         <expand macro="system_options"/>
+        <section name="developer" title="Developer Options" expanded="false">
+            <expand macro="alignment_type_option"/>
+        </section>
     </inputs>
     <outputs>
         <data name="kegalign_output" format="tgz" from_work_dir="data_package.tgz" label="KegAlign on ${on_string}"/>
