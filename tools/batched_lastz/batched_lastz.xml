@@ -2,6 +2,7 @@
     <description>: align batches of sequences</description>
     <macros>
         <import>macros.xml</import>
+        <import>alignment_type_option.xml</import>
     </macros>
     <expand macro="requirements"/>
     <required_files>
@@ -20,6 +21,7 @@
         <param argument="--input" type="data" format="tgz" label="Tarball"/>
         <section name="developer" title="Developer options" expanded="false">
             <param name="debug_enabled" type="boolean" checked="false" label="Print debug messages"/>
+            <expand macro="alignment_type_option"/>
         </section>
     </inputs>
     <outputs>

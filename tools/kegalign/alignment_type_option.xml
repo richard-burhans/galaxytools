@@ -1,0 +1,9 @@
+<macros>
+    <xml name="alignment_type_option">
+        <param name="alignment_type" type="select" label="Alignment type" help="for scheduling hints">
+            <option value="vertebrates_default" selected="true">Vertebrates (default)</option>
+            <option value="vertebrates_same_species" selected="true">Vertebrates (same species)</option>
+            <option value="virus_bacteria">Virus/Bacteria</option>
+        </param>
+    </xml>
+</macros>
