@@ -1,0 +1,7 @@
+<tool id="suggest_demo" name="Suggest demo" version="1.0+galaxy0" profile="24.0">
+  <description>throwaway tool; intentionally non-canonical to demo suggest mode</description>
+        <command><![CDATA[echo demo]]></command>
+  <inputs/>
+  <outputs/>
+  <help>Demonstration of the forward gate's suggest mode. Not a real tool.</help>
+</tool>
