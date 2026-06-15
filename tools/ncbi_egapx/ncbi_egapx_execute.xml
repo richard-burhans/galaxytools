@@ -25,8 +25,8 @@
     #end if
     ]]></command>
     <environment_variables>
-         <environment_variable name="NXF_DEBUG">3</environment_variable>
-         <environment_variable name="EGAPX_RNASEQ_QUERY_LIMIT">$getVar('developer.query_limit.rnaseq_query_limit', '20')</environment_variable>
+        <environment_variable name="NXF_DEBUG">3</environment_variable>
+        <environment_variable name="EGAPX_RNASEQ_QUERY_LIMIT">$getVar('developer.query_limit.rnaseq_query_limit', '20')</environment_variable>
     </environment_variables>
     <inputs>
         <param name="input_config" type="data" format="yaml" label="EGAPx configuration YAML file to pass to Nextflow"/>

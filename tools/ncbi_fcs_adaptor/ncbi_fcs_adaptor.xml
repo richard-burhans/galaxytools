@@ -35,23 +35,23 @@
         <test expect_num_outputs="2">
             <param name="input" value="fcsadaptor_prok_test.fa.gz" ftype="fasta"/>
             <param name="tax" value="--prok"/>
-            <output name="adaptor_report" file="adaptor_report.tab" ftype="tabular" />
-            <output name="clean_fasta" decompress="true" file="clean_fasta.fa.gz" ftype="fasta" />
+            <output name="adaptor_report" file="adaptor_report.tab" ftype="tabular"/>
+            <output name="clean_fasta" decompress="true" file="clean_fasta.fa.gz" ftype="fasta"/>
         </test>
         <test expect_num_outputs="4">
             <param name="input" value="fcsadaptor_prok_test.fa.gz" ftype="fasta"/>
             <param name="tax" value="--prok"/>
             <param name="optional_log" value="adaptor_log,validate_fasta_log"/>
-            <output name="adaptor_report" file="adaptor_report.tab" ftype="tabular" />
-            <output name="clean_fasta" decompress="true" file="clean_fasta.fa.gz" ftype="fasta" />
+            <output name="adaptor_report" file="adaptor_report.tab" ftype="tabular"/>
+            <output name="clean_fasta" decompress="true" file="clean_fasta.fa.gz" ftype="fasta"/>
             <output name="adaptor_log">
                 <assert_contents>
-                    <has_text_matching expression="\bINFO \[workflow \] completed success\b" />
+                    <has_text_matching expression="\bINFO \[workflow \] completed success\b"/>
                 </assert_contents>
             </output>
             <output name="validate_fasta_log">
                 <assert_contents>
-                    <has_size value="0" />
+                    <has_size value="0"/>
                 </assert_contents>
             </output>
         </test>
