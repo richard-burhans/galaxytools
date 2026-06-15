@@ -1,0 +1,19 @@
+name: forward-gate
+on:
+  pull_request:
+    paths: ["tools/**/*.xml"]
+
+jobs:
+  canonical-form:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # so the gate can post review suggestions
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # the gate diffs the PR against its base
+      - uses: richard-burhans/galaxy-tool-refactor/.github/actions/forward-gate@main
+        with:
+          version: "0.3.1"
+          mode: suggest
