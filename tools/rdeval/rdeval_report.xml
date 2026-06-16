@@ -43,7 +43,7 @@ rmarkdown::render(
 ]]></configfile>
     </configfiles>
     <inputs>
-        <param name="input_files" type="data" format="data" multiple="true" label="Input dataset" help="RD files"/>
+        <param name="input_files" type="data" format="data" label="Input dataset" help="RD files" multiple="true"/>
         <param name="interactive" type="boolean" value="true" label="interactive" help="interactive"/>
     </inputs>
     <outputs>
