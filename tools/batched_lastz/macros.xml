@@ -6,8 +6,8 @@
         </requirements>
     </xml>
     <token name="@TOOL_VERSION@">1.04.22</token>
-    <token name="@VERSION_SUFFIX@">7</token>
-    <token name="@PROFILE@">21.05</token>
+    <token name="@VERSION_SUFFIX@">8</token>
+    <token name="@PROFILE@">22.01</token>
     <xml name="citations">
         <citations>
             <citation type="bibtex">

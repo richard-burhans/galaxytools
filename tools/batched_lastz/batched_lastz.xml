@@ -25,18 +25,17 @@
         </section>
     </inputs>
     <outputs>
-        <data name="output" label="Batched LASTZ on ${on_string}" format="auto" />
+        <data name="output" label="Batched LASTZ on ${on_string}" format="auto"/>
     </outputs>
     <tests>
-      <test expect_num_outputs="1">
-        <param name="input" value="input.tgz" ftype="tgz"/>
-        <output name="output">
-            <assert_contents>
-                <has_size min="1"/>
-            </assert_contents>
-        </output>
-
-      </test>
+        <test expect_num_outputs="1">
+            <param name="input" value="input.tgz" ftype="tgz"/>
+            <output name="output">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </output>
+        </test>
     </tests>
     <help><![CDATA[
 Batched LASTZ is a special version of LASTZ designed to process output of Galaxy's KegAlign tool. It outputs pairiwse alignments in a verietry of formats.
