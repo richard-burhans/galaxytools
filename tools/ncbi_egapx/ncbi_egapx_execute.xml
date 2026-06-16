@@ -25,8 +25,8 @@
     #end if
     ]]></command>
     <environment_variables>
-         <environment_variable name="NXF_DEBUG">3</environment_variable>
-         <environment_variable name="EGAPX_RNASEQ_QUERY_LIMIT">$getVar('developer.query_limit.rnaseq_query_limit', '20')</environment_variable>
+        <environment_variable name="NXF_DEBUG">3</environment_variable>
+        <environment_variable name="EGAPX_RNASEQ_QUERY_LIMIT">$getVar('developer.query_limit.rnaseq_query_limit', '20')</environment_variable>
     </environment_variables>
     <inputs>
         <param name="input_config" type="data" format="yaml" label="EGAPx configuration YAML file to pass to Nextflow"/>
@@ -43,7 +43,7 @@
                 </when>
                 <when value="false"/>
             </conditional>
-            <param label="Gigabase pairs" name="gigabase_pairs" type="integer" size="3" min="1" max="8" value="1" help="Approximate gigabase pair count for scheduling hints"/>
+            <param name="gigabase_pairs" type="integer" min="1" max="8" value="1" label="Gigabase pairs" help="Approximate gigabase pair count for scheduling hints" size="3"/>
         </section>
     </inputs>
     <outputs>
