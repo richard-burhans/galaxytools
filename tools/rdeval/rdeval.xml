@@ -100,28 +100,28 @@
                     <param name="length_comparison" type="select" label="Retain reads with length">
                         <option value="&lt;" selected="true">less than</option>
                         <option value="=">equal to</option>
-                        <option value=">">greater than</option>
+                        <option value="&gt;">greater than</option>
                         <sanitizer sanitize="false"/>
                     </param>
-                    <param name="length_value" type="integer" min="0" value="0" label="Length in bp" />
+                    <param name="length_value" type="integer" min="0" value="0" label="Length in bp"/>
                 </when>
                 <when value="q_exp">
                     <param name="quality_comparison" type="select" label="Retain reads with average read quality">
                         <option value="&lt;" selected="true">less than</option>
                         <option value="=">equal to</option>
-                        <option value=">">greater than</option>
+                        <option value="&gt;">greater than</option>
                         <sanitizer sanitize="false"/>
                     </param>
-                    <param name="quality_value" type="integer" min="0" value="0" label="Average read quality" />
+                    <param name="quality_value" type="integer" min="0" value="0" label="Average read quality"/>
                 </when>
                 <when value="lq_exp">
                     <param name="length_comparison" type="select" label="Retain reads with length">
                         <option value="&lt;" selected="true">less than</option>
                         <option value="=">equal to</option>
-                        <option value=">">greater than</option>
+                        <option value="&gt;">greater than</option>
                         <sanitizer sanitize="false"/>
                     </param>
-                    <param name="length_value" type="integer" min="0" value="0" label="Length in bp" />
+                    <param name="length_value" type="integer" min="0" value="0" label="Length in bp"/>
                     <param name="exp_operator" type="select" label="Combination operator">
                         <option value="|" selected="true">or</option>
                         <option value="&amp;">and</option>
@@ -130,10 +130,10 @@
                     <param name="quality_comparison" type="select" label="Average read quality">
                         <option value="&lt;" selected="true">less than</option>
                         <option value="=">equal to</option>
-                        <option value=">">greater than</option>
+                        <option value="&gt;">greater than</option>
                         <sanitizer sanitize="false"/>
                     </param>
-                    <param name="quality_value" type="integer" min="0" value="0" label="average read quality" />
+                    <param name="quality_value" type="integer" min="0" value="0" label="average read quality"/>
                 </when>
             </conditional>
         </section>
@@ -235,10 +235,10 @@
             <section name="input_filter">
                 <conditional name="filter_expression">
                     <param name="filter_selector" value="lq_exp"/>
-                    <param name="length_comparison" value=">"/>
+                    <param name="length_comparison" value="&gt;"/>
                     <param name="length_value" value="10"/>
                     <param name="exp_operator" value="&amp;"/>
-                    <param name="quality_comparison" value=">"/>
+                    <param name="quality_comparison" value="&gt;"/>
                     <param name="quality_value" value="10"/>
                 </conditional>
             </section>
