@@ -1,0 +1,21 @@
+diff --git a/nf/subworkflows/ncbi/shared/diamond/main.nf b/nf/subworkflows/ncbi/shared/diamond/main.nf
+index 3648ca9..6b86485 100644
+--- a/nf/subworkflows/ncbi/shared/diamond/main.nf
++++ b/nf/subworkflows/ncbi/shared/diamond/main.nf
+@@ -84,13 +84,13 @@ process run_diamond_egap {
+     prime_cache -cache ./asncache/ -ifmt asnb-seq-entry  -i ${swiss_prot_asn} -oseq-ids /dev/null -split-sequences
+ 
+     mkdir ./output
+-    mkdir ./work
++    workdir=`mktemp -d -p . work.XXXXXXXXXX`
+ 
+     echo  ${params}
+     echo "${gnomon_prot_ids.join('\n')}" > query.mft
+     diamond_egap  ${params} -asn-cache ./asncache/ -nogenbank -query-manifest query.mft -subject ${swiss_prot_ids} \
+-        -output-dir ./output/ -work-area ./work/  -diamond-executable \${diamond_bin}
+-    rm -rf ./work
++        -output-dir ./output/ -work-area "\$workdir" -diamond-executable \${diamond_bin}
++    rm -rf "\$workdir"
+     """
+ 
+     stub:

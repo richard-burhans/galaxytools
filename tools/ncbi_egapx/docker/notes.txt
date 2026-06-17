@@ -1,0 +1,15 @@
+# https://github.com/ncbi/egapx?tab=readme-ov-file#prerequisites
+
+EGAPX_NEXTFLOW_VERSION="23.10.1"
+EGAPX_PYTHON_VERSION=">=3.9"
+EGAPX_TAG=""
+EGAPX_PACKAGES=""
+EGAPX_PYTHON_PACKAGES=""
+
+
+pip install nf-parser
+
+python >=3.9
+lark
+
+lark
