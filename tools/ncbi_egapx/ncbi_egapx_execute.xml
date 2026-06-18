@@ -85,6 +85,13 @@
         <test expect_num_outputs="27" expect_test_failure="false">
             <param name="input_config" value="input.yaml"/>
             <param name="input_cache" value="egapx_local_cache.tgz"/>
+            <section name="developer">
+                <param name="collect_star_bams" value="true"/>
+                <conditional name="query_limit">
+                    <param name="query_limit_selector" value="true"/>
+                    <param name="rnaseq_query_limit" value="20"/>
+                </conditional>
+            </section>
             <expand macro="test_outputs"/>
         </test>
     </tests>
