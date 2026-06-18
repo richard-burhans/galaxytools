@@ -97,6 +97,29 @@ if [ ! -e "$project_root/egapx" ]; then
     fi
 fi
 
+## apply local source patches to the cloned EGAPx checkout
+## patches live in assets/patches and are bind-mounted at /root/bin/patches
+## they are applied in filename order; each patch must either apply cleanly or
+## already be applied, otherwise the build fails loudly so a stale patch is never
+## silently shipped
+patch_dir="/root/bin/patches"
+if [ -d "$patch_dir" ]; then
+    cd "$project_root/egapx"
+    for patch_file in "$patch_dir"/*.patch; do
+        [ -e "$patch_file" ] || continue
+        patch_name=$(basename "$patch_file")
+        if git apply --check "$patch_file" 2>/dev/null; then
+            git apply "$patch_file"
+            echo "applied patch: $patch_name"
+        elif git apply --reverse --check "$patch_file" 2>/dev/null; then
+            echo "patch already applied, skipping: $patch_name"
+        else
+            echo "error: patch does not apply: $patch_name" >&2
+            exit 1
+        fi
+    done
+fi
+
 if [ ! -e "$project_root/.venv" ]; then
     python3 -m venv "$project_root/.venv"
     echo "source \"$project_root/.venv/bin/activate\"" >> "$project_root/env.bash"
