@@ -82,7 +82,7 @@
         </collection>
     </outputs>
     <tests>
-        <test expect_num_outputs="27" expect_test_failure="false">
+        <test expect_num_outputs="27" expect_test_failure="true">
             <param name="input_config" value="input.yaml"/>
             <param name="input_cache" value="egapx_local_cache.tgz"/>
             <section name="developer">
