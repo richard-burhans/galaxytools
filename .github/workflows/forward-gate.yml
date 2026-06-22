@@ -10,7 +10,7 @@ jobs:
       contents: read
       pull-requests: write   # so the gate can post review suggestions
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # the gate diffs the PR against its base
       - uses: richard-burhans/galaxy-tool-refactor/.github/actions/forward-gate@v0.3.3
