@@ -1,0 +1,45 @@
+class: GalaxyWorkflow
+doc: |
+  End-to-end EGAPx integration test.
+
+  ncbi_egapx_prepare_input downloads the EGAPx local cache (--download-needed)
+  from a history YAML configuration and emits it as a `directory` dataset.
+  That cache directory is then wired directly into ncbi_egapx_execute, which
+  runs the annotation pipeline against it. Chaining the two tools this way lets
+  the `directory` cache flow as a native composite dataset (its extra_files_path
+  is populated by Galaxy), which a standalone tool test cannot do.
+
+  Requires network access and the quay.io/galaxy/egapx container; it downloads
+  reference data and runs a full annotation, so it is NOT runnable in an offline
+  CI/toolshed environment.
+license: MIT
+creator:
+  - class: Person
+    name: Ross Lazarus
+    identifier: https://orcid.org/0000-0003-3939-1961
+  - class: Person
+    name: Richard Burhans
+    url: https://science.psu.edu/bmb/people/rcb112
+inputs:
+  config_yaml:
+    type: data
+    doc: EGAPx configuration YAML (see ../test-data/input.yaml)
+steps:
+  prepare_input:
+    tool_id: ncbi_egapx_prepare_input
+    tool_version: 0.5.2+galaxy0
+    label: prepare_input
+    in:
+      cond_input_style|input_style:
+        default: history
+      cond_input_style|yamlin: config_yaml
+  execute:
+    tool_id: ncbi_egapx_execute
+    tool_version: 0.5.2+galaxy0
+    label: execute
+    in:
+      input_config: config_yaml
+      input_cache: prepare_input/output
+outputs:
+  annotation_gff:
+    outputSource: execute/complete_genomic_gff

@@ -1,0 +1,120 @@
+diff --git a/ui/egapx.py b/ui/egapx.py
+index 62effde..158240b 100755
+--- a/ui/egapx.py
++++ b/ui/egapx.py
+@@ -174,7 +174,7 @@ class FtpDownloader:
+         self.reconnect() 
+ 
+     def reconnect(self):
+-        self.ftp = FTP(self.host)
++        self.ftp = FTP(self.host, timeout=2)
+         self.ftp.login()
+         self.ftp.set_debuglevel(0)
+        
+@@ -183,34 +183,81 @@ class FtpDownloader:
+         # print(f"file: {ftp_name}")
+         # print(f"f: { os.path.dirname(local_path)}")
+ 
++        mode_arg = "wb"
++        rest_arg = {}
++
++        try:
++            self.ftp.sendcmd("TYPE I")
++            expected_size = self.ftp.size(ftp_name)
++        except:
++            expected_size = 0
++
+         os.makedirs(os.path.dirname(local_path), exist_ok=True)
++
+         try:
+-            with open(local_path, 'wb') as f:
+-                self.ftp.retrbinary("RETR {0}".format(ftp_name), f.write)
+-            # print("downloaded: {0}".format(local_path))
+-            return True
++            stat_result = os.stat(local_path)
++            current_size = stat_result.st_size
+         except FileNotFoundError:
+-            print("FAILED FNF: {0}".format(local_path))
+-        except EOFError:
+-            print("FAILED EOF: {0}".format(local_path))
+-            time.sleep(1)
+-            self.reconnect()
+-            print("retrying...")
+-            r = self.download_ftp_file(ftp_name, local_path)
+-            print("downloaded on retry: {0}".format(local_path))
+-            return r
+-        except BrokenPipeError:
+-            print("FAILED BP: {0}".format(local_path))
+-        except IsADirectoryError:
+-            ## same as 550 but pre-exists
+-            ## os.remove(local_path)
+-            return 550
+-        except ftplib.error_perm:
+-            ## ftplib.error_perm: 550 genomes/TOOLS/EGAP/ortholog_references/9606/current: Not a regular file
+-            ## its a symlink to a dir.
+-            os.remove(local_path)
+-            return 550
+-        return False
++            current_size = 0
++
++        if expected_size != 0:
++            while 0 <= current_size < expected_size:
++                mode_arg = "ab"
++                rest_arg = {"rest": str(current_size)}
++                resume = False
++
++                try:
++                    with open(local_path, mode_arg) as f:
++                        self.ftp.retrbinary("RETR {0}".format(ftp_name), f.write, **rest_arg)
++                        print("downloaded: {0}".format(local_path))
++                    return True
++                except FileNotFoundError:
++                    print("FAILED FNF: {0}".format(local_path))
++                except EOFError:
++                    print("FAILED EOF: {0}".format(local_path))
++                    time.sleep(1)
++                    self.reconnect()
++                    print("retrying...")
++                    r = self.download_ftp_file(ftp_name, local_path)
++                    print("downloaded on retry: {0}".format(local_path))
++                    return r
++                except BrokenPipeError:
++                    print("FAILED BP: {0}".format(local_path))
++                except IsADirectoryError:
++                    ## same as 550 but pre-exists
++                    ## os.remove(local_path)
++                    return 550
++                except ftplib.error_perm:
++                    ## ftplib.error_perm: 550 genomes/TOOLS/EGAP/ortholog_references/9606/current: Not a regular file
++                    ## its a symlink to a dir.
++                    os.remove(local_path)
++                    return 550
++                except TimeoutError:
++                    rico_sleep_seconds = 0.25
++                    time.sleep(rico_sleep_seconds)
++                    self.reconnect()
++                    resume = True
++                except ConnectionResetError:
++                    try:
++                        stat_result = os.stat(local_path)
++                        new_current_size = stat_result.st_size
++                    except FileNotFoundError:
++                        print("FAILED connection reset: {0}".format(local_path))
++                        return False
++
++                    if new_current_size > current_size:
++                        resume = True
++                        rico_sleep_seconds = 0.25
++                        time.sleep(rico_sleep_seconds)
++                        self.reconnect()
++                        current_size = new_current_size
++                    else:
++                        print("FAILED connection reset: {0}".format(local_path))
++                except Exception:
++                    raise
++
++                if not resume:
++                    return False
+ 
+     # item: ('Eublepharis_macularius', {'modify': '20240125225739', 'perm': 'fle', 'size': '4096', 'type': 'dir', 'unique': '6CU599079F', 'unix.group': '562', 'unix.mode': '0444', 'unix.owner': '14'}
+     def should_download_file(self, ftp_item, local_name):

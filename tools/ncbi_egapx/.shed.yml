@@ -1,5 +1,11 @@
 categories:
   - Genome annotation
+# The docker/ directory holds the augmented-container build sources, and
+# test-workflows/ holds a planemo workflow test; neither are Galaxy tool files,
+# so keep them out of the ToolShed package.
+exclude:
+  - docker
+  - test-workflows
 description: Eukaryotic Genome Annotation Pipeline - External (EGAPx)
 homepage_url: https://github.com/ncbi/egapx
 long_description: |

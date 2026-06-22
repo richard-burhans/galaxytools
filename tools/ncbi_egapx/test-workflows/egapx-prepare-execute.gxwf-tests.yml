@@ -1,0 +1,15 @@
+- doc: |
+    Prepare the EGAPx local cache from a history YAML configuration, then run
+    the annotation pipeline against that cache. Requires network access and the
+    quay.io/galaxy/egapx container (downloads reference data + runs a full
+    annotation); not runnable offline.
+  job:
+    config_yaml:
+      class: File
+      path: ../test-data/input.yaml
+      filetype: yaml
+  outputs:
+    annotation_gff:
+      asserts:
+        has_size:
+          min: 1

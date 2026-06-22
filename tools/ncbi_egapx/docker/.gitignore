@@ -1,0 +1,18 @@
+# Build artifacts and vendored checkouts produced when building the augmented
+# container. These are large (multi-GB), may contain nested .git directories,
+# and must never be committed.
+/egapx/
+/assets/egapx/
+/img/
+/out.txt
+
+# example output produced by the build-time priming run
+/example_out/
+
+# build logs / scratch / images
+*.log
+*.tar
+*.sif
+
+# never commit credentials; the quay robot token comes from the environment
+.env
