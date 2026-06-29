@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0   # the gate diffs the PR against its base
-      - uses: richard-burhans/galaxy-tool-refactor/.github/actions/forward-gate@v0.3.3
+      - uses: richard-burhans/galaxy-tool-refactor/.github/actions/forward-gate@v0.3.6
         with:
           version: "0.3.3"
           mode: suggest
