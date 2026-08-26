@@ -255,8 +255,16 @@ class bashCommandLineFile:
         return command_dict
 
     def _write_format(self) -> None:
+        """Record the LASTZ output format for batched_lastz.
+
+        ⚠ THE LASTZ FORMAT, NOT THE GALAXY SELECTOR. batched_lastz reads this value and maps it to
+        the Galaxy datatype of the final dataset, and its table is keyed on lastz's own format names
+        (`sam-`, `maf+`, `lav+text`, ...). Writing the selector instead put values like `bam` in
+        here, which that table has no entry for, so it silently fell back to `tabular` -- and SAM
+        output reached users typed as tabular. The tool sends the resolved format now.
+        """
         with open("format.txt", "w") as ofh:
-            print(f"{self.args.format_selector}", file=ofh)
+            print(f"{self.args.output_format}", file=ofh)
 
         self.package_file.add_format("format.txt")
 
@@ -297,7 +305,7 @@ class nodevisitor(bashlex.ast.nodevisitor):  # type: ignore[misc]
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tool_directory", type=str, required=True, help="tool directory")
-    parser.add_argument("--format_selector", type=str, required=True, help="format selector")
+    parser.add_argument("--output_format", type=str, required=True, help="lastz output format")
     parser.add_argument("--debug", action="store_true", help="enable debug messages")
     args = parser.parse_args()
 
