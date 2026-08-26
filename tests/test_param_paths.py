@@ -100,10 +100,19 @@ def _resolves(ref: str, declared: dict[str, str]) -> bool:
 
 
 def _command_text(tool_xml: pathlib.Path) -> str:
-    for node in ET.parse(tool_xml).getroot():
-        if node.tag in ("command", "configfiles"):
-            return node.text or ""
-    return ""
+    """Every place a tool interpolates parameters: the command AND each configfile.
+
+    ⚠ CONFIGFILES COUNT, AND READING ONLY THE FIRST NODE MISSES THEM. `<configfiles>` holds
+    `<configfile>` children, so its own `.text` is the whitespace before the first child -- a checker
+    that returns it scans nothing. ncbi_egapx interpolates parameters in both places, and the version
+    of this check that read only the command saw half the tool.
+    """
+    root = ET.parse(tool_xml).getroot()
+    chunks = []
+    for node in root.iter():
+        if node.tag in ("command", "configfile") and node.text:
+            chunks.append(node.text)
+    return "\n".join(chunks)
 
 
 def _references(command: str, roots: set[str]) -> set[str]:
@@ -117,7 +126,20 @@ def _references(command: str, roots: set[str]) -> set[str]:
     return found
 
 
-TOOL_XMLS = sorted(p for p in TOOLS.glob("*/*.xml") if p.parent.name == p.stem)
+def _is_tool(path: pathlib.Path) -> bool:
+    """A tool XML is one whose root element is <tool>.
+
+    ⚠ NOT "the file named after its directory". That heuristic silently skipped
+    ncbi_egapx_prepare_input.xml, a second tool living beside the first -- so the check reported on a
+    directory while covering only half of it.
+    """
+    try:
+        return ET.parse(path).getroot().tag == "tool"
+    except ET.ParseError:
+        return False
+
+
+TOOL_XMLS = sorted(p for p in TOOLS.glob("*/*.xml") if _is_tool(p))
 
 # Tools carrying the same defect this check was written for, not yet repaired. Recorded rather than
 # excluded: `strict` means a fix makes the test fail as UNEXPECTEDLY PASSING, which is the prompt to
@@ -133,33 +155,41 @@ KNOWN_DEFECTS = {
     ("segalign", "resolves"): "abandoned tool — scoring_options ambiguous params wired one level too "
                               "shallow, the same defect as kegalign, in the tool it was derived from",
     ("segalign", "bare"): "abandoned tool — ambiguous_selector referenced without its section prefix",
+    # Both egapx tools, left for later by agreement -- the surface is a dozen references across
+    # nested conditionals feeding a YAML configfile, which is a different-sized job from a wiring fix.
     ("ncbi_egapx", "bare"): "$genome and $yamlin referenced without their conditional prefix, while "
                             "the #if directly above them uses the full path",
+    ("ncbi_egapx", "resolves"): "cond_input_style.proteins is missing the cond_protein_set level; "
+                                "the #if on the line above it has the full path",
+    ("ncbi_egapx_prepare_input", "bare"): "$genome, $yamlin, $taxid, $uri and $locus_tag_prefix "
+                                          "referenced without their conditional prefix",
+    ("ncbi_egapx_prepare_input", "resolves"): "cond_input_style.proteins is missing the "
+                                              "cond_protein_set level",
 }
 
 
 def _known(tool_xml: pathlib.Path, check: str, request) -> None:
-    reason = KNOWN_DEFECTS.get((tool_xml.parent.name, check))
+    reason = KNOWN_DEFECTS.get((tool_xml.stem, check))
     if reason:
         request.applymarker(pytest.mark.xfail(strict=True, reason=reason))
 
 
-@pytest.mark.parametrize("tool_xml", TOOL_XMLS, ids=lambda p: p.parent.name)
+@pytest.mark.parametrize("tool_xml", TOOL_XMLS, ids=lambda p: p.stem)
 def test_every_parameter_reference_resolves(tool_xml: pathlib.Path, request) -> None:
     _known(tool_xml, "resolves", request)
     declared = _declared_paths(tool_xml)
     sections = {p for p, tag in declared.items() if "." not in p and tag != "param"}
     referenced = _references(_command_text(tool_xml), sections)
     if not referenced:
-        pytest.skip(f"{tool_xml.parent.name} has no section-rooted parameter references")
+        pytest.skip(f"{tool_xml.stem} has no section-rooted parameter references")
 
     unresolved = sorted(r for r in referenced if not _resolves(r, declared))
     assert not unresolved, (
-        f"{tool_xml.parent.name}: {len(unresolved)} reference(s) name no declared parameter — "
+        f"{tool_xml.stem}: {len(unresolved)} reference(s) name no declared parameter — "
         f"Cheetah will fail only when a user reaches that branch:\n  " + "\n  ".join(unresolved))
 
 
-@pytest.mark.parametrize("tool_xml", TOOL_XMLS, ids=lambda p: p.parent.name)
+@pytest.mark.parametrize("tool_xml", TOOL_XMLS, ids=lambda p: p.stem)
 def test_no_section_parameter_referenced_bare(tool_xml: pathlib.Path, request) -> None:
     """A parameter inside a section must never be addressed without its section prefix.
 
@@ -182,5 +212,5 @@ def test_no_section_parameter_referenced_bare(tool_xml: pathlib.Path, request) -
         if ref in nested_leaves:
             bare.add(ref)
     assert not bare, (
-        f"{tool_xml.parent.name}: parameter(s) referenced without their section prefix: "
+        f"{tool_xml.stem}: parameter(s) referenced without their section prefix: "
         f"{', '.join(sorted(bare))}")
