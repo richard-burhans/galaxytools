@@ -50,12 +50,15 @@ python '$__tool_directory__/runner.py'
 #if $scoring_pathname != "None":
     --scoring '$scoring_pathname'
 #end if
+## ⚠ THE REWARD/PENALTY PAIR LIVES INSIDE THE `ambiguous_params` CONDITIONAL, so the path carries
+## that level too. Addressed one level too shallow, Cheetah fails only when a user picks something
+## other than the default -- which short-circuits this whole block, so it never showed up.
 #if str($scoring_options.ambiguous_selector) != "x"
-    #if str($scoring_options.set_ambiguous_params_selector) == "true"
-        #set $argument_value = ','.join($scoring_options.ambiguous_selector, $scoring_options.ambiguous_reward, $scoring_options.ambiguous_penalty)
+    #if str($scoring_options.ambiguous_params.set_ambiguous_params_selector) == "true"
+        #set $argument_value = ','.join([str($scoring_options.ambiguous_selector), str($scoring_options.ambiguous_params.ambiguous_reward), str($scoring_options.ambiguous_params.ambiguous_penalty)])
     --ambiguous '$argument_value'
     #else
-    --ambiguous '$ambiguous_selector'
+    --ambiguous '$scoring_options.ambiguous_selector'
     #end if
 #end if
 
