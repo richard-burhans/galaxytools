@@ -97,24 +97,28 @@ python '$__tool_directory__/runner.py'
 
 ## Output Options ------------------------------------------------------
 
+## Resolve the selector to the LASTZ format ONCE. It is needed twice -- here for lastz, and below
+## for package_output.py, which records it in the tarball so batched_lastz can assign the Galaxy
+## datatype. Passing the SELECTOR there instead of this value is what typed SAM output as `tabular`:
+## batched_lastz's table is keyed on lastz format names, and `bam` is not one of them.
 #if str($output_options.format.format_selector) == "bam"
-    --format '$output_options.format.bam_options'
+    #set $lastz_format = str($output_options.format.bam_options)
 #else if str($output_options.format.format_selector) == "general_def"
-    --format general-
+    #set $lastz_format = "general-"
 #else if str($output_options.format.format_selector) == "general_full"
-    --format 'general-:${output_options.format.fields}'
-
+    #set $lastz_format = "general-:%s" % str($output_options.format.fields)
 #else if str($output_options.format.format_selector) == "maf"
-    --format '$output_options.format.maf_type'
+    #set $lastz_format = str($output_options.format.maf_type)
 #else if str($output_options.format.format_selector) == "axt"
-    --format '$output_options.format.axt_type'
+    #set $lastz_format = str($output_options.format.axt_type)
 #else if str($output_options.format.format_selector) == "lav"
-    --format '$output_options.format.lav_type'
+    #set $lastz_format = str($output_options.format.lav_type)
 #else if str($output_options.format.format_selector) == "blastn"
-    --format=BLASTN-
+    #set $lastz_format = "BLASTN-"
 #else if str($output_options.format.format_selector) == "differences"
-    --format=differences
+    #set $lastz_format = "differences"
 #end if
+    --format '$lastz_format'
 ## todo :: rplot, bam
 ##  --action:target=multiple
 ##  $output_format.rplot
@@ -143,7 +147,7 @@ python '$__tool_directory__/runner.py'
 &&
 python '$__tool_directory__/package_output.py'
     --tool_directory '$__tool_directory__'
-    --format_selector '$output_options.format.format_selector'
+    --output_format '$lastz_format'
 #if str($system_options.debug) == "true"
     --debug
 #end if
