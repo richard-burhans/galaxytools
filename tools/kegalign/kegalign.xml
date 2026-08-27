@@ -14,12 +14,6 @@
     </macros>
     <expand macro="edam_ontology"/>
     <expand macro="requirements"/>
-    <required_files>
-        <include path="diagonal_partition.py"/>
-        <include path="lastz-cmd.ini"/>
-        <include path="package_output.py"/>
-        <include path="runner.py"/>
-    </required_files>
     <command detect_errors="exit_code"><![CDATA[
 ## Convert input sequences to 2bit -------------------------------------
 
@@ -27,16 +21,23 @@ mkdir -p "\$(pwd)/work" &&
 faToTwoBit <(gzip -cdfq '$target') "\$(pwd)/work/ref.2bit" &&
 faToTwoBit <(gzip -cdfq '$query') "\$(pwd)/work/query.2bit" &&
 
+## The scripts come from the kegalign package, which installs them to its bin
+## directory alongside the aligner -- this tool no longer carries copies of them.
+## `--tool_directory` still has to name that directory, because runner.py locates
+## diagonal_partition.py through it and package_output.py locates lastz-cmd.ini.
+KEGALIGN_BIN=\$(dirname "\$(command -v runner.py)") &&
+test -f "\$KEGALIGN_BIN/runner.py" &&
+
 ## Run KegAlign --------------------------------------------------------
 
 ## explicitly calling python to bypass a pulsar bug
 ## https://github.com/galaxyproject/pulsar/issues/341
-python '$__tool_directory__/runner.py'
+python "\$KEGALIGN_BIN/runner.py"
     --output-type tarball
     --output-file '$kegalign_output'
     --diagonal-partition
     --num-cpu \${GALAXY_SLOTS:-2}
-    --tool_directory '$__tool_directory__'
+    --tool_directory "\$KEGALIGN_BIN"
     '$target'
     '$query'
 
@@ -148,8 +149,8 @@ python '$__tool_directory__/runner.py'
 ## Package Output ------------------------------------------------------
 
 &&
-python '$__tool_directory__/package_output.py'
-    --tool_directory '$__tool_directory__'
+python "\$KEGALIGN_BIN/package_output.py"
+    --tool_directory "\$KEGALIGN_BIN"
     --output_format '$lastz_format'
 #if str($system_options.debug) == "true"
     --debug
