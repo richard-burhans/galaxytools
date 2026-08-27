@@ -121,16 +121,19 @@ def read_format(run_lastz_tarball: types.ModuleType, written: str, tmp_path: pat
         os.chdir(cwd)
 
 
-PAIRS = {
-    "wrapper": (TOOLS / "kegalign" / "package_output.py",
-                TOOLS / "batched_lastz" / "run_lastz_tarball.py"),
-}
+# ⚠ THE GALAXY TOOL NO LONGER CARRIES A WRITER. tools/kegalign used to vendor its own copy of
+# package_output.py; it now calls the one the kegalign conda package installs, so the writer under
+# test lives in a KegAlign checkout and these tests need KEGALIGN_SRC to run at all. That is the
+# point of the change -- there is no second copy left to disagree with.
+#
+# `batched_lastz` still vendors run_lastz_tarball.py deliberately: it must stay installable on
+# CPU-only nodes, and kegalign is a CUDA package. So the pairing that matters in production is the
+# packaged writer feeding THAT reader, which is the second entry here.
+PAIRS = {}
 if CORE:
-    PAIRS["core"] = (CORE / "package_output.py", CORE / "run_lastz_tarball.py")
-    PAIRS["core-writer/wrapper-reader"] = (CORE / "package_output.py",
-                                           TOOLS / "batched_lastz" / "run_lastz_tarball.py")
-    PAIRS["wrapper-writer/core-reader"] = (TOOLS / "kegalign" / "package_output.py",
-                                           CORE / "run_lastz_tarball.py")
+    PAIRS["packaged"] = (CORE / "package_output.py", CORE / "run_lastz_tarball.py")
+    PAIRS["packaged-writer/galaxy-reader"] = (CORE / "package_output.py",
+                                              TOOLS / "batched_lastz" / "run_lastz_tarball.py")
 
 
 @pytest.mark.parametrize("pair", sorted(PAIRS))
@@ -163,8 +166,10 @@ def test_writer_and_reader_speak_the_same_vocabulary(selector: str, lastz_format
     (`sam-`, `maf+`). Where those vocabularies fail to overlap the reader silently falls back to
     "tabular" instead of failing, so nothing downstream ever reports the mismatch.
     """
-    writer = _load(PAIRS["wrapper"][0], "pkg_vocab")
-    reader = _load(PAIRS["wrapper"][1], "run_vocab")
+    if not PAIRS:
+        pytest.skip("set KEGALIGN_SRC to a KegAlign checkout: the writer is packaged, not vendored")
+    writer = _load(PAIRS["packaged-writer/galaxy-reader"][0], "pkg_vocab")
+    reader = _load(PAIRS["packaged-writer/galaxy-reader"][1], "run_vocab")
     written = write_format(writer, selector, lastz_format, tmp_path)
     got = read_format(reader, written, tmp_path)
     fell_back = got == "tabular" and EXPECTED_DATATYPE[lastz_format] != "tabular"
@@ -176,9 +181,11 @@ def test_writer_and_reader_speak_the_same_vocabulary(selector: str, lastz_format
 @pytest.mark.parametrize(("selector", "lastz_format"), _selector_formats())
 def test_characterise_current_wrapper_behaviour(selector: str, lastz_format: str,
                                                 tmp_path: pathlib.Path, record_property) -> None:
-    """Record what the shipped wrapper does today. Never fails -- it is the before-picture."""
-    writer = _load(PAIRS["wrapper"][0], "pkg_char")
-    reader = _load(PAIRS["wrapper"][1], "run_char")
+    """Record what the shipped pair does today. Never fails -- it is the before-picture."""
+    if not PAIRS:
+        pytest.skip("set KEGALIGN_SRC to a KegAlign checkout: the writer is packaged, not vendored")
+    writer = _load(PAIRS["packaged-writer/galaxy-reader"][0], "pkg_char")
+    reader = _load(PAIRS["packaged-writer/galaxy-reader"][1], "run_char")
     written = write_format(writer, selector, lastz_format, tmp_path)
     got = read_format(reader, written, tmp_path)
     record_property("selector", selector)
