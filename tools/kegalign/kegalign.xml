@@ -17,9 +17,22 @@
     <command detect_errors="exit_code"><![CDATA[
 ## Convert input sequences to 2bit -------------------------------------
 
+## ⚠ NO PROCESS SUBSTITUTION HERE. `faToTwoBit <(gzip -cdfq ...)` is a bashism, and the
+## job script is not guaranteed to run under bash: on usegalaxy.org's vgp destination the
+## container's /bin/sh rejects it with `syntax error: unexpected "("` and the tool dies at
+## exit 2 before reading a single base. The wrapper carried that line unchanged from
+## 2024-08-29 and every container tolerated it until this one, so this is a latent bashism
+## finally meeting a POSIX shell -- not a regression in the aligner.
+## Decompressed to a real file rather than a FIFO or /dev/stdin so that nothing depends on
+## faToTwoBit accepting a non-seekable input, and removed immediately after conversion so
+## the uncompressed copies do not sit beside the 2bit files for the life of the job.
+
 mkdir -p "\$(pwd)/work" &&
-faToTwoBit <(gzip -cdfq '$target') "\$(pwd)/work/ref.2bit" &&
-faToTwoBit <(gzip -cdfq '$query') "\$(pwd)/work/query.2bit" &&
+gzip -cdfq '$target' > "\$(pwd)/work/ref.fa" &&
+faToTwoBit "\$(pwd)/work/ref.fa" "\$(pwd)/work/ref.2bit" &&
+gzip -cdfq '$query' > "\$(pwd)/work/query.fa" &&
+faToTwoBit "\$(pwd)/work/query.fa" "\$(pwd)/work/query.2bit" &&
+rm -f "\$(pwd)/work/ref.fa" "\$(pwd)/work/query.fa" &&
 
 ## The scripts come from the kegalign package, which installs them to its bin
 ## directory alongside the aligner -- this tool no longer carries copies of them.
