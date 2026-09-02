@@ -233,6 +233,14 @@ By default the HOXD70 substitution scores are used (from `Chiaromonte et al. 200
 
 Matrix can be supplied as an input to **Read the substitution scores** parameter in *Scoring* section. Substitution matrix can be inferred from your data using another LASTZ-based tool (LASTZ_D: Infer substitution scores).
 
+.. class:: infomark
+
+From KegAlign 0.3.0, a supplied scoring file's ``bad_score`` and ``fill_score`` are honoured in the
+gap-free extension stage as well as the gapped one. Earlier versions read both values but used them
+only for gapped extension, so a custom file was interpreted two different ways within a single run.
+Results from a custom scoring file are therefore not directly comparable with those from 0.2.2.14
+or earlier.
+
 **Output Options**
 
 .. class:: infomark
