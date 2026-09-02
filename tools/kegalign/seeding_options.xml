@@ -17,12 +17,12 @@
                     <param name="custom_seed" type="text" value="" optional="false" label="Custom seed pattern">
                         <validator type="empty_field"/>
                         <validator type="regex" message="Arbitrary pattern of 1s, 0s, and Ts">^[01T]+$</validator>
-                        <!-- Mirrors MAX_SEED_SPAN and MAX_SEED_WEIGHT, which KegAlign enforces from
-                             0.3.0, and the weight FLOOR, which it does not yet: MIN_SEED_WEIGHT
-                             lands in 0.3.1. Until then the form is stricter than the binary
-                             behind it, deliberately: a weight-3 pattern does not fail
-                             cleanly there, it dies with cudaErrorIllegalAddress. Checking here means the user is told in the form rather
-                             than by a failed job. Weight counts 1 and T alike: the tool
+                        <!-- Mirrors MAX_SEED_SPAN, MAX_SEED_WEIGHT and MIN_SEED_WEIGHT, all
+                             three of which KegAlign enforces from 0.3.1. Checking here means
+                             the user is told in the form rather than by a failed job, which
+                             matters most at the floor: below weight 4 a Release build has had
+                             its assert deleted by NDEBUG and dies with cudaErrorIllegalAddress
+                             rather than a message. Weight counts 1 and T alike: the tool
                              normalises 1 to T before counting them. -->
                         <validator type="expression" message="Seed pattern may be at most 64 positions long">len(value) &lt;= 64</validator>
                         <validator type="expression" message="Seed pattern must have between 4 and 15 match positions (1 or T)">4 &lt;= sum(c in "1T" for c in value) &lt;= 15</validator>
