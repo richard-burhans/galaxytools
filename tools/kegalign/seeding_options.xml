@@ -17,12 +17,12 @@
                     <param name="custom_seed" type="text" value="" optional="false" label="Custom seed pattern">
                         <validator type="empty_field"/>
                         <validator type="regex" message="Arbitrary pattern of 1s, 0s, and Ts">^[01T]+$</validator>
-                        <!-- Mirrors MAX_SEED_SPAN and MAX_SEED_WEIGHT, which KegAlign enforces
+                        <!-- Mirrors MAX_SEED_SPAN, MIN_SEED_WEIGHT and MAX_SEED_WEIGHT, which KegAlign enforces
                              from 0.3.0. Checking here means the user is told in the form rather
                              than by a failed job. Weight counts 1 and T alike: the tool
                              normalises 1 to T before counting them. -->
                         <validator type="expression" message="Seed pattern may be at most 64 positions long">len(value) &lt;= 64</validator>
-                        <validator type="expression" message="Seed pattern must have between 1 and 15 match positions (1 or T)">1 &lt;= sum(c in "1T" for c in value) &lt;= 15</validator>
+                        <validator type="expression" message="Seed pattern must have between 4 and 15 match positions (1 or T)">4 &lt;= sum(c in "1T" for c in value) &lt;= 15</validator>
                         <sanitizer invalid_char="">
                             <valid initial="none">
                                 <add value="0"/>
