@@ -34,6 +34,20 @@ places it has to exist:
     lags the depot. Compared by publication TIMESTAMP: a CVMFS revision published before the image
     was built cannot contain it.
 
+⚠ THE CVMFS TEST IS NECESSARY AND NOT SUFFICIENT, and saying otherwise cost a second run. On
+2026-09-03 CVMFS published S13566 at 03:04:08Z, ten minutes after the image was built at
+02:54:38Z, and this check said "mountable" -- then both arms died in a BusyBox image anyway. A
+publication timestamp after the build does not prove the sync that produced that revision INCLUDED
+the image, and it says nothing about whether a given compute node has refreshed its own CVMFS
+cache. Treat a pass as "worth trying", never as "will work".
+
+⛔ THE ONE RELIABLE DISCRIMINATOR IS THE JOB'S OWN OUTPUT. A job that lands in the wrong image
+still runs, and fails with a plausible complaint about the DATA -- `gzip: invalid magic` is
+BusyBox's wording, verbatim, where the real container's GNU gzip 1.14 passes a plain FASTA through
+without a word. Both were checked by running the two images side by side rather than reasoning
+about them. So: if the stderr carries none of the tool's own messages, suspect the container
+before the inputs.
+
 ⚠ The requirement package is not the tool name. The `kegalign` tool requires `kegalign-full`, so
 the image to look for is named after the REQUIREMENT. `--package` says which; it defaults to the
 tool name, which is right for tools whose names match and wrong silently otherwise.
@@ -147,7 +161,8 @@ def container_status(package: str, version: str) -> tuple[bool, str]:
     if cvmfs_time < built:
         return False, (f"{tags[-1]} was built {_utc(built)} but CVMFS is still at S{rev} "
                        f"({_utc(cvmfs_time)}) -- a job would NOT find the image")
-    return True, f"{tags[-1]} built {_utc(built)}, CVMFS S{rev} published {_utc(cvmfs_time)}"
+    return True, (f"{tags[-1]} built {_utc(built)}, CVMFS S{rev} published {_utc(cvmfs_time)} "
+                  f"-- NECESSARY, not sufficient (see the module docstring)")
 
 
 def _utc(epoch: float) -> str:
@@ -176,7 +191,8 @@ def report(server: str, owner: str, name: str, package: str) -> bool:
         print(f"  INSTALLED BUT NOT RUNNABLE — {host} serves {want}, but a job cannot mount its "
               f"image. This is the state that produces a bare error with no tool output.")
         return False
-    print(f"  PROPAGATED — {host} is serving {want} and its container is mountable")
+    print(f"  LIKELY READY — {host} serves {want}, its image is built, and CVMFS has published "
+          f"since. ⚠ That is NECESSARY, NOT SUFFICIENT: only a job proves it.")
     return True
 
 
