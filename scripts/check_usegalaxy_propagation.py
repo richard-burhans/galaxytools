@@ -21,11 +21,45 @@ ship the SAME tool version are indistinguishable here -- which is a real limit, 
 a wrapper-only change that does not bump @VERSION_SUFFIX@ is invisible to any observer outside the
 server, and that is a reason to bump the suffix, not a reason to trust a different check.
 
-    python scripts/check_usegalaxy_propagation.py --tool kegalign
+⛔ INSTALLED IS NOT RUNNABLE, AND THIS SCRIPT USED TO CONFLATE THEM. On 2026-09-02 it reported
+kegalign 0.3.1+galaxy0 as propagated to usegalaxy.org, correctly -- and every job using it died,
+because the mulled Singularity image `kegalign-full:0.3.1--hdfd78af_0` had not been built yet.
+Galaxy had the tool and not its container, so jobs fell back to another image and produced a bare
+`gzip: invalid magic` with no aligner output at all. Two hours of a validation run went into a
+question this check could have answered in one request. So it now checks the image too, in the two
+places it has to exist:
+
+  * `depot.galaxyproject.org/singularity/<pkg>:<version>--<build>` -- where the image is BUILT
+  * the `singularity.galaxyproject.org` CVMFS repository -- what a job actually MOUNTS, and which
+    lags the depot. Compared by publication TIMESTAMP: a CVMFS revision published before the image
+    was built cannot contain it.
+
+⚠ THE CVMFS TEST IS NECESSARY AND NOT SUFFICIENT, and saying otherwise cost a second run. On
+2026-09-03 CVMFS published S13566 at 03:04:08Z, ten minutes after the image was built at
+02:54:38Z, and this check said "mountable" -- then both arms died in a BusyBox image anyway. A
+publication timestamp after the build does not prove the sync that produced that revision INCLUDED
+the image, and it says nothing about whether a given compute node has refreshed its own CVMFS
+cache. Treat a pass as "worth trying", never as "will work".
+
+⛔ THE ONE RELIABLE DISCRIMINATOR IS THE JOB'S OWN OUTPUT. A job that lands in the wrong image
+still runs, and fails with a plausible complaint about the DATA -- `gzip: invalid magic` is
+BusyBox's wording, verbatim, where the real container's GNU gzip 1.14 passes a plain FASTA through
+without a word. Both were checked by running the two images side by side rather than reasoning
+about them. So: if the stderr carries none of the tool's own messages, suspect the container
+before the inputs.
+
+⚠ The requirement package is not the tool name. The `kegalign` tool requires `kegalign-full`, so
+the image to look for is named after the REQUIREMENT. `--package` says which; it defaults to the
+tool name, which is right for tools whose names match and wrong silently otherwise.
+
+    python scripts/check_usegalaxy_propagation.py --tool kegalign --package kegalign-full
     python scripts/check_usegalaxy_propagation.py --tool kegalign --watch
 """
 import argparse
+import datetime
+import email.utils
 import json
+import re
 import sys
 import time
 import urllib.parse
@@ -36,6 +70,9 @@ DEFAULT_SERVER = "https://usegalaxy.org"
 DEFAULT_OWNER = "richard-burhans"
 DEFAULT_INTERVAL = 900          # 15 min; CVMFS propagation is measured in hours, not seconds
 DEFAULT_TIMEOUT = 12 * 3600
+DEPOT = "https://depot.galaxyproject.org/singularity"
+CVMFS_PUBLISHED = ("http://cvmfs1-psu0.galaxyproject.org/cvmfs/"
+                   "singularity.galaxyproject.org/.cvmfspublished")
 
 
 def get_json(url: str, timeout: int = 60):
@@ -77,7 +114,62 @@ def installed_versions(server: str, owner: str, name: str) -> list[str]:
     return sorted({i.rsplit("/", 1)[-1] for i in ids if prefix in i})
 
 
-def report(server: str, owner: str, name: str) -> bool:
+def container_status(package: str, version: str) -> tuple[bool, str]:
+    """Is the mulled image for `package` `version` built, and has CVMFS caught up?
+
+    Returns (usable, explanation). "Usable" means the image exists on the depot AND the CVMFS
+    repository has published a revision since it was built -- a job mounts CVMFS, not the depot,
+    so a built-but-unpublished image is exactly as unrunnable as a missing one.
+
+    The build string is not knowable from the version alone, so the depot's directory listing is
+    searched for any tag matching the version. That is one request and it is exact; guessing a
+    build string and getting a 404 would report "not built" for an image that is.
+    """
+    prefix = f"{package}:{version}--"
+    try:
+        listing = urllib.request.urlopen(
+            urllib.request.Request(DEPOT + "/"), timeout=90).read().decode("utf-8", "replace")
+    except OSError as e:
+        return False, f"could not read the depot listing ({type(e).__name__}: {e})"
+    tags = sorted({m.group(0) for m in re.finditer(
+        re.escape(prefix) + r"[A-Za-z0-9_]+", listing)})
+    if not tags:
+        return False, f"no image {prefix}* has been built yet"
+
+    try:
+        with urllib.request.urlopen(urllib.request.Request(DEPOT + "/" + tags[-1]),
+                                    timeout=90) as response:
+            built_header = response.headers.get("Last-Modified")
+    except OSError as e:
+        return False, f"{tags[-1]} is listed but not fetchable ({type(e).__name__}: {e})"
+    built = (email.utils.parsedate_to_datetime(built_header).timestamp()
+             if built_header else None)
+
+    try:
+        published = urllib.request.urlopen(
+            urllib.request.Request(CVMFS_PUBLISHED), timeout=90).read().decode("utf-8", "replace")
+    except OSError as e:
+        return False, f"{tags[-1]} is built, but CVMFS is unreachable ({type(e).__name__}: {e})"
+    revision = re.search(r"^S(\d+)", published, re.M)
+    stamp = re.search(r"^T(\d+)", published, re.M)
+    if not stamp:
+        return False, f"{tags[-1]} is built, but CVMFS published no timestamp to compare against"
+    cvmfs_time = int(stamp.group(1))
+    rev = revision.group(1) if revision else "?"
+    if built is None:
+        return False, f"{tags[-1]} is built, but the depot served no Last-Modified to compare"
+    if cvmfs_time < built:
+        return False, (f"{tags[-1]} was built {_utc(built)} but CVMFS is still at S{rev} "
+                       f"({_utc(cvmfs_time)}) -- a job would NOT find the image")
+    return True, (f"{tags[-1]} built {_utc(built)}, CVMFS S{rev} published {_utc(cvmfs_time)} "
+                  f"-- NECESSARY, not sufficient (see the module docstring)")
+
+
+def _utc(epoch: float) -> str:
+    return datetime.datetime.fromtimestamp(epoch, datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def report(server: str, owner: str, name: str, package: str) -> bool:
     changeset, want = published_version(owner, name)
     have = installed_versions(server, owner, name)
     host = urllib.parse.urlparse(server).netloc
@@ -87,17 +179,30 @@ def report(server: str, owner: str, name: str) -> bool:
     if not want:
         print("  UNDECIDABLE — the published revision reports no tool version to compare against")
         return False
-    if want in have:
-        print(f"  PROPAGATED — {host} is serving {want}")
-        return True
-    print(f"  NOT YET — {host} has not picked up {want}")
-    return False
+    if want not in have:
+        print(f"  NOT YET — {host} has not picked up {want}")
+        return False
+
+    # ⛔ The tool being installed is where this check used to stop, and it was not enough.
+    upstream = want.split("+")[0]
+    usable, detail = container_status(package, upstream)
+    print(f"  container  {package} {upstream}: {detail}")
+    if not usable:
+        print(f"  INSTALLED BUT NOT RUNNABLE — {host} serves {want}, but a job cannot mount its "
+              f"image. This is the state that produces a bare error with no tool output.")
+        return False
+    print(f"  LIKELY READY — {host} serves {want}, its image is built, and CVMFS has published "
+          f"since. ⚠ That is NECESSARY, NOT SUFFICIENT: only a job proves it.")
+    return True
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--tool", required=True, help="Tool Shed repository name, e.g. kegalign")
     parser.add_argument("--owner", default=DEFAULT_OWNER)
+    parser.add_argument("--package", default=None,
+                        help="conda package whose mulled image backs the tool (default: the tool "
+                             "name; kegalign is backed by kegalign-full)")
     parser.add_argument("--server", default=DEFAULT_SERVER,
                         help=f"Galaxy server to check (default {DEFAULT_SERVER})")
     parser.add_argument("--watch", action="store_true",
@@ -107,15 +212,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT,
                         help=f"give up after this many seconds (default {DEFAULT_TIMEOUT})")
     args = parser.parse_args(argv)
+    package = args.package or args.tool
 
     if not args.watch:
-        return 0 if report(args.server, args.owner, args.tool) else 1
+        return 0 if report(args.server, args.owner, args.tool, package) else 1
 
     started = time.time()
     while True:
         print(f"[{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}]", flush=True)
         try:
-            if report(args.server, args.owner, args.tool):
+            if report(args.server, args.owner, args.tool, package):
                 return 0
         except (OSError, ValueError) as e:
             # A transient failure is not an answer. Keep waiting rather than reporting
