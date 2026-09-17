@@ -2,6 +2,10 @@
 
 **One genome pair in, a keg-keyed alignment collection out.**
 
+*On the name:* **Growler** is just the system's name. It carries no relationship to *keg* beyond
+both being words — in particular it implies nothing about relative size, and there is no
+container metaphor to keep consistent. A **keg** is the unit: one chromosome pair's segments.
+
 KegAlign emits a collection of **kegs** — one gzipped segments file per `(target, query)`
 chromosome pair, both strands — plus the two 2bits as their own datasets. `growler_lastz` is
 mapped over that collection. No tarball, no `commands.json`, no `format.txt`, no collapse.
