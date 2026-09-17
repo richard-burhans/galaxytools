@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
 import argparse
+import collections.abc
 import concurrent.futures
 import contextlib
 import gzip
 import json
 import multiprocessing
 import os
+import pathlib
 import queue
 import re
 import shutil
@@ -19,7 +21,7 @@ import typing
 
 
 @contextlib.contextmanager
-def open_file(filename: str):
+def open_file(filename: str) -> collections.abc.Iterator[typing.IO[str]]:
     if filename.endswith(".gz"):
         with gzip.open(filename, "wt", compresslevel=6) as f:
             yield f
@@ -35,15 +37,13 @@ lastz_output_format_regex = re.compile(
 
 
 # Specifies the output format: lav, lav+text, axt, axt+, maf, maf+, maf-, sam, softsam, sam-, softsam-, cigar, BLASTN, PAF, PAF:wfmash, differences, rdotplot, text, general[:<fields>], or general-[:<fields>].
-# ‑‑format=none can be used when no alignment output is desired.
+# --format=none can be used when no alignment output is desired.
 
 
 def run_command(
-    instance: int,
-    input_queue: "queue.Queue[typing.Dict[str, typing.Any]]",
+    input_queue: "queue.Queue[dict[str, typing.Any]]",
     output_queue: "queue.Queue[float]",
-    debug: bool = False,
-) -> typing.List[str]:
+) -> list[str]:
     os.chdir("galaxy/files")
 
     # These are not considered errors even though
@@ -57,7 +57,7 @@ def run_command(
     # worker's sentinel in the queue; another worker then consumes it and exits too, so
     # commands still queued are silently never run. One failed lastz could drop an
     # arbitrary share of the batch.
-    failures: typing.List[str] = []
+    failures: list[str] = []
 
     while True:
         command_dict = input_queue.get()
@@ -74,7 +74,7 @@ def run_command(
 
         stdin = command_dict["stdin"]
         if stdin is not None:
-            stdin = open(stdin, "r")
+            stdin = open(stdin)
 
         stdout = command_dict["stdout"]
         if stdout is not None:
@@ -98,9 +98,9 @@ def run_command(
 
         if stderr_file is not None:
             try:
-                statinfo = os.stat(stderr_file, follow_symlinks=False)
-                if statinfo.st_size != 0:
-                    with open(stderr_file) as f:
+                stderr_path = pathlib.Path(stderr_file)
+                if stderr_path.lstat().st_size != 0:
+                    with stderr_path.open() as f:
                         for stderr_line in f:
                             stderr_line = stderr_line.strip()
                             if not stderr_line:
@@ -130,8 +130,8 @@ def run_command(
 
 
 def collect_failures(
-    futures: typing.Iterable["concurrent.futures.Future[typing.List[str]]"],
-) -> typing.List[str]:
+    futures: collections.abc.Iterable["concurrent.futures.Future[list[str]]"],
+) -> list[str]:
     """Every failure the workers reported, as messages.
 
     ⛔ A WORKER SIGNALS FAILURE BY RETURNING, NOT BY RAISING. The previous version of this
@@ -143,7 +143,7 @@ def collect_failures(
 
     Split out so it can be tested without processes, a tarball or lastz.
     """
-    failures: typing.List[str] = []
+    failures: list[str] = []
 
     for future in futures:
         if future.cancelled():
@@ -164,16 +164,14 @@ class BatchTar:
     def __init__(self, pathname: str, debug: bool = False) -> None:
         self.pathname = pathname
         self.debug = debug
-        self.tarfile = None
-        self.commands: typing.List[typing.Dict[str, typing.Any]] = []
+        self.commands: list[dict[str, typing.Any]] = []
         self.format_name = "tabular"
         self._extract()
         self._load_commands()
         self._load_format()
 
-    def batch_commands(self) -> typing.Iterator[typing.Dict[str, typing.Any]]:
-        for command in self.commands:
-            yield command
+    def batch_commands(self) -> collections.abc.Iterator[dict[str, typing.Any]]:
+        yield from self.commands
 
     def final_output_format(self) -> str:
         return self.format_name
@@ -199,14 +197,14 @@ class BatchTar:
             )
 
     def _load_commands(self) -> None:
-        try:
-            f = open("galaxy/commands.json")
-        except FileNotFoundError:
+        commands_path = pathlib.Path("galaxy/commands.json")
+        if not commands_path.is_file():
             sys.exit(
                 f"ERROR: input tarball missing galaxy/commands.json: {self.pathname}"
             )
 
         begin = time.perf_counter()
+        f = commands_path.open()
         for json_line in f:
             json_line = json_line.rstrip("\n")
             try:
@@ -228,9 +226,9 @@ class BatchTar:
                 flush=True,
             )
 
-    def _load_command(self, command_dict: typing.Dict[str, typing.Any]) -> None:
+    def _load_command(self, command_dict: dict[str, typing.Any]) -> None:
         # check command_dict structure
-        field_types: typing.Dict[str, typing.List[typing.Any]] = {
+        field_types: dict[str, list[typing.Any]] = {
             "executable": [str],
             "args": [list],
             "stdin": [str, "None"],
@@ -313,8 +311,8 @@ class TarRunner:
         self.parallel = parallel
         self.debug = debug
         self.batch_tar = BatchTar(self.input_pathname, debug=self.debug)
-        self.output_file_format: typing.Dict[str, str] = {}
-        self.output_files: typing.Dict[str, typing.List[str]] = {}
+        self.output_file_format: dict[str, str] = {}
+        self.output_files: dict[str, list[str]] = {}
         self._set_output()
         self._set_target_query()
 
@@ -331,7 +329,7 @@ class TarRunner:
 
             if output_file is None:
                 f = tempfile.NamedTemporaryFile(dir="galaxy/files", delete=False)
-                output_file = os.path.basename(f.name)
+                output_file = pathlib.Path(f.name).name
                 f.close()
                 command_dict["args"].append(f"--output={output_file}")
 
@@ -350,7 +348,7 @@ class TarRunner:
 
     def _set_target_query(self) -> None:
         for command_dict in self.batch_tar.batch_commands():
-            new_args: typing.List[str] = []
+            new_args: list[str] = []
 
             for arg in command_dict["args"]:
                 if arg.startswith("--target="):
@@ -367,7 +365,7 @@ class TarRunner:
         begin = time.perf_counter()
 
         with multiprocessing.Manager() as manager:
-            input_queue: queue.Queue[typing.Dict[str, typing.Any]] = manager.Queue()
+            input_queue: queue.Queue[dict[str, typing.Any]] = manager.Queue()
             output_queue: queue.Queue[float] = manager.Queue()
 
             for command_dict in self.batch_tar.batch_commands():
@@ -381,14 +379,8 @@ class TarRunner:
                 max_workers=self.parallel
             ) as executor:
                 futures = [
-                    executor.submit(
-                        run_command,
-                        instance,
-                        input_queue,
-                        output_queue,
-                        debug=self.debug,
-                    )
-                    for instance in range(self.parallel)
+                    executor.submit(run_command, input_queue, output_queue)
+                    for _ in range(self.parallel)
                 ]
 
             failures = collect_failures(concurrent.futures.as_completed(futures))
