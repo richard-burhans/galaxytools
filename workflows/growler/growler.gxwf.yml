@@ -1,0 +1,91 @@
+class: GalaxyWorkflow
+label: Growler (one genome pair)
+doc: |
+  Growler: one genome pair in, a keg-keyed alignment collection out.
+
+  KegAlign emits a collection of KEGS -- one gzipped segments file per (target, query) chromosome
+  pair, both strands -- plus the two 2bits as their own datasets. Growler LASTZ is then mapped
+  over that collection. There is no tarball, no commands.json, no format.txt, and no collapse:
+  the chromosome-pair key created by KegAlign is carried by Galaxy's element identifiers all the
+  way to chaining.
+
+  ▶ USE THIS AS A SUBWORKFLOW. Mapped over a genome-pair collection it emits `list:list`
+  (outer = genome pair, inner = chromosome pair) with outer identifiers preserved -- measured on
+  usegalaxy.org 26.1, 2026-09-17. That is what makes the panel case work: Galaxy does NOT
+  broadcast a dataset across nesting levels, but inside one Growler invocation there is only one
+  level, so nothing needs broadcasting.
+
+  ⚠ EVERY MAPPED JOB RUNS THE SAME COMMAND LINE. The 5,177 commands of a real bundle collapse to
+  8 argument signatures, and dropping `subset=` and `--strand` collapses those 8 to 1 (both
+  measured byte-identical). So no element identifier has to reach a text parameter -- which is
+  the limitation that killed every multiz fold on 2026-06-13.
+
+  ⚠ The scoring file, gapped threshold, y-drop and interpolation are passed to BOTH stages. They
+  have to agree: KegAlign uses them to choose anchors, Growler LASTZ to extend them.
+
+inputs:
+  target_fasta:
+    type: data
+    doc: Target genome, FASTA or FASTA.gz. KegAlign converts it to 2bit inside the job.
+    position: {top: 0, left: 0}
+  query_fasta:
+    type: data
+    doc: Query genome, FASTA or FASTA.gz.
+    position: {top: 110, left: 0}
+  scores:
+    type: data
+    optional: true
+    doc: >
+      Scoring file in LASTZ format. Optional; omitted, both stages use LASTZ's built-in matrix.
+      It is wired to both stages from this single input precisely so they cannot drift apart.
+    position: {top: 220, left: 0}
+
+outputs:
+  alignments:
+    outputSource: growler_lastz/output
+    doc: One alignment per chromosome pair, keyed <target>__<query>.
+  target_2bit:
+    outputSource: kegalign/target_2bit
+  query_2bit:
+    outputSource: kegalign/query_2bit
+
+steps:
+  kegalign:
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.1+galaxy0
+    label: kegalign
+    doc: >
+      Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it emit
+      kegs instead of data_package.tgz; the tarball path is untouched and still available.
+    in:
+      target: target_fasta
+      query: query_fasta
+      scoring_options|scoring: scores
+    state:
+      bundle_selector: collection
+      sequence_options:
+        strand_selector: both
+      output_options:
+        format:
+          format_selector: maf
+          maf_type: maf-
+    position: {top: 0, left: 260}
+
+  growler_lastz:
+    tool_id: growler_lastz
+    label: growler_lastz
+    doc: >
+      Gapped extension, mapped over the keg collection: N independent jobs, one lastz each, and
+      the 2bits and scoring file ride along as fixed inputs rather than being copied into every
+      element. At 210 MB each the 2bits would be ~42 GB of inflation across 100 kegs.
+    in:
+      keg: kegalign/kegs
+      target: kegalign/target_2bit
+      query: kegalign/query_2bit
+      scores: scores
+    state:
+      format_selector: maf-
+      gappedthresh: 3000
+      ydrop: 9430
+      interpolation:
+        inner_selector: no
+    position: {top: 0, left: 560}
