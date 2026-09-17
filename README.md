@@ -1,41 +1,77 @@
-[![Galaxy Tool Linting and Tests for push and PR](https://github.com/richard-burhans/galaxytools/actions/workflows/pr.yaml/badge.svg?branch=main)](https://github.com/richard-burhans/galaxytools/actions/workflows/pr.yaml/badge.svg)
-[![Weekly global Tool Linting and Tests](https://github.com/richard-burhans/galaxytools/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/richard-burhans/galaxytools/actions/workflows/ci.yaml/badge.svg)
+[![Galaxy Tool Linting and Tests for push and PR](https://github.com/richard-burhans/galaxytools/actions/workflows/pr.yaml/badge.svg?branch=main)](https://github.com/richard-burhans/galaxytools/actions/workflows/pr.yaml)
+[![Weekly global Tool Linting and Tests](https://github.com/richard-burhans/galaxytools/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/richard-burhans/galaxytools/actions/workflows/ci.yaml)
 
-# Galaxy tool repository template
+# Galaxy tools
 
-This is a template repository to create [IUC](https://github.com/galaxyproject/tools-iuc) style repositories.
-It offers:
+Galaxy tool wrappers maintained by [@richard-burhans](https://github.com/richard-burhans), in the
+[IUC](https://github.com/galaxyproject/tools-iuc) layout. Tools are published to the
+[Main Tool Shed](https://toolshed.g2.bx.psu.edu/) under the owner `richard-burhans`, automatically,
+when CI passes on `main`.
 
-- the same structure as the IUC repository
-- CI for pull requests and weekly CI for all tools
-- automatic Tool Shed deployment of any updated tools, if the CI passes
- 
-Some documentation of the structure and the use of the CI can be found in [here](TODO link to tutorial).
+## Tools
 
-Setup
-=====
+| tool | what it does | notes |
+|---|---|---|
+| [`kegalign`](tools/kegalign) | GPU whole-genome pairwise alignment on LASTZ's seed–filter–extend paradigm | needs a GPU; **emits work for `batched_lastz`, not alignments** |
+| [`batched_lastz`](tools/batched_lastz) | runs the LASTZ commands KegAlign produced | CPU only; second half of the pair above |
+| [`segalign`](tools/segalign) | KegAlign's predecessor | |
+| [`ncbi_egapx`](tools/ncbi_egapx) | NCBI Eukaryotic Genome Annotation Pipeline (EGAPx) | |
+| [`ncbi_fcs_adaptor`](tools/ncbi_fcs_adaptor) | detects adaptor and vector contamination in genome sequences | |
+| [`rdeval`](tools/rdeval) | multithreaded read analysis and manipulation | |
 
-- Adapt the repository owner from `galaxyproject` to the owner of your repository [here](https://github.com/richard-burhans/galaxytools/blob/main/.github/workflows/ci.yaml#L15), [here](https://github.com/richard-burhans/galaxytools/blob/main/.github/workflows/pr.yaml#L304) and [here](https://github.com/richard-burhans/galaxytools/blob/main/.github/workflows/slash.yaml#L10). This is needed to forbid running the CI workflows in forks.
-- Change the links for the badges in this document [here](https://github.com/richard-burhans/galaxytools/blob/main/README.md#L1) and [here](https://github.com/richard-burhans/galaxytools/blob/main/README.md#L2), i.e. chage the organisation and repository name in the links. Certainly you may want to add the other content of this document.
-- Add the API keys to the toolshed and testtoolshed as secrets with the name `TTS_API_KEY` and `TS_API_KEY` (for automated deployment). 
-- Remove the example tool in `tools/example`
+### KegAlign and Batched LASTZ are one pipeline in two tools
 
+KegAlign does seeding and ungapped extension on the GPU and writes a **tarball** — the surviving
+HSPs as `.segments` files, the LASTZ command line to run over each, the 2bit sequences, and the
+scoring file. Batched LASTZ takes that tarball and performs the gapped extension, on CPU.
 
-In order to use the `/run-all-tool-tests` slash command you need to add a secret `PAT` to your repo that allows the action to access
-you repository - see [here](https://docs.github.com/en/actions/reference/encrypted-secrets). The slash command allows to run trigger weekly CI running using a given fork and branch of the Galaxy project, e.g. `/run-all-tool-tests branch=release_21.05 fork=galaxyproject`. 
+The split exists because the two halves want different hardware: the GPU node is released as soon as
+seeding is done, rather than sitting idle for the much longer CPU stage.
 
-Also consider adding:
+⚠ **They are versioned independently and must be kept in step.** The interface is the tarball —
+`commands.json` and `format.txt` — with no schema anywhere to enforce it, so `tests/test_format_contract.py`
+asserts that the writer and the reader still agree. They have drifted before.
 
-- `CONTRIBUTING.md`
-- `.github/CODEOWNERS`
-- `.github/PULL_REQUEST_TEMPLATE.md`
+⚠ **`tools/batched_lastz/run_lastz_tarball.py` is a deliberate second copy** of the script in the
+KegAlign source. It is vendored here because Batched LASTZ must install on CPU-only nodes and the
+`kegalign` conda package is a CUDA build. Changing one copy means considering the other.
 
-Updates
-=======
+## Tests
 
-Only the CI workflows may require updates from time to time. You can manually copy the latest version from this repository to your repository (not changing the repository owner as indicated in the setup section). We suggest to do this at least once a year, ideally with every Galaxy release. 
+`tests/` holds static checks that need no Galaxy, no container and no GPU, so they run anywhere:
 
-Bug reports
-===========
+| test | what it pins |
+|---|---|
+| `test_format_contract.py` | the tarball datatype contract between `kegalign` and `batched_lastz` |
+| `test_param_paths.py` | every `$section.…` in a tool's command resolves to a declared parameter |
+| `test_select_defaults.py` | a single-select `<param>` marks at most one option `selected="true"` |
+| `test_batched_lastz_failures.py` | a failed LASTZ command makes the tool exit nonzero |
 
-Please report problems with the CI workflows here: [IUC](https://github.com/galaxyproject/tools-iuc).
+```bash
+pip install pytest
+python -m pytest tests/ -q
+```
+
+Each exists because the thing it checks went wrong once. They are cheap; run them before pushing.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). In short:
+
+- **Bump the version when you change a tool.** `@TOOL_VERSION@` tracks the wrapped software;
+  `@VERSION_SUFFIX@` increments for wrapper-only changes and resets to `0` when `@TOOL_VERSION@`
+  moves. Planemo's `ShedVersion` linter fails the build otherwise, because the Tool Shed cannot tell
+  two revisions apart at the same version.
+- ⚠ **A macro shared between tools may be a symlink** — `tools/batched_lastz/alignment_type_option.xml`
+  points at the `kegalign` copy. Editing it changes the rendered XML of *both* tools, but `git diff`
+  reports one path, and CI derives its changed-tool list from that. Bump both.
+- Python is linted with `flake8` (see `setup.cfg`); tool XML with `planemo shed_lint`.
+
+`/run-all-tool-tests branch=release_25.1 fork=galaxyproject` triggers the weekly CI against a chosen
+Galaxy branch. It needs the `PAT` secret.
+
+## Reporting problems
+
+Tool bugs: open an issue here. Problems with the shared CI workflows themselves belong upstream with
+the [IUC](https://github.com/galaxyproject/tools-iuc), which this repository's layout and workflows
+are derived from.
