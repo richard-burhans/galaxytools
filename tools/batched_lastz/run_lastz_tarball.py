@@ -43,7 +43,7 @@ def run_command(
     input_queue: "queue.Queue[typing.Dict[str, typing.Any]]",
     output_queue: "queue.Queue[float]",
     debug: bool = False,
-) -> str | None:
+) -> typing.List[str]:
     os.chdir("galaxy/files")
 
     # These are not considered errors even though
@@ -53,11 +53,17 @@ def run_command(
     )
     truncation_msg = "truncation can be reduced by using --allocate:traceback to increase traceback memory"
 
+    # ⛔ COLLECT FAILURES, DO NOT RETURN ON THE FIRST ONE. Returning early leaves this
+    # worker's sentinel in the queue; another worker then consumes it and exits too, so
+    # commands still queued are silently never run. One failed lastz could drop an
+    # arbitrary share of the batch.
+    failures: typing.List[str] = []
+
     while True:
         command_dict = input_queue.get()
 
         if not command_dict:
-            return None
+            return failures
 
         # 2G, not 1.99G. lastz caps traceback at INT_MAX and carries a special case so
         # that "2G" is accepted and clamped to it. Below 1.04.41 there was no guard and
@@ -97,16 +103,61 @@ def run_command(
                     with open(stderr_file) as f:
                         for stderr_line in f:
                             stderr_line = stderr_line.strip()
+                            if not stderr_line:
+                                # a blank line is not a diagnostic
+                                continue
                             if (not truncation_regex.match(stderr_line) and stderr_line != truncation_msg):
                                 stderr_ok = False
-            except Exception:
+            except OSError:
+                # cannot read what lastz said, so cannot clear it of being an error
                 stderr_ok = False
 
-        if p.returncode in [0, 1] and stderr_ok:
+        # ⚠ 1 IS lastz's OWN FAILURE CODE -- suicidef() and chastise() both exit
+        # EXIT_FAILURE. It is tolerated here only because the stderr check above can
+        # tell a truncation warning from a real error, and it can only do that when
+        # stderr was captured. With no stderr file there is nothing to inspect, so a
+        # nonzero code has to be fatal.
+        if stderr_file is None:
+            command_ok = p.returncode == 0
+        else:
+            command_ok = p.returncode in (0, 1) and stderr_ok
+
+        if command_ok:
             elapsed = time.perf_counter() - begin
             output_queue.put(elapsed)
         else:
-            return f"command failed (rc={p.returncode}): {' '.join(args)}"
+            failures.append(f"command failed (rc={p.returncode}): {' '.join(args)}")
+
+
+def collect_failures(
+    futures: typing.Iterable["concurrent.futures.Future[typing.List[str]]"],
+) -> typing.List[str]:
+    """Every failure the workers reported, as messages.
+
+    ⛔ A WORKER SIGNALS FAILURE BY RETURNING, NOT BY RAISING. The previous version of this
+    logic tested only future STATE -- `done()`, `cancelled()`, `exception()` -- none of
+    which is ever true for a worker that returns normally. So a failed lastz was printed to
+    stderr and the tool still exited 0, and because the wrapper sets
+    `detect_errors="exit_code"` Galaxy marked the job green and handed back a silently
+    incomplete alignment.
+
+    Split out so it can be tested without processes, a tarball or lastz.
+    """
+    failures: typing.List[str] = []
+
+    for future in futures:
+        if future.cancelled():
+            failures.append("worker was cancelled")
+            continue
+
+        exception = future.exception()
+        if exception is not None:
+            failures.append(f"worker raised: {exception}")
+            continue
+
+        failures.extend(future.result())
+
+    return failures
 
 
 class BatchTar:
@@ -340,15 +391,10 @@ class TarRunner:
                     for instance in range(self.parallel)
                 ]
 
-            found_falures = False
-
-            for f in concurrent.futures.as_completed(futures):
-                result = f.result()
-                if result is not None:
-                    print(f"lastz: {result}", file=sys.stderr, flush=True)
-
-                if not f.done() or f.cancelled() or f.exception() is not None:
-                    found_falures = True
+            failures = collect_failures(concurrent.futures.as_completed(futures))
+            for failure in failures:
+                print(f"lastz: {failure}", file=sys.stderr, flush=True)
+            found_failures = bool(failures)
 
             while not output_queue.empty():
                 run_time = output_queue.get()
@@ -356,7 +402,7 @@ class TarRunner:
                 if self.debug:
                     print(f"lastz took {run_time}", file=sys.stderr, flush=True)
 
-            if found_falures:
+            if found_failures:
                 sys.exit("lastz command failed")
 
         elapsed = time.perf_counter() - begin
@@ -385,8 +431,10 @@ class TarRunner:
                         for line in ifh:
                             ofh.write(line)
 
+        # move rather than copy: this file can be many gigabytes, and copy2 holds two
+        # of them on disk at once
         src_filename = f"output.{final_output_format}"
-        shutil.copy2(src_filename, self.output_pathname)
+        shutil.move(src_filename, self.output_pathname)
 
         output_metadata = {
             "output": {
