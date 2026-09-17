@@ -5,8 +5,8 @@
             <requirement type="package" version="3.12">python</requirement>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">1.04.22</token>
-    <token name="@VERSION_SUFFIX@">9</token>
+    <token name="@TOOL_VERSION@">1.04.52</token>
+    <token name="@VERSION_SUFFIX@">0</token>
     <token name="@PROFILE@">22.01</token>
     <xml name="citations">
         <citations>

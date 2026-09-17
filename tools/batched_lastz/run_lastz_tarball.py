@@ -59,7 +59,11 @@ def run_command(
         if not command_dict:
             return None
 
-        args = ["lastz", "--allocate:traceback=1.99G"]
+        # 2G, not 1.99G. lastz caps traceback at INT_MAX and carries a special case so
+        # that "2G" is accepted and clamped to it. Below 1.04.41 there was no guard and
+        # the value was parsed into a signed int, so 2G overflowed -- which is why 1.99G
+        # was correct then. The requirement above now pins >= 1.04.52.
+        args = ["lastz", "--allocate:traceback=2G"]
         args.extend(command_dict["args"])
 
         stdin = command_dict["stdin"]
