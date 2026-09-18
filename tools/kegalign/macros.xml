@@ -4,19 +4,22 @@
          those two packages move on separate release cadences. A single @TOOL_VERSION@ token would
          force them to agree, which is exactly the coupling this merge is meant to remove.
 
-         Each tool also carries its own suffix: a change to one tool must bump that tool's revision
-         and only that one. -->
+         Each tool carries its own suffix, but ⚠ THEY DO NOT MOVE INDEPENDENTLY. One repository holds
+         all three, and editing anything shared (this file above all) makes planemo treat every tool
+         in it as changed, so ShedVersion demands a bump for each. Measured on #152: changing only
+         @KEGALIGN_VERSION@ failed the lint on batched_lastz and growler_lastz for being equal to
+         their published revisions. Bump all three whenever this file changes. -->
 
-    <token name="@KEGALIGN_VERSION@">0.3.1</token>
-    <token name="@KEGALIGN_SUFFIX@">3</token>
+    <token name="@KEGALIGN_VERSION@">0.3.2</token>
+    <token name="@KEGALIGN_SUFFIX@">0</token>
 
     <!-- ⚠ 1.04.52 is not incidental. Both LASTZ tools allocate a 2G traceback buffer, and that
          value overflows a signed int before lastz 1.04.41; KegAlign's own copy of the reader uses
          1.99G for exactly that reason. Lowering this pin without lowering that value gives a tool
          that starts and then dies in the allocation. -->
     <token name="@LASTZ_VERSION@">1.04.52</token>
-    <token name="@BATCHED_LASTZ_SUFFIX@">2</token>
-    <token name="@GROWLER_LASTZ_SUFFIX@">0</token>
+    <token name="@BATCHED_LASTZ_SUFFIX@">3</token>
+    <token name="@GROWLER_LASTZ_SUFFIX@">1</token>
 
     <token name="@PROFILE@">22.01</token>
 
