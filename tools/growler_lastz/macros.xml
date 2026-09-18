@@ -1,0 +1,29 @@
+<macros>
+    <xml name="requirements">
+        <requirements>
+            <requirement type="package" version="@TOOL_VERSION@">lastz</requirement>
+        </requirements>
+    </xml>
+    <!-- ⚠ 1.04.52 is not incidental. The command line allocates a 2G traceback buffer, and that
+         value overflows a signed int before lastz 1.04.41; KegAlign's own copy of the reader
+         uses 1.99G for exactly that reason. Lowering this pin without lowering that value gives
+         a tool that starts and then dies in the allocation. -->
+    <token name="@TOOL_VERSION@">1.04.52</token>
+    <token name="@VERSION_SUFFIX@">0</token>
+    <token name="@PROFILE@">22.01</token>
+    <xml name="citations">
+        <citations>
+            <citation type="bibtex">
+            @misc{
+                githublastz,
+                author = {Harris, Robert},
+                year = {2007},
+                title = {Improved pairwise alignment of genomic DNA},
+                publisher = {The Pennsylvania State University},
+                journal = {Ph. D. Thesis},
+                url = {http://www.bx.psu.edu/~rsharris/rsharris_phd_thesis_2007.pdf},
+                }
+            </citation>
+        </citations>
+    </xml>
+</macros>
