@@ -32,7 +32,7 @@ TOOLS = ROOT / "tools"
 def _xml_files() -> list[pathlib.Path]:
     """Every tool and macro XML, with symlinks collapsed to their target.
 
-    ⚠ `batched_lastz/alignment_type_option.xml` is a SYMLINK to the `kegalign` copy, so walking the
+    ⚠ `alignment_type_option.xml` USED TO BE a symlink from `batched_lastz/` into `kegalign/`, so walking the
     tree naively reports the same defect twice and a fix appears to only half-land. Resolving to the
     real path and de-duplicating is what makes the count mean "distinct files".
     """

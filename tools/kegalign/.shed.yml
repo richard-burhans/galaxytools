@@ -1,11 +1,23 @@
 categories:
 - Next Gen Mappers
-description: A Scalable GPU System for Pairwise Whole Genome Alignments based on LASTZ's seed-filter-extend paradigm.
+description: Pairwise whole-genome alignment - KegAlign on the GPU, and the LASTZ tools that finish it
 homepage_url: https://github.com/galaxyproject/KegAlign
 long_description: |
-  KegAlign is a scalable, GPU-accelerated system for computing pairwise
-  WGA. KegAlign is based on the standard seed-filter-extend heuristic,
-  in which the filtering stage dominates the runtime.
+  Three tools that together compute a pairwise whole-genome alignment.
+
+  KegAlign is a scalable, GPU-accelerated system based on the standard
+  seed-filter-extend heuristic, in which the filtering stage dominates
+  the runtime. It performs seeding, filtering and gap-free extension,
+  and emits the anchors for the gapped-extension stage.
+
+  Batched LASTZ and Growler LASTZ each perform that gapped extension on
+  CPU. Batched LASTZ consumes KegAlign's tarball; Growler LASTZ consumes
+  one element of KegAlign's collection output, a single chromosome pair,
+  so that Galaxy can map the stage over the pairs.
+
+  They share this repository because they share a scoring contract and a
+  file format, and were previously kept in step by hand across two
+  repositories.
 name: kegalign
 owner: richard-burhans
 remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/kegalign

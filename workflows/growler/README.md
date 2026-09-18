@@ -83,4 +83,30 @@ collision.
 connections bind as intended (validated against usegalaxy.org 26.1); the only import error is
 `growler_lastz` reporting "Tool is not installed", which is expected until it ships.
 
+## Where the tools live
+
+All three live in `tools/kegalign/` as one toolshed repository: KegAlign (GPU), Batched LASTZ
+(gapped extension over a tarball) and Growler LASTZ (gapped extension over one chromosome pair).
+
+They were separate directories, which cost two things. `alignment_type_option.xml` had to be a
+**symlink** from `batched_lastz/` into `kegalign/`, and editing it changed the rendered XML of both
+tools while `git diff --name-only` reported one path -- which is what CI derives its
+changed-repository list from, so only one tool got linted (2026-09-17). And the `lastz` version pin
+existed **twice**, once per directory, with nothing asserting the two agreed.
+
+One directory removes both. The symlink is now a plain file, and `macros.xml` carries one
+`@LASTZ_VERSION@` shared by the two LASTZ tools, alongside `@KEGALIGN_VERSION@` for the GPU tool --
+separate tokens because `lastz` and `kegalign-full` release on separate cadences, and each tool
+carries its own suffix so a change to one bumps only that one.
+
+⚠ **Merging to `main` publishes.** `pr.yaml`'s `deploy` job runs `planemo shed_update` on every
+push to `main` in this owner's repository, so a merge is a release. That is why the tool suffix has
+to be bumped in the same PR as any change to a tool's rendered XML: the previous suffix is already
+the latest installable revision by the time the next PR is linted.
+
+⚠ **This changes Batched LASTZ's full tool id** from
+`.../repos/richard-burhans/batched_lastz/batched_lastz/...` to
+`.../repos/richard-burhans/kegalign/batched_lastz/...`. TPV entries and any workflow referencing the
+old id need updating; brc-tools' WF-C is one.
+
 See `galaxytools#149` for the full design record and the measurements behind each claim.
