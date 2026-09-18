@@ -20,10 +20,14 @@ import pathlib
 
 import pytest
 
+# ⚠ The three tools share one directory now; this file moved with batched_lastz.xml. A hard-coded
+# path that stops existing makes pytest ERROR at collection rather than fail a named assertion,
+# which reads as an infrastructure problem instead of a missing subject.
 MODULE = (
     pathlib.Path(__file__).resolve().parent.parent
-    / "tools" / "batched_lastz" / "run_lastz_tarball.py"
+    / "tools" / "kegalign" / "run_lastz_tarball.py"
 )
+assert MODULE.is_file(), f"subject under test is missing: {MODULE}"
 
 
 def _load():

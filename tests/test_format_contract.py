@@ -133,7 +133,7 @@ PAIRS = {}
 if CORE:
     PAIRS["packaged"] = (CORE / "package_output.py", CORE / "run_lastz_tarball.py")
     PAIRS["packaged-writer/galaxy-reader"] = (CORE / "package_output.py",
-                                              TOOLS / "batched_lastz" / "run_lastz_tarball.py")
+                                              TOOLS / "kegalign" / "run_lastz_tarball.py")
 
 
 @pytest.mark.parametrize("pair", sorted(PAIRS))
