@@ -1,20 +1,63 @@
 <macros>
-    <xml name="requirements">
+    <!-- ⚠ THREE TOOLS SHARE THIS FILE, so nothing here may be called just "the" version.
+         KegAlign resolves `kegalign-full`; Batched LASTZ and Growler LASTZ resolve `lastz`, and
+         those two packages move on separate release cadences. A single @TOOL_VERSION@ token would
+         force them to agree, which is exactly the coupling this merge is meant to remove.
+
+         Each tool also carries its own suffix: a change to one tool must bump that tool's revision
+         and only that one. -->
+
+    <token name="@KEGALIGN_VERSION@">0.3.1</token>
+    <token name="@KEGALIGN_SUFFIX@">2</token>
+
+    <!-- ⚠ 1.04.52 is not incidental. Both LASTZ tools allocate a 2G traceback buffer, and that
+         value overflows a signed int before lastz 1.04.41; KegAlign's own copy of the reader uses
+         1.99G for exactly that reason. Lowering this pin without lowering that value gives a tool
+         that starts and then dies in the allocation. -->
+    <token name="@LASTZ_VERSION@">1.04.52</token>
+    <token name="@BATCHED_LASTZ_SUFFIX@">2</token>
+    <token name="@GROWLER_LASTZ_SUFFIX@">0</token>
+
+    <token name="@PROFILE@">22.01</token>
+
+    <xml name="kegalign_requirements">
         <requirements>
-            <requirement type="package" version="@TOOL_VERSION@">kegalign-full</requirement>
+            <requirement type="package" version="@KEGALIGN_VERSION@">kegalign-full</requirement>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">0.3.1</token>
-    <token name="@VERSION_SUFFIX@">2</token>
-    <token name="@PROFILE@">25.0</token>
+
+    <xml name="lastz_requirements">
+        <requirements>
+            <requirement type="package" version="@LASTZ_VERSION@">lastz</requirement>
+            <yield/>
+        </requirements>
+    </xml>
+
     <xml name="edam_ontology">
         <edam_operations>
             <edam_operation>operation_0491</edam_operation>
         </edam_operations>
     </xml>
-    <xml name="citations">
+
+    <xml name="kegalign_citations">
         <citations>
             <citation type="doi">10.1109/SC41405.2020.00043</citation>
+        </citations>
+    </xml>
+
+    <xml name="lastz_citations">
+        <citations>
+            <citation type="bibtex">
+            @misc{
+                githublastz,
+                author = {Harris, Robert},
+                year = {2007},
+                title = {Improved pairwise alignment of genomic DNA},
+                publisher = {The Pennsylvania State University},
+                journal = {Ph. D. Thesis},
+                url = {http://www.bx.psu.edu/~rsharris/rsharris_phd_thesis_2007.pdf},
+                }
+            </citation>
         </citations>
     </xml>
 </macros>

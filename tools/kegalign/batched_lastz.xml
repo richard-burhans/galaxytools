@@ -1,10 +1,12 @@
-<tool id="batched_lastz" name="Batched LASTZ" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+<tool id="batched_lastz" name="Batched LASTZ" version="@LASTZ_VERSION@+galaxy@BATCHED_LASTZ_SUFFIX@" profile="@PROFILE@">
     <description>: align batches of sequences</description>
     <macros>
         <import>macros.xml</import>
         <import>alignment_type_option.xml</import>
     </macros>
-    <expand macro="requirements"/>
+    <expand macro="lastz_requirements">
+        <requirement type="package" version="3.12">python</requirement>
+    </expand>
     <required_files>
         <include path="run_lastz_tarball.py"/>
     </required_files>
@@ -52,5 +54,5 @@ KegAlign processes **Target** and **Query** sequences to identify highly similar
 
 The default output is a MAF alignment file. Other formats can be configured in *Output Options* section.  See LASTZ manual <https://lastz.github.io/lastz/#formats>`_ for description of possible formats.
     ]]></help>
-    <expand macro="citations"/>
+    <expand macro="lastz_citations"/>
 </tool>

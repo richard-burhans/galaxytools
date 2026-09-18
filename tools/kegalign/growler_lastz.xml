@@ -1,9 +1,9 @@
-<tool id="growler_lastz" name="Growler LASTZ" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+<tool id="growler_lastz" name="Growler LASTZ" version="@LASTZ_VERSION@+galaxy@GROWLER_LASTZ_SUFFIX@" profile="@PROFILE@">
     <description>: gapped extension of one chromosome pair</description>
     <macros>
         <import>macros.xml</import>
     </macros>
-    <expand macro="requirements"/>
+    <expand macro="lastz_requirements"/>
     <command detect_errors="exit_code"><![CDATA[
 ## Growler maps this tool over a collection of pair files. One pair file = every anchor segment for one
 ## (target, query) chromosome pair, both strands. One job, one lastz, one output element, and
@@ -31,7 +31,7 @@ lastz
     'query.2bit[nameparse=darkspace]'
 
 ## ⚠ 2G pins lastz >= 1.04.41: the value overflows a signed int in earlier builds, which is why
-## KegAlign's own copy of the reader uses 1.99G and this one does not. @TOOL_VERSION@ is 1.04.52.
+## KegAlign's own copy of the reader uses 1.99G and this one does not. @LASTZ_VERSION@ is 1.04.52.
     --allocate:traceback=2G
     --segments=pair.segments
 
@@ -125,5 +125,5 @@ The scoring file, ``--gappedthresh``, ``--ydrop`` and ``--inner`` are the values
 it generated its commands. Supplying different ones here is legal and will run, but the two stages
 will then disagree about what counts as a good alignment.
     ]]></help>
-    <expand macro="citations"/>
+    <expand macro="lastz_citations"/>
 </tool>
