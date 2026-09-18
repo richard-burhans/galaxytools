@@ -1,63 +1,123 @@
-"""Minimal .2bit writer + Growler test-data generator.
+#!/usr/bin/env python3
+"""Generate the Growler LASTZ test data: two .2bit sequences and a two-strand pair file.
 
-⛔ The test data must actually contain a MINUS-strand alignment, or the test that asserts on
-both strands is decoration. So this generator writes the pair, then the caller runs real lastz
-against it and checks. Nothing here is trusted on inspection.
+    python3 make_test_data.py [output_dir]
+
+The test asserts that BOTH strands appear in the output, so the data has to contain a
+plus-strand and a minus-strand alignment. That is the tool's whole contract: a pair file
+holds both strands, written plus-before-minus, and LASTZ is invoked with no --strand.
+
+The generated files were run through real LASTZ before being committed. The first attempt
+packed the .2bit header as one uint32 plus two uint16 and LASTZ rejected it with
+"bad 2bit version (00010000)" -- the header is FOUR uint32 fields.
 """
-import struct, gzip, random, pathlib, sys
+import gzip
+import pathlib
+import random
+import struct
+import sys
 
-COMP = str.maketrans("ACGT", "TGCA")
-def rc(s): return s.translate(COMP)[::-1]
+COMPLEMENT = str.maketrans("ACGT", "TGCA")
 
-def pack_dna(seq):
-    vals = {"T":0,"C":1,"A":2,"G":3}
-    out = bytearray(); acc = 0; n = 0
-    for ch in seq.upper():
-        acc = (acc << 2) | vals.get(ch, 0); n += 1
-        if n == 4: out.append(acc); acc = 0; n = 0
-    if n: out.append(acc << (2*(4-n)))
-    return bytes(out)
+#: .2bit packs four bases per byte, two bits each, in this order.
+BASE_BITS = {"T": 0, "C": 1, "A": 2, "G": 3}
 
-def write_2bit(path, seqs):
-    names = list(seqs)
-    index = b"".join(struct.pack("B", len(n)) + n.encode() + struct.pack("<I", 0) for n in names)
-    header_len = 16 + len(index)
-    offsets, cur = {}, header_len
+SIGNATURE = 0x1A412743
+SHARED_LENGTH = 150
+FILLER_LENGTH = 50
+
+
+def reverse_complement(sequence):
+    return sequence.translate(COMPLEMENT)[::-1]
+
+
+def pack_dna(sequence):
+    """Two bits per base, four per byte, the last byte zero-padded on the right."""
+    packed = bytearray()
+    accumulator = 0
+    held = 0
+    for base in sequence.upper():
+        accumulator = (accumulator << 2) | BASE_BITS.get(base, 0)
+        held += 1
+        if held == 4:
+            packed.append(accumulator)
+            accumulator = 0
+            held = 0
+    if held:
+        packed.append(accumulator << (2 * (4 - held)))
+    return bytes(packed)
+
+
+def write_2bit(path, sequences):
+    names = list(sequences)
+    index_length = sum(1 + len(name) + 4 for name in names)
+    header_length = 16 + index_length
+
     blobs = {}
-    for n in names:
-        s = seqs[n]
-        blob = struct.pack("<I", len(s)) + struct.pack("<I", 0) + struct.pack("<I", 0) + struct.pack("<I", 0) + pack_dna(s)
-        blobs[n] = blob; offsets[n] = cur; cur += len(blob)
-    with open(path, "wb") as fh:
-        # signature, version, sequenceCount, reserved -- FOUR uint32s. Packing version and
-        # count as uint16 gives "bad 2bit version (00010000)": the fields shift by two bytes.
-        fh.write(struct.pack("<IIII", 0x1A412743, 0, len(names), 0))
-        for n in names:
-            fh.write(struct.pack("B", len(n)) + n.encode() + struct.pack("<I", offsets[n]))
-        for n in names:
-            fh.write(blobs[n])
+    offsets = {}
+    position = header_length
+    for name in names:
+        sequence = sequences[name]
+        # dnaSize, nBlockCount, maskBlockCount, reserved, then the packed bases
+        blobs[name] = (
+            struct.pack("<IIII", len(sequence), 0, 0, 0) + pack_dna(sequence)
+        )
+        offsets[name] = position
+        position += len(blobs[name])
 
-rnd = random.Random(20260917)
-bases = "ACGT"
-filler = lambda k: "".join(rnd.choice(bases) for _ in range(k))
+    with open(path, "wb") as handle:
+        # signature, version, sequenceCount, reserved -- four uint32 fields
+        handle.write(struct.pack("<IIII", SIGNATURE, 0, len(names), 0))
+        for name in names:
+            handle.write(struct.pack("B", len(name)))
+            handle.write(name.encode())
+            handle.write(struct.pack("<I", offsets[name]))
+        for name in names:
+            handle.write(blobs[name])
 
-shared_plus  = filler(150)
-shared_minus = filler(150)
-target = shared_plus + filler(50) + shared_minus + filler(50)          # 400 bp
-query  = shared_plus + filler(50) + rc(shared_minus) + filler(50)      # 400 bp
 
-out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
-write_2bit(out/"target.2bit", {"target1": target})
-write_2bit(out/"query.2bit",  {"query1": query})
+def main():
+    out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
+    rnd = random.Random(20260917)
 
-# plus anchor: target 1..150  <-> query 1..150
-# minus anchor: target 201..350. On the reverse strand the query's matching region 201..350
-# (1-based forward) counts as 400-350+1 .. 400-201+1 = 51..200.
-lines = [
-    "target1\t1\t150\tquery1\t1\t150\t+\t3000",
-    "target1\t201\t350\tquery1\t51\t200\t-\t3000",
-]
-with gzip.open(out/"keg_two_strand.segments.gz", "wb", compresslevel=6) as fh:
-    fh.write(("\n".join(lines) + "\n").encode())
-print("wrote target.2bit query.2bit keg_two_strand.segments.gz")
-print("target len", len(target), "query len", len(query))
+    def filler(length):
+        return "".join(rnd.choice("ACGT") for _ in range(length))
+
+    shared_plus = filler(SHARED_LENGTH)
+    shared_minus = filler(SHARED_LENGTH)
+
+    target = shared_plus + filler(FILLER_LENGTH) + shared_minus + filler(FILLER_LENGTH)
+    query = (
+        shared_plus
+        + filler(FILLER_LENGTH)
+        + reverse_complement(shared_minus)
+        + filler(FILLER_LENGTH)
+    )
+
+    write_2bit(out / "target.2bit", {"target1": target})
+    write_2bit(out / "query.2bit", {"query1": query})
+
+    # Segment coordinates are one-based and inclusive. Minus-strand query intervals are
+    # counted along the reverse strand, so the forward region 201..350 of a 400 bp query
+    # is 400-350+1 .. 400-201+1 = 51..200 there.
+    # the reverse-complemented block sits at these FORWARD coordinates in both sequences
+    forward_start = SHARED_LENGTH + FILLER_LENGTH + 1
+    forward_end = SHARED_LENGTH * 2 + FILLER_LENGTH
+    # reverse-strand coordinates are (length - forward + 1), which swaps the endpoints
+    minus_start = len(query) - forward_end + 1
+    minus_end = len(query) - forward_start + 1
+    segments = [
+        "target1\t1\t{}\tquery1\t1\t{}\t+\t3000".format(SHARED_LENGTH, SHARED_LENGTH),
+        "target1\t{}\t{}\tquery1\t{}\t{}\t-\t3000".format(
+            forward_start, forward_end, minus_start, minus_end
+        ),
+    ]
+    with gzip.open(out / "pair_two_strand.segments.gz", "wb", compresslevel=6) as handle:
+        handle.write(("\n".join(segments) + "\n").encode())
+
+    print("wrote target.2bit query.2bit pair_two_strand.segments.gz")
+    print("target {} bp, query {} bp".format(len(target), len(query)))
+
+
+if __name__ == "__main__":
+    main()
