@@ -26,7 +26,7 @@ doc: 'Runs Growler over every ordered pair of a genome collection.
 
   chromosomes this is N*(N-1) Growler invocations, each mapping LASTZ over roughly C^2
 
-  kegs. Ten genomes of ten chromosomes is ~9,000 LASTZ jobs; fourteen chromosomes across
+  pair files. Ten genomes of ten chromosomes is ~9,000 LASTZ jobs; fourteen chromosomes across
 
   ten genomes is ~17,600. That is Galaxy''s scheduler and database, not the aligner.'
 inputs:
@@ -91,10 +91,10 @@ steps:
     run:
       class: GalaxyWorkflow
       label: Growler (one genome pair)
-      doc: 'Growler: one genome pair in, a keg-keyed alignment collection out.
+      doc: 'Growler: one genome pair in, a pair-keyed alignment collection out.
 
 
-        KegAlign emits a collection of KEGS -- one gzipped segments file per (target, query) chromosome
+        KegAlign emits a collection of PAIR FILES -- one gzipped segments file per (target, query) chromosome
 
         pair, both strands -- plus the two 2bits as their own datasets. Growler LASTZ is then mapped
 
@@ -166,7 +166,7 @@ steps:
           tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.1+galaxy0
           label: kegalign
           doc: 'Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it
-            emit kegs instead of data_package.tgz; the tarball path is untouched and still available.
+            emit pair files instead of data_package.tgz; the tarball path is untouched and still available.
 
             '
           in:
@@ -187,13 +187,13 @@ steps:
         growler_lastz:
           tool_id: growler_lastz
           label: growler_lastz
-          doc: 'Gapped extension, mapped over the keg collection: N independent jobs, one lastz each,
-            and the 2bits and scoring file ride along as fixed inputs rather than being copied into every
-            element. At 210 MB each the 2bits would be ~42 GB of inflation across 100 kegs.
+          doc: 'Gapped extension, mapped over the pair file collection: N independent jobs, one lastz
+            each, and the 2bits and scoring file ride along as fixed inputs rather than being copied into
+            every element. At 210 MB each the 2bits would be ~42 GB of inflation across 100 pair files.
 
             '
           in:
-            keg: kegalign/kegs
+            pair: kegalign/pairs
             target: kegalign/target_2bit
             query: kegalign/query_2bit
             scores: scores
@@ -207,7 +207,7 @@ steps:
             top: 0
             left: 560
     label: growler
-    doc: Mapped over the pair lists. Each invocation sees one genome pair and emits a flat keg collection;
+    doc: Mapped over the pair lists. Each invocation sees one genome pair and emits a flat pair file collection;
       Galaxy nests those into list:list.
     in:
       target_fasta: targets/output_filtered

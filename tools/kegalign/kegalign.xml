@@ -163,16 +163,16 @@ python "\$KEGALIGN_BIN/runner.py"
 
 &&
 #if str($bundle_selector) == "collection"
-## Growler: group the diagonal-partition splits into kegs -- one gzipped segments file per
+## Growler: group the diagonal-partition splits into pair files -- one gzipped segments file per
 ## (target, query) chromosome pair, both strands, plus-before-minus as the lastz manual requires.
 ## No tarball, no commands.json, no format.txt: everything the grouping needs (target, query,
 ## strand) is in columns 1, 4 and 7 of the segment lines themselves.
 ##
 ## ⚠ `--format` above still selects what KegAlign writes into its command lines, but nothing
 ## reads them on this path -- the output format is chosen downstream, on Growler LASTZ.
-python "\$KEGALIGN_BIN/build_kegs.py"
+python "\$KEGALIGN_BIN/build_pairs.py"
     --segments-dir .
-    --out kegs
+    --out pairs
 #else
 python "\$KEGALIGN_BIN/package_output.py"
     --tool_directory "\$KEGALIGN_BIN"
@@ -195,9 +195,9 @@ python "\$KEGALIGN_BIN/package_output.py"
         <expand macro="output_options"/>
         <expand macro="system_options"/>
         <param name="bundle_selector" type="select" label="Output shape"
-               help="Tarball is the original two-step form, consumed by Batched LASTZ. Kegs emit one element per chromosome pair for Growler, which maps LASTZ over them without ever packing or unpacking an archive.">
+               help="Tarball is the original two-step form, consumed by Batched LASTZ. Chromosome pairs emit one element per pair for Growler, which maps LASTZ over them without ever packing or unpacking an archive.">
             <option value="tarball" selected="true">A single tarball (data_package.tgz)</option>
-            <option value="collection">A collection of kegs, one per chromosome pair</option>
+            <option value="collection">A collection of pair files, one per chromosome pair</option>
         </param>
         <section name="developer" title="Developer Options" expanded="false">
             <expand macro="alignment_type_option"/>
@@ -210,11 +210,11 @@ python "\$KEGALIGN_BIN/package_output.py"
         <!-- ⚠ Discovery is ASCII-ordered and the elements arrive hidden. The identifier is
              `<target>__<query>`: two underscores, because a single one occurs inside real
              sequence names and downstream regrouping matches these identifiers with a regex. -->
-        <collection name="kegs" type="list" label="KegAlign kegs on ${on_string}">
+        <collection name="pairs" type="list" label="KegAlign chromosome pairs on ${on_string}">
             <filter>bundle_selector == "collection"</filter>
-            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.segments\.gz" directory="kegs" format="tabular.gz" visible="false"/>
+            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.segments\.gz" directory="pairs" format="tabular.gz" visible="false"/>
         </collection>
-        <!-- The 2bits are emitted as their own datasets rather than copied into every keg: at
+        <!-- The 2bits are emitted as their own datasets rather than copied into every pair file: at
              210 MB each they are 2.9% of a bundle, but duplicated across 100 elements they would
              be ~42 GB of pure inflation. Growler LASTZ takes them as fixed inputs. -->
         <data name="target_2bit" format="twobit" from_work_dir="work/ref.2bit" label="KegAlign target 2bit on ${on_string}">

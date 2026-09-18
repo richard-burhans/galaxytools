@@ -1,11 +1,11 @@
 <tool id="growler_lastz" name="Growler LASTZ" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
-    <description>: gapped extension of one keg</description>
+    <description>: gapped extension of one chromosome pair</description>
     <macros>
         <import>macros.xml</import>
     </macros>
     <expand macro="requirements"/>
     <command detect_errors="exit_code"><![CDATA[
-## Growler maps this tool over a collection of kegs. One keg = every anchor segment for one
+## Growler maps this tool over a collection of pair files. One pair file = every anchor segment for one
 ## (target, query) chromosome pair, both strands. One job, one lastz, one output element, and
 ## the element identifier is carried through unchanged by Galaxy.
 
@@ -16,7 +16,7 @@
 ln -s '$target' target.2bit &&
 ln -s '$query' query.2bit &&
 
-## ⛔ AND THE KEG MUST BE DECOMPRESSED FIRST. Kegs ship gzipped because segments are 97.1% of a
+## ⛔ AND THE KEG MUST BE DECOMPRESSED FIRST. Pair files ship gzipped because segments are 97.1% of a
 ## bundle and compress ~3.6x -- shipping them plain would roughly triple the object store. But
 ## `--segments=<file>.gz` does not fail loudly: lastz reads the gzip header as text and reports
 ## `FAILURE: bad field (...: line 1, ...)` while still producing an empty output file. Measured
@@ -24,7 +24,7 @@ ln -s '$query' query.2bit &&
 ##
 ## This costs ~140 MB per job. The tarball path it replaces inflated the ENTIRE bundle -- 14.58 GB
 ## on the pair this was measured against -- into the job directory before running anything.
-gzip -cdfq '$keg' > keg.segments &&
+gzip -cdfq '$pair' > pair.segments &&
 
 lastz
     'target.2bit[nameparse=darkspace][multiple]'
@@ -33,11 +33,11 @@ lastz
 ## ⚠ 2G pins lastz >= 1.04.41: the value overflows a signed int in earlier builds, which is why
 ## KegAlign's own copy of the reader uses 1.99G and this one does not. @TOOL_VERSION@ is 1.04.52.
     --allocate:traceback=2G
-    --segments=keg.segments
+    --segments=pair.segments
 
-## ⚠ NO `--strand`. A keg holds both strands, written plus-before-minus as the lastz manual
+## ⚠ NO `--strand`. A pair file holds both strands, written plus-before-minus as the lastz manual
 ## requires, and lastz's default is `both`. Passing `--strand=plus` here would silently drop
-## every minus-strand segment in the keg -- measured identical output with the flag omitted.
+## every minus-strand segment in the pair file -- measured identical output with the flag omitted.
 #if $scores
     --scores='$scores'
 #end if
@@ -50,8 +50,8 @@ lastz
     --output='$output'
     ]]></command>
     <inputs>
-        <param name="keg" type="data" format="tabular.gz" label="Keg"
-               help="One element of a KegAlign keg collection: the anchor segments for a single chromosome pair, both strands, gzipped."/>
+        <param name="pair" type="data" format="tabular.gz" label="Chromosome pair"
+               help="One element of a KegAlign pair file collection: the anchor segments for a single chromosome pair, both strands, gzipped."/>
         <param name="target" type="data" format="twobit" label="Target sequence (2bit)"/>
         <param name="query" type="data" format="twobit" label="Query sequence (2bit)"/>
         <param name="scores" type="data" format="txt" optional="true" label="Scoring file in LASTZ format"
@@ -85,12 +85,12 @@ lastz
         </data>
     </outputs>
     <tests>
-        <!-- A two-strand keg: the plus segments precede the minus segments, which is the whole
+        <!-- A two-strand pair file: the plus segments precede the minus segments, which is the whole
              ordering contract. Asserting that BOTH strands appear is the point of the test.
-             A keg run with a stray strand flag still produces perfectly valid MAF, just half
+             A pair file run with a stray strand flag still produces perfectly valid MAF, just half
              of it, so an assertion that only checks the file is non-empty would pass. -->
         <test expect_num_outputs="1">
-            <param name="keg" value="keg_two_strand.segments.gz" ftype="tabular.gz"/>
+            <param name="pair" value="pair_two_strand.segments.gz" ftype="tabular.gz"/>
             <param name="target" value="target.2bit" ftype="twobit"/>
             <param name="query" value="query.2bit" ftype="twobit"/>
             <param name="gappedthresh" value="100"/>
@@ -107,16 +107,16 @@ lastz
     <help><![CDATA[
 **What it does**
 
-Growler LASTZ performs the gapped-extension stage for a single **keg** — one element of the
-collection KegAlign emits with ``--output-type collection``. A keg holds every anchor segment for
+Growler LASTZ performs the gapped-extension stage for a single **pair file** — one element of the
+collection KegAlign emits with ``--output-type collection``. A pair file holds every anchor segment for
 one ``(target, query)`` chromosome pair, both strands, gzipped.
 
-Galaxy maps this tool over the keg collection, so the chromosome-pair key created by KegAlign is
+Galaxy maps this tool over the pair file collection, so the chromosome-pair key created by KegAlign is
 carried all the way through to chaining without a tarball, a command manifest, or a collapse step.
 
 .. class:: infomark
 
-Every job runs the **same** command line; only the keg differs. There is nothing per-element to
+Every job runs the **same** command line; only the pair file differs. There is nothing per-element to
 route, and no element identifier has to reach a parameter.
 
 **Inputs that must agree with the KegAlign run**

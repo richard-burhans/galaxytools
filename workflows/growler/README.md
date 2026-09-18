@@ -1,18 +1,18 @@
 # Growler
 
-**One genome pair in, a keg-keyed alignment collection out.**
+**One genome pair in, a pair-keyed alignment collection out.**
 
-*On the name:* **Growler** is just the system's name. It carries no relationship to *keg* beyond
+*On the name:* **Growler** is just the system's name. It carries no relationship to *pair file* beyond
 both being words — in particular it implies nothing about relative size, and there is no
-container metaphor to keep consistent. A **keg** is the unit: one chromosome pair's segments.
+container metaphor to keep consistent. A **pair file** is the unit: one chromosome pair's segments.
 
-KegAlign emits a collection of **kegs** — one gzipped segments file per `(target, query)`
+KegAlign emits a collection of **pair files** — one gzipped segments file per `(target, query)`
 chromosome pair, both strands — plus the two 2bits as their own datasets. `growler_lastz` is
 mapped over that collection. No tarball, no `commands.json`, no `format.txt`, no collapse.
 
 ```
 target.fa ─┐
-           ├─▶ KegAlign ──┬─▶ collection of kegs ──┐
+           ├─▶ KegAlign ──┬─▶ collection of pairs ─────┐
 query.fa  ─┘  (GPU)       ├─▶ target.2bit          ├─▶ growler_lastz  ──▶ collection of
 scores ───────────────────┴─▶ query.2bit  ─────────┘   (mapped, N jobs)    alignments
 ```
@@ -33,7 +33,7 @@ collection_type: list:list | outer: 2
 That matters because **Galaxy does not broadcast a dataset across nesting levels**. brc-tools works
 around it by materialising parallel `list:list` collections with matching identifiers. Inside one
 Growler invocation there is only *one* level — a single genome pair, two 2bits as plain `data`
-inputs, a flat collection of kegs — so there is nothing to broadcast. The subworkflow does not
+inputs, a flat collection of pair files — so there is nothing to broadcast. The subworkflow does not
 solve the nesting problem; it removes it.
 
 ## Why every mapped job runs the same command line
@@ -45,21 +45,21 @@ measurements collapse those 8 to 1:
 | | result |
 |---|---|
 | drop `subset=`, use the whole 2bit | byte-identical output; costs +888 MB peak RSS, +25% time |
-| one keg carrying both strands, no `--strand` | byte-identical to the two single-strand runs concatenated — 970 blocks = 542 + 428, same order |
+| one pair file carrying both strands, no `--strand` | byte-identical to the two single-strand runs concatenated — 970 blocks = 542 + 428, same order |
 
 So nothing per-element has to be routed, and **no element identifier has to reach a text
 parameter** — the limitation recorded in brc-tools' `multiz_fold.xml` as *"how every fold in the
 2026-06-13 runs died on the name validator."*
 
-## Why the kegs are gzipped
+## Why the pair files are gzipped
 
 Segments are 97.1% of a bundle, and a bundle compresses ~3.6× (14.58 GB → 4.10 GB, measured).
-Shipping kegs as plain datasets would roughly triple the object store — ~300 GB against ~1.06 TB
+Shipping pair files as plain datasets would roughly triple the object store — ~300 GB against ~1.06 TB
 across a 90-pair panel.
 
 ⚠ But **lastz cannot read a gzipped segments file**, and it does not say so loudly:
 `--segments=x.gz` reports `FAILURE: bad field (x.gz: line 1, …)` *and still writes an empty output
-file*. `growler_lastz` therefore decompresses its own keg — ~140 MB per job, against the tarball
+file*. `growler_lastz` therefore decompresses its own pair file — ~140 MB per job, against the tarball
 path inflating the whole 14.58 GB into the job directory before running anything.
 
 ## Where it stops

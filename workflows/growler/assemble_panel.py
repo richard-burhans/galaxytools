@@ -19,7 +19,7 @@ level, and there is no native operation that expands one dataset across N identi
 works around this by materialising parallel `list:list` collections with matching identifiers.
 
 Inside a Growler invocation there is only one level: one genome pair, two 2bits as plain `data`
-inputs, a flat collection of kegs. The nesting problem does not get solved here, it stops existing.
+inputs, a flat collection of pair files. The nesting problem does not get solved here, it stops existing.
 And the outer `list:list` is produced for free: a subworkflow mapped over a list, emitting a
 collection, yields `list:list` with outer identifiers preserved -- measured on usegalaxy.org 26.1
 on 2026-09-17, in exactly this shape.
@@ -58,7 +58,7 @@ def build(growler: dict) -> dict:
             "identifiers preserved, so downstream steps can regroup on either axis.\n\n"
             "⚠ Job count is the scaling wall, not compute. For a panel of N genomes with C\n"
             "chromosomes this is N*(N-1) Growler invocations, each mapping LASTZ over roughly C^2\n"
-            "kegs. Ten genomes of ten chromosomes is ~9,000 LASTZ jobs; fourteen chromosomes across\n"
+            "pair files. Ten genomes of ten chromosomes is ~9,000 LASTZ jobs; fourteen chromosomes across\n"
             "ten genomes is ~17,600. That is Galaxy's scheduler and database, not the aligner."
         ),
         "inputs": {
@@ -108,7 +108,7 @@ def build(growler: dict) -> dict:
                 "run": growler,
                 "label": "growler",
                 "doc": "Mapped over the pair lists. Each invocation sees one genome pair and "
-                       "emits a flat keg collection; Galaxy nests those into list:list.",
+                       "emits a flat pair file collection; Galaxy nests those into list:list.",
                 "in": {"target_fasta": "targets/output_filtered",
                        "query_fasta": "queries/output_filtered",
                        "scores": "scores"},

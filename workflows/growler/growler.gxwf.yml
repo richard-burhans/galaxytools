@@ -1,9 +1,9 @@
 class: GalaxyWorkflow
 label: Growler (one genome pair)
 doc: |
-  Growler: one genome pair in, a keg-keyed alignment collection out.
+  Growler: one genome pair in, a pair-keyed alignment collection out.
 
-  KegAlign emits a collection of KEGS -- one gzipped segments file per (target, query) chromosome
+  KegAlign emits a collection of PAIR FILES -- one gzipped segments file per (target, query) chromosome
   pair, both strands -- plus the two 2bits as their own datasets. Growler LASTZ is then mapped
   over that collection. There is no tarball, no commands.json, no format.txt, and no collapse:
   the chromosome-pair key created by KegAlign is carried by Galaxy's element identifiers all the
@@ -55,7 +55,7 @@ steps:
     label: kegalign
     doc: >
       Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it emit
-      kegs instead of data_package.tgz; the tarball path is untouched and still available.
+      pair files instead of data_package.tgz; the tarball path is untouched and still available.
     in:
       target: target_fasta
       query: query_fasta
@@ -74,11 +74,11 @@ steps:
     tool_id: growler_lastz
     label: growler_lastz
     doc: >
-      Gapped extension, mapped over the keg collection: N independent jobs, one lastz each, and
+      Gapped extension, mapped over the pair file collection: N independent jobs, one lastz each, and
       the 2bits and scoring file ride along as fixed inputs rather than being copied into every
-      element. At 210 MB each the 2bits would be ~42 GB of inflation across 100 kegs.
+      element. At 210 MB each the 2bits would be ~42 GB of inflation across 100 pair files.
     in:
-      keg: kegalign/kegs
+      pair: kegalign/pairs
       target: kegalign/target_2bit
       query: kegalign/query_2bit
       scores: scores
