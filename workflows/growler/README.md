@@ -99,6 +99,11 @@ One directory removes both. The symlink is now a plain file, and `macros.xml` ca
 separate tokens because `lastz` and `kegalign-full` release on separate cadences, and each tool
 carries its own suffix so a change to one bumps only that one.
 
+⚠ **Merging to `main` publishes.** `pr.yaml`'s `deploy` job runs `planemo shed_update` on every
+push to `main` in this owner's repository, so a merge is a release. That is why the tool suffix has
+to be bumped in the same PR as any change to a tool's rendered XML: the previous suffix is already
+the latest installable revision by the time the next PR is linted.
+
 ⚠ **This changes Batched LASTZ's full tool id** from
 `.../repos/richard-burhans/batched_lastz/batched_lastz/...` to
 `.../repos/richard-burhans/kegalign/batched_lastz/...`. TPV entries and any workflow referencing the

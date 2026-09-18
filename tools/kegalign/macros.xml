@@ -8,7 +8,7 @@
          and only that one. -->
 
     <token name="@KEGALIGN_VERSION@">0.3.1</token>
-    <token name="@KEGALIGN_SUFFIX@">2</token>
+    <token name="@KEGALIGN_SUFFIX@">3</token>
 
     <!-- ⚠ 1.04.52 is not incidental. Both LASTZ tools allocate a 2G traceback buffer, and that
          value overflows a signed int before lastz 1.04.41; KegAlign's own copy of the reader uses
