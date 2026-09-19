@@ -147,9 +147,14 @@ def build(growler: dict) -> dict:
 #: The tool ids the chain arm is lifted from, verbatim out of WF-C's align_chain.gxwf.yml. Kept as
 #: one table so a drift between the wrapper and WF-C is a one-line diff rather than a hunt.
 #:
-#: ⚠ `chainStitchId` is BARE AND UNVERSIONED, exactly as WF-C has it. It resolves to whatever the
-#: server has installed. Pinning it here would be a change to WF-C's behaviour smuggled in under a
-#: refactor, so it is left alone and recorded instead.
+#: ⚠ TWO IDS ARE BARE AND UNVERSIONED, for different reasons, and both resolve to whatever the
+#: server happens to have installed:
+#:   `chainStitchId`      exactly as WF-C has it. Pinning it here would be a change to WF-C's
+#:                        behaviour smuggled in under a refactor, so it is left alone.
+#:   `ucsc_chainmergesort` because it is not published anywhere yet -- it is written in this same
+#:                        repository (tools/ucsc_chainmergesort) and has no revision to pin.
+#:                        ⚠ PIN IT once it is on the target server, or this document silently
+#:                        accepts any future version of the step the whole collapse turns on.
 IUC = "toolshed.g2.bx.psu.edu/repos/iuc"
 TOOLS = {
     "axtchain": f"{IUC}/ucsc_axtchain/ucsc_axtchain/482+galaxy2",
