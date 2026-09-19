@@ -82,6 +82,16 @@ def build(growler: dict) -> dict:
                 "doc": "Scoring file in LASTZ format, shared by every pair.",
                 "position": {"top": 260, "left": 0},
             },
+            "output_format": {
+                "type": "text",
+                "default": "axt",
+                "doc": "LASTZ output format, shared by every pair. Defaults to axt because the "
+                       "consumer is axtChain, which accepts axt,psl only. Lifted to the panel "
+                       "rather than left at the subworkflow's default so that ONE setting governs "
+                       "the whole panel -- a panel whose pairs disagreed about their format would "
+                       "produce a collection its consumer can only partly read.",
+                "position": {"top": 370, "left": 0},
+            },
         },
         "steps": {
             "pairs": {
@@ -111,7 +121,8 @@ def build(growler: dict) -> dict:
                        "emits a flat pair file collection; Galaxy nests those into list:list.",
                 "in": {"target_fasta": "targets/output_filtered",
                        "query_fasta": "queries/output_filtered",
-                       "scores": "scores"},
+                       "scores": "scores",
+                       "output_format": "output_format"},
                 "position": {"top": 0, "left": 800},
             },
         },
@@ -137,7 +148,8 @@ def self_test() -> int:
 
     child = {"class": "GalaxyWorkflow", "label": "kid",
              "inputs": {"target_fasta": {"type": "data"}, "query_fasta": {"type": "data"},
-                        "scores": {"type": "data", "optional": True}},
+                        "scores": {"type": "data", "optional": True},
+                        "output_format": {"type": "text", "default": "axt"}},
              "outputs": {"alignments": {"outputSource": "x/out"}}, "steps": {}}
     panel = build(child)
 
@@ -160,8 +172,16 @@ def self_test() -> int:
     check("growler takes the filtered lists, not the raw cross product",
           [panel["steps"]["growler"]["in"]["target_fasta"], panel["steps"]["growler"]["in"]["query_fasta"]],
           ["targets/output_filtered", "queries/output_filtered"])
+    # ⛔ THE FORMAT MUST REACH THE CHILD FROM THE PANEL, NOT FROM THE CHILD'S OWN DEFAULT. Drop
+    # this connection and every pair silently falls back to whatever growler.gxwf.yml defaults to
+    # -- which is a perfectly valid run, in the wrong format, discovered at the chain step.
+    check("the panel drives the child's output format",
+          panel["steps"]["growler"]["in"].get("output_format"), "output_format")
+    check("  and the panel's own default is the chain path's format",
+          panel["inputs"]["output_format"]["default"], "axt")
+
     # every name the panel connects to must exist in the child, or the import binds nothing
-    for slot in ("target_fasta", "query_fasta", "scores"):
+    for slot in ("target_fasta", "query_fasta", "scores", "output_format"):
         check(f"child declares input {slot}", slot in child["inputs"], True)
     check("child declares the output the panel exports",
           panel["outputs"]["alignments"]["outputSource"].split("/")[1] in child["outputs"], True)
