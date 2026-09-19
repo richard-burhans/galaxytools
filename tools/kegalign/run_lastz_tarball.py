@@ -115,6 +115,28 @@ lastz_output_format_regex = re.compile(
 # --format=none can be used when no alignment output is desired.
 
 
+def command_succeeded(returncode: int, stderr_file: str | None, stderr_ok: bool) -> bool:
+    """Whether one lastz invocation is to be treated as successful.
+
+    ⚠ 1 IS lastz's OWN FAILURE CODE -- suicidef() and chastise() both exit EXIT_FAILURE. It is
+    tolerated only because the stderr check can tell a truncation warning from a real error, and
+    it can only do that when stderr was captured. With no stderr file there is nothing to
+    tolerate it by, so a nonzero code has to be fatal -- otherwise a genuinely failed command is
+    indistinguishable from a truncated-but-usable one.
+
+    ⛔ THIS IS A SECOND COPY, AND THE COPY THAT ACTUALLY RUNS. KegAlign's
+    `scripts/run_lastz_tarball.py` carries the same function, and
+    `tests/test_lastz_failure_propagation.py` imports and exercises THAT one. batched_lastz.xml
+    runs THIS file through `$__tool_directory__`, so until now the rule the test guarantees and
+    the rule that executed were merely similar-looking inline code. Same name and same shape so a
+    change to one is greppable in the other; they still have to be changed together.
+    """
+    if stderr_file is None:
+        return returncode == 0
+
+    return returncode in (0, 1) and stderr_ok
+
+
 def run_command(
     input_queue: "queue.Queue[dict[str, typing.Any]]",
     output_queue: "queue.Queue[float]",
@@ -187,17 +209,7 @@ def run_command(
                 # cannot read what lastz said, so cannot clear it of being an error
                 stderr_ok = False
 
-        # ⚠ 1 IS lastz's OWN FAILURE CODE -- suicidef() and chastise() both exit
-        # EXIT_FAILURE. It is tolerated here only because the stderr check above can
-        # tell a truncation warning from a real error, and it can only do that when
-        # stderr was captured. With no stderr file there is nothing to inspect, so a
-        # nonzero code has to be fatal.
-        if stderr_file is None:
-            command_ok = p.returncode == 0
-        else:
-            command_ok = p.returncode in (0, 1) and stderr_ok
-
-        if command_ok:
+        if command_succeeded(p.returncode, stderr_file, stderr_ok):
             elapsed = time.perf_counter() - begin
             output_queue.put(elapsed)
         else:

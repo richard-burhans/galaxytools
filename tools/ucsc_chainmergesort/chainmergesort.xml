@@ -2,7 +2,7 @@
     <description>: combine sorted chain files into one sorted chain file</description>
     <macros>
         <token name="@TOOL_VERSION@">482</token>
-        <token name="@VERSION_SUFFIX@">0</token>
+        <token name="@VERSION_SUFFIX@">1</token>
     </macros>
     <xrefs>
         <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
@@ -18,6 +18,14 @@
 ## ...` would work until a panel got wide enough to hit ARG_MAX, and then fail on the size of the
 ## panel rather than on anything about the data. `-inputList` is the option upstream provides for
 ## exactly this and has no downside.
+##
+## ⛔ TRUNCATE FIRST. `>>` into a file nothing creates empty means a SECOND execution of this
+## command in the same working directory doubles the list -- chainMergeSort then merges every
+## input twice and renumbers, so the output carries 2x the chains with entirely plausible ids and
+## netChainSubset downstream happily matches nets to the duplicates. Nothing raises. A fresh job
+## directory makes that unreachable in normal operation; re-running the generated job script by
+## hand, which is the standard way to debug one of these, does not.
+: > input_list.txt &&
 #for $chain in $in_chains:
 echo '$chain' >> input_list.txt &&
 #end for

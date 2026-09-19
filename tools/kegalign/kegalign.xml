@@ -5,7 +5,7 @@
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
         <token name="@KEGALIGN_VERSION@">0.3.3</token>
-        <token name="@KEGALIGN_SUFFIX@">0</token>
+        <token name="@KEGALIGN_SUFFIX@">1</token>
         <import>macros.xml</import>
         <import>sequence_options.xml</import>
         <import>scoring_options.xml</import>
@@ -32,12 +32,21 @@
 ## faToTwoBit accepting a non-seekable input, and removed immediately after conversion so
 ## the uncompressed copies do not sit beside the 2bit files for the life of the job.
 
+##
+## ⛔ COLLECTION PATH ONLY, AND IT WAS UNCONDITIONAL. run_kegalign converts both genomes AGAIN
+## into its own $DATA_FOLDER (ref.2bit / query.2bit), and that is the pair the generated lastz
+## commands reference. These copies exist solely to be EMITTED as the target_2bit / query_2bit
+## datasets Growler LASTZ takes as fixed inputs -- and those two outputs are filtered off on the
+## tarball path, so on the default path a Cannabis-scale pair paid a second full conversion of
+## both genomes plus ~420 MB of job disk for two datasets that were then discarded.
+#if str($bundle_selector) == "collection"
 mkdir -p "\$(pwd)/work" &&
 gzip -cdfq '$target' > "\$(pwd)/work/ref.fa" &&
 faToTwoBit "\$(pwd)/work/ref.fa" "\$(pwd)/work/ref.2bit" &&
 gzip -cdfq '$query' > "\$(pwd)/work/query.fa" &&
 faToTwoBit "\$(pwd)/work/query.fa" "\$(pwd)/work/query.2bit" &&
 rm -f "\$(pwd)/work/ref.fa" "\$(pwd)/work/query.fa" &&
+#end if
 
 ## The scripts come from the kegalign package, which installs them to its bin
 ## directory alongside the aligner -- this tool no longer carries copies of them.
@@ -52,7 +61,15 @@ test -f "\$KEGALIGN_BIN/runner.py" &&
 ## https://github.com/galaxyproject/pulsar/issues/341
 python "\$KEGALIGN_BIN/runner.py"
     --output-type tarball
-    --output-file '$kegalign_output'
+##
+## ⚠ A LITERAL, NOT '$kegalign_output'. runner.py declares --output-file required, and then
+## never reads it under --output-type tarball -- its tarball branch is `pass`, and the command
+## file it does write is always `lastz-commands.txt`. Naming the dataset here was dead on BOTH
+## paths, and on the collection path kegalign_output is filtered off entirely: Galaxy hands the
+## template a NoneDataset "for tool writing convienence" (lib/galaxy/tools/evaluation.py), so it
+## rendered as the literal string `None` rather than failing. Harmless today and a real pathname
+## the moment --output-type stops being hardcoded.
+    --output-file lastz-commands.txt
     --diagonal-partition
     --num-cpu \${GALAXY_SLOTS:-2}
     --tool_directory "\$KEGALIGN_BIN"
@@ -178,6 +195,15 @@ python "\$KEGALIGN_BIN/runner.py"
 python "\$KEGALIGN_BIN/build_pairs.py"
     --segments-dir .
     --out pairs
+##
+## ⚠ THE QUERY 2BIT IS READ FOR ITS SEQUENCE ORDER ONLY, and it is already sitting in work/ at
+## this point in the command. A batch holding several queries must list them in query-file order
+## or lastz exits 1 with "segments must appear in the same order as the query file" -- measured,
+## that rule is the one it enforces loudly.
+#if int($batch_lines) > 0
+    --batch-lines $batch_lines
+    --query-2bit "\$(pwd)/work/query.2bit"
+#end if
 #else
 python "\$KEGALIGN_BIN/package_output.py"
     --tool_directory "\$KEGALIGN_BIN"
@@ -204,6 +230,16 @@ python "\$KEGALIGN_BIN/package_output.py"
             <option value="tarball" selected="true">A single tarball (data_package.tgz)</option>
             <option value="collection">A collection of pair files, one per chromosome pair</option>
         </param>
+        <!-- ⚠ FLAT, NOT NESTED UNDER bundle_selector. Making that a <conditional> would be tidier
+             and would change the stored state shape of every saved workflow and history that
+             names `bundle_selector`, for a parameter that is simply ignored on the other path.
+             It is documented as collection-only instead. -->
+        <param name="batch_lines" type="integer" value="0" min="0" label="Segment lines per element"
+               help="Chromosome pairs only, and 0 turns it off. One element per chromosome pair makes the
+                     element count scale with the QUERY'S SEQUENCE COUNT -- fine for ten chromosomes, ruinous
+                     for a contig-level assembly, where a 300,000-contig query emits an element per contig per
+                     target. Above 0, whole query sequences are packed into elements of about this many segment
+                     lines, so the count is chosen rather than inherited. A single query is never split."/>
         <section name="developer" title="Developer Options" expanded="false">
             <expand macro="alignment_type_option"/>
         </section>
