@@ -39,6 +39,7 @@ import argparse
 import pathlib
 import sys
 import zlib
+from xml.etree import ElementTree
 
 import yaml
 
@@ -165,14 +166,15 @@ def build(growler: dict) -> dict:
 #: are identical (version 0.1.0, inputs ['input'], outputs ['output']), so resolving by name is
 #: unambiguous in effect. If they ever diverge, that stops being true silently.
 #:
-#: ⚠ `ucsc_chainmergesort` is bare for a different reason: it is written in this same repository
-#: (tools/ucsc_chainmergesort) and has no published revision to pin. PIN IT once it is on the
-#: target server, or this document silently accepts any future version of the step the whole
-#: collapse turns on.
+#: ⚠ `ucsc_chainmergesort` used to be bare for a different reason -- written in this same
+#: repository (tools/ucsc_chainmergesort) with no published revision to pin. It is published now,
+#: Tool Shed revision `9e355f0c9f46`, so it is pinned. A bare id here would have accepted any
+#: future version of the step the whole collapse turns on, and would not have resolved at all on a
+#: server that installs it from the shed rather than from a local tool_conf.xml.
 IUC = "toolshed.g2.bx.psu.edu/repos/iuc"
 TOOLS = {
     "axtchain": f"{IUC}/ucsc_axtchain/ucsc_axtchain/482+galaxy2",
-    "chainmergesort": "ucsc_chainmergesort",
+    "chainmergesort": "toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy0",
     "chainprenet": f"{IUC}/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0",
     "chainnet": f"{IUC}/ucsc_chainnet/ucsc_chainnet/482+galaxy0",
     "netchainsubset": f"{IUC}/ucsc_netchainsubset/ucsc_netchainsubset/482+galaxy0",
@@ -433,8 +435,41 @@ def build_pair(growler: dict) -> dict:
 #: bytes and import fine; 3,000 characters of base64 compress to 2,290 and 500. A bisect over it
 #: looks incoherent -- one added space flips 200 to 500 -- because the trigger is a threshold on a
 #: derived size, not an offending substring.
-ANNOTATION_NOTE_BYTES = 1_600
 ANNOTATION_PROBLEM_BYTES = 1_900
+
+
+def _annotation_texts(document: dict, prefix: str = "") -> list[tuple[str, str]]:
+    """`(where, text)` for every annotation in a workflow, DESCENDING INTO INLINED SUBWORKFLOWS.
+
+    ⛔ THE NESTED DOCUMENT IS THE ONE THAT NEEDS CHECKING. gxformat2 has no include, so a
+    subworkflow step carries its whole child under `run:` -- and that child is `growler.gxwf.yml`,
+    the hand-edited source. Galaxy stores it as a workflow in its own right with its own
+    annotations, each capped separately, so a guard that reads only the top level watches the two
+    GENERATED files and ignores the one a human types into.
+    """
+    items = [(f"{prefix}<workflow doc>", document.get("doc", ""))]
+    for section in ("inputs", "steps", "outputs"):
+        for name, value in (document.get(section) or {}).items():
+            if not isinstance(value, dict):
+                continue
+            items.append((f"{prefix}{section[:-1]} {name}", value.get("doc", "")))
+            child = value.get("run")
+            if isinstance(child, dict):
+                items.extend(_annotation_texts(child, prefix=f"{prefix}{name}/"))
+    return items
+
+
+def walk_steps(document: dict, prefix: str = "") -> list[tuple[str, dict]]:
+    """`(path, step)` for every step, DESCENDING INTO INLINED SUBWORKFLOWS -- same reason as above."""
+    found = []
+    for name, step in (document.get("steps") or {}).items():
+        if not isinstance(step, dict):
+            continue
+        found.append((f"{prefix}{name}", step))
+        child = step.get("run")
+        if isinstance(child, dict):
+            found.extend(walk_steps(child, prefix=f"{prefix}{name}/"))
+    return found
 
 
 def annotation_sizes(document: dict) -> list[tuple[int, str, int]]:
@@ -443,12 +478,10 @@ def annotation_sizes(document: dict) -> list[tuple[int, str, int]]:
     Every `doc` is its own annotation and each is capped separately, so the SUM is not the thing to
     measure either -- a document of many small docs is fine and one long step doc is not.
     """
-    items = [("<workflow doc>", document.get("doc", ""))]
-    for section in ("inputs", "steps", "outputs"):
-        for name, value in (document.get(section) or {}).items():
-            if isinstance(value, dict):
-                items.append((f"{section[:-1]} {name}", value.get("doc", "")))
-    sized = [(len(zlib.compress((text or "").encode())), where, len(text or "")) for where, text in items]
+    sized = [
+        (len(zlib.compress((text or "").encode())), where, len(text or ""))
+        for where, text in _annotation_texts(document)
+    ]
     return sorted(sized, reverse=True)
 
 
@@ -460,6 +493,33 @@ def annotation_complaints(document: dict, label: str) -> list[str]:
         for size, where, chars in annotation_sizes(document)
         if size >= ANNOTATION_PROBLEM_BYTES
     ]
+
+
+#: ⛔ A TOOL VERSION BUMP IS NOT A WORKFLOW UPDATE, AND NOTHING LINKS THEM. kegalign.xml moved to
+#: 0.3.3 in c0ab39e while growler.gxwf.yml stayed on 0.3.2+galaxy2 -- the revision whose container
+#: ships the buffered build_pairs.py and OOMs on a real genome pair. Every check passed: ruff,
+#: flake8, planemo, --check, the self-test. The committed workflow simply selected a tool the
+#: repository had already moved past.
+#:
+#: So the version a step pins is re-derived HERE from the tool's own XML rather than trusted. The
+#: shed guid is the tool's `version=` attribute with its tokens expanded, so this is the same
+#: string by construction -- and when someone bumps a suffix, the self-test fails until the
+#: workflow follows.
+def tool_version(xml: pathlib.Path) -> str:
+    """The version a tool XML declares, with `@TOKEN@`s expanded from it and its imported macros."""
+    tree = ElementTree.parse(xml)
+    tokens: dict[str, str] = {}
+    for macros in tree.getroot().findall("macros"):
+        for imported in macros.findall("import"):
+            for token in ElementTree.parse(xml.parent / (imported.text or "")).getroot().iter("token"):
+                tokens[token.get("name") or ""] = token.text or ""
+        for token in macros.findall("token"):
+            tokens[token.get("name") or ""] = token.text or ""
+    version = tree.getroot().get("version") or ""
+    for name, value in tokens.items():
+        version = version.replace(name, value)
+    assert "@" not in version, f"{xml.name}: unexpanded token in {version!r}"
+    return version
 
 
 def render(growler: dict) -> str:
@@ -575,6 +635,56 @@ def self_test() -> int:
     check("the wrapper renders", yaml.safe_load(render_pair(child))["label"],
           "Growler pair (one genome pair, through chains)")
 
+    # ----------------------------------------------------------------- tool ids and their pins
+    # ⛔ NO BARE CLASSIC IDS. `growler_lastz` was bare while its sibling `kegalign`, in the SAME
+    # shed repository, was fully qualified one line above -- so once installed it would have been
+    # `.../repos/richard-burhans/kegalign/growler_lastz/...` and the bare form a 404. That is
+    # precisely what `/api/tools/chainStitchId` did on both .org and vgp. `ucsc_chainmergesort`
+    # was bare for a better reason (unpublished) that has since expired.
+    # ▶ AND IT WALKS THE INLINED CHILD TOO, because that is where the bare id actually was. A
+    # check over top-level steps only would have passed the document it was written to catch.
+    # ⚠ AGAINST THE COMMITTED DOCUMENT, NOT THE STUB. `child` above is a synthetic fixture with
+    # no steps, so every assertion about tool ids would pass over an empty set. These checks are
+    # about what is on disk, so they read what is on disk.
+    real_child = yaml.safe_load(GROWLER.read_text())
+    real_pair = build_pair(real_child)
+    real_panel = build(yaml.safe_load(GROWLER.read_text()))
+
+    UDT_IDS = {"brc-chain-stitch-id"}
+    for document, label in ((real_pair, "pair"), (real_panel, "panel")):
+        seen = 0
+        for name, step in walk_steps(document):
+            found = step.get("tool_id")
+            if found is None or found in UDT_IDS or found.startswith("__"):
+                continue
+            seen += 1
+            check(f"{label} step `{name}` names a fully qualified tool",
+                  found.startswith("toolshed.g2.bx.psu.edu/repos/"), True)
+        # A walker that silently returns nothing would pass every assertion above.
+        check(f"  ({label}: the walker found shed-pinned steps at all)", seen > 0, True)
+
+    # ⛔ AND THE PIN MUST AGREE WITH THE TOOL XML IN THIS REPOSITORY. This is the check that the
+    # 0.3.2-vs-0.3.3 miss needed and did not have: bump a suffix in tools/, and the self-test
+    # fails until the workflow follows.
+    root = HERE.parent.parent
+    pinned = {name.rsplit("/", 1)[-1]: step.get("tool_id", "") for name, step in walk_steps(real_pair)}
+    for step_name, xml in (
+        ("kegalign", "tools/kegalign/kegalign.xml"),
+        ("growler_lastz", "tools/kegalign/growler_lastz.xml"),
+        ("chainmergesort", "tools/ucsc_chainmergesort/chainmergesort.xml"),
+    ):
+        want = tool_version(root / xml)
+        check(f"`{step_name}` pins the version {pathlib.Path(xml).name} declares",
+              pinned[step_name].rsplit("/", 1)[-1], want)
+
+    # ⚠ `no` UNQUOTED IS THE YAML BOOLEAN False, and growler_lastz.xml declares inner_selector as a
+    # conditional selector whose options are the STRINGS "no" and "yes". A stored `false` matches
+    # neither `<when>`, so Galaxy falls back to the default -- which happens to be `no`, so this
+    # was invisible. It stops being invisible the day the default moves.
+    check("inner_selector is the string \"no\", not a YAML boolean",
+          real_pair["steps"]["growler"]["run"]["steps"]["growler_lastz"]["state"]["interpolation"]["inner_selector"],
+          "no")
+
     # ------------------------------------------------------------------- the import size guard
     # ⛔ AND IT MUST BE ABLE TO FIRE. A guard that has never rejected anything is a guard nobody
     # has tested. Incompressible text is used because the threshold is on COMPRESSED size: 3,000
@@ -596,6 +706,17 @@ def self_test() -> int:
     check("sizes are reported largest first",
           annotation_sizes({"doc": "aaa", "steps": {"s": {"doc": incompressible}}, "inputs": {}})[0][1],
           "step s")
+
+    # ⛔ AND IT MUST DESCEND INTO THE INLINED SUBWORKFLOW, which is the document a human edits.
+    # A guard reading only the top level watches the two GENERATED files and ignores growler.gxwf.yml.
+    nested = {"doc": "", "inputs": {}, "steps": {"growler": {"run": {"doc": incompressible, "steps": {}, "inputs": {}}}}}
+    check("an over-long doc in the INLINED CHILD is caught", len(annotation_complaints(nested, "x")), 1)
+    check("  and it is reported under the step that carries it",
+          annotation_sizes(nested)[0][1], "growler/<workflow doc>")
+    check("the COMMITTED wrapper's child is reachable from the top level",
+          any(where.startswith("growler/") for _, where, _ in annotation_sizes(real_pair)), True)
+    check("  and the committed documents are under the limit, child included",
+          annotation_complaints(real_pair, "pair") + annotation_complaints(real_panel, "panel"), [])
 
     if failures:
         print(f"\n{len(failures)} test(s) failed")

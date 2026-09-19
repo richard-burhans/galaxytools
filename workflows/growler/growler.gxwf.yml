@@ -66,14 +66,23 @@ outputs:
 
 steps:
   kegalign:
-    # ⚠ THIS PIN WENT STALE TWICE WITHOUT KEGALIGN CHANGING, and the cause is now fixed. One shed
-    # repository holds all three tools, so editing the shared macros.xml used to bump every suffix
-    # in it: kegalign went +galaxy0 -> +galaxy1 for a change to batched_lastz's gzip level, then
-    # +galaxy1 -> +galaxy2 for the commit that moved the suffixes out of macros.xml and ended the
-    # coupling. From here kegalign's suffix moves only when KEGALIGN changes, so this should hold.
-    # Still check it against the revision actually installed before a run -- a shared-file edit
-    # (the requirement macros, the citations, @LASTZ_VERSION@) legitimately moves all three.
-    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.2+galaxy2
+    # ⛔ THIS PIN IS NOT COSMETIC: 0.3.2 IS THE REVISION THAT OOMs. Its container ships the
+    # BUFFERED build_pairs.py -- `git show v0.3.2:scripts/build_pairs.py` has no `stream_pairs`,
+    # and the collection path invokes exactly that code. Measured peak RSS 52.4 MB + 1.96 x
+    # (input MB): ~28 GB for a 14.15 GB bundle, OOM-killed at 15 GB. It also gzips at level 6.
+    # v0.3.3 is the first release whose collection output survives a real genome pair.
+    #
+    # ⚠ AND THE PIN WAS LEFT BEHIND ONCE ALREADY. kegalign.xml moved to 0.3.3 in c0ab39e and this
+    # document did not, so the committed workflow selected the OOM revision while the tool that
+    # generated it required the fixed one. A tool version bump is not a workflow update; nothing
+    # links them, so check this line against `@KEGALIGN_VERSION@` whenever either moves.
+    #
+    # ⚠ The pin went stale twice before that WITHOUT KegAlign changing, and that cause is fixed:
+    # one shed repository holds all three tools, so editing the shared macros.xml used to bump
+    # every suffix in it. Since the suffixes moved out of macros.xml, kegalign's moves only when
+    # KEGALIGN does. A shared-file edit (the requirement macros, the citations, @LASTZ_VERSION@)
+    # still legitimately moves all three.
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.3+galaxy0
     label: kegalign
     doc: >
       Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it emit
@@ -98,7 +107,12 @@ steps:
     position: {top: 0, left: 260}
 
   growler_lastz:
-    tool_id: growler_lastz
+    # ⛔ FULLY QUALIFIED, like its sibling above, and for the reason 8f0ffc9 already found the
+    # hard way: a bare classic id resolves only where a local tool_conf.xml provides the tool.
+    # growler_lastz ships from the SAME shed repository as kegalign, so once installed it is
+    # `.../repos/richard-burhans/kegalign/growler_lastz/...` and the bare `growler_lastz` is a
+    # 404 -- exactly what `/api/tools/chainStitchId` did on both .org and vgp.
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/growler_lastz/1.04.52+galaxy4
     label: growler_lastz
     doc: >
       Gapped extension, mapped over the pair file collection: N independent jobs, one lastz each, and
@@ -114,5 +128,5 @@ steps:
       gappedthresh: 3000
       ydrop: 9430
       interpolation:
-        inner_selector: no
+        inner_selector: "no"
     position: {top: 0, left: 560}

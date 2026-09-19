@@ -191,7 +191,7 @@ steps:
           outputSource: kegalign/query_2bit
       steps:
         kegalign:
-          tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.2+galaxy2
+          tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.3+galaxy0
           label: kegalign
           doc: 'Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it
             emit pair files instead of data_package.tgz; the tarball path is untouched and still available.
@@ -218,7 +218,7 @@ steps:
             top: 0
             left: 260
         growler_lastz:
-          tool_id: growler_lastz
+          tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/growler_lastz/1.04.52+galaxy4
           label: growler_lastz
           doc: 'Gapped extension, mapped over the pair file collection: N independent jobs, one lastz
             each, and the 2bits and scoring file ride along as fixed inputs rather than being copied into
@@ -235,7 +235,7 @@ steps:
             gappedthresh: 3000
             ydrop: 9430
             interpolation:
-              inner_selector: false
+              inner_selector: 'no'
           position:
             top: 0
             left: 560
