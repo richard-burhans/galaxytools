@@ -248,6 +248,33 @@ jobs:
         name: 'File size report'
         path: file_size_report.txt
 
+  # The Growler workflow documents are GENERATED, and nothing else here checks them.
+  #
+  # ⛔ Every other lint job is gated on `needs.setup.outputs.repository-list != ''`, which is empty
+  # for a change under `workflows/` because that is not a shed repository. So a stale generated
+  # document merges green. It has now happened twice: growler_pair.gxwf.yml kept a tool pin its own
+  # source had already moved past, because the change was written before the generator learned to
+  # emit that document. The generator can already detect it; nobody was running the generator.
+  #
+  # Deliberately NOT gated on a path filter or on `setup`: it costs seconds, and the failure it
+  # catches is precisely one where the interesting file is not the one that changed.
+  generated_workflows:
+    name: Check generated workflows
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@v7
+      with:
+        python-version: '3.11'
+    - name: Install PyYAML
+      run: pip install pyyaml
+    - name: Growler documents are generated, not hand-written
+      run: |
+        python workflows/growler/assemble.py --self-test
+        python workflows/growler/assemble.py --check
+
   # Planemo test the changed repositories, each chunk creates an artifact
   # containing HTML and JSON reports for the executed tests
   test:
