@@ -248,7 +248,8 @@ jobs:
         name: 'File size report'
         path: file_size_report.txt
 
-  # The Growler workflow documents are GENERATED, and nothing else here checks them.
+  # The only job that looks at `workflows/` at all. It has two duties, and they exist for the
+  # same reason: every other lint and test job here is gated on a SHED REPOSITORY having changed.
   #
   # ⛔ Every other lint job is gated on `needs.setup.outputs.repository-list != ''`, which is empty
   # for a change under `workflows/` because that is not a shed repository. So a stale generated
@@ -258,8 +259,8 @@ jobs:
   #
   # Deliberately NOT gated on a path filter or on `setup`: it costs seconds, and the failure it
   # catches is precisely one where the interesting file is not the one that changed.
-  generated_workflows:
-    name: Check generated workflows
+  workflows_dir:
+    name: Check workflows/
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v7
@@ -268,12 +269,23 @@ jobs:
     - uses: actions/setup-python@v7
       with:
         python-version: '3.11'
-    - name: Install PyYAML
-      run: pip install pyyaml
+    - name: Install PyYAML and flake8
+      run: pip install pyyaml flake8 flake8-import-order
     - name: Growler documents are generated, not hand-written
       run: |
         python workflows/growler/assemble.py --self-test
         python workflows/growler/assemble.py --check
+    # Same `setup.cfg` the Lint Python scripts job uses, so there is one Python standard here and
+    # not two. That job skips for a change under `workflows/`, which is how a duplicate
+    # `import zlib` reached main in #164 -- flake8 reports it as F811 and nothing was running flake8.
+    - name: Lint Python under workflows/
+      run: |
+        files=$(find workflows -name '*.py' | sort)
+        # A file list that comes back empty must FAIL. Bare `flake8` with no arguments lints the
+        # whole checkout and passes here, so an empty list would look exactly like a clean run.
+        test -n "$files"
+        echo "$files"
+        flake8 $files
 
   # Planemo test the changed repositories, each chunk creates an artifact
   # containing HTML and JSON reports for the executed tests
@@ -451,7 +463,7 @@ jobs:
 
   determine-success:
     name: Check workflow success
-    needs: [setup, lint, flake8, lintr, file_sizes, combine_outputs]
+    needs: [setup, lint, flake8, lintr, file_sizes, workflows_dir, combine_outputs]
     if: ${{ always() && github.ref != 'refs/heads/master' && github.ref != 'refs/heads/main' }}
     runs-on: ubuntu-latest
     steps:
@@ -466,6 +478,9 @@ jobs:
       run: exit 1
     - name: Indicate file size check status
       if: ${{ needs.file_sizes.result != 'success' && needs.file_sizes.result != 'skipped' }}
+      run: exit 1
+    - name: Indicate workflows/ check status
+      if: ${{ needs.workflows_dir.result != 'success' && needs.workflows_dir.result != 'skipped' }}
       run: exit 1
     - name: Check tool test status
       if: ${{ needs.combine_outputs.result != 'success' && needs.combine_outputs.result != 'skipped' }}
