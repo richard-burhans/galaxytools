@@ -289,7 +289,7 @@ steps:
       top: 0
       left: 1800
   chainstitchid_clean:
-    tool_id: chainStitchId
+    tool_id: brc-chain-stitch-id
     label: chainstitchid_clean
     doc: Both the cleaned_chains deliverable AND the reciprocal-best arm's input.
     in:
@@ -345,7 +345,7 @@ steps:
       top: 200
       left: 3300
   rb_stitch:
-    tool_id: chainStitchId
+    tool_id: brc-chain-stitch-id
     label: rb_stitch
     in:
       input: rb_subset/out
