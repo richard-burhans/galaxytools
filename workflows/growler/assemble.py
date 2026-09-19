@@ -149,14 +149,27 @@ def build(growler: dict) -> dict:
 #: The tool ids the chain arm is lifted from, verbatim out of WF-C's align_chain.gxwf.yml. Kept as
 #: one table so a drift between the wrapper and WF-C is a one-line diff rather than a hunt.
 #:
-#: ⚠ TWO IDS ARE BARE AND UNVERSIONED, for different reasons, and both resolve to whatever the
-#: server happens to have installed:
-#:   `chainStitchId`      exactly as WF-C has it. Pinning it here would be a change to WF-C's
-#:                        behaviour smuggled in under a refactor, so it is left alone.
-#:   `ucsc_chainmergesort` because it is not published anywhere yet -- it is written in this same
-#:                        repository (tools/ucsc_chainmergesort) and has no revision to pin.
-#:                        ⚠ PIN IT once it is on the target server, or this document silently
-#:                        accepts any future version of the step the whole collapse turns on.
+#: ⛔ THE STITCH STEP IS A USER-DEFINED TOOL, AND IT HAS TO BE. `chainStitchId` is the one chain
+#: utility the IUC collection does not carry. brc-tools holds it twice: a shed wrapper at
+#: `tools/chainStitchId/` that has NEVER BEEN PUBLISHED (the Tool Shed returns no results for it),
+#: and a UDT generated from that wrapper. WF-C therefore has two editions, and the bare
+#: `chainStitchId` in its classic one resolves only where a local tool_conf.xml provides it.
+#:
+#: This document lifted the classic id and so named a tool that resolves on NEITHER usegalaxy.org
+#: NOR vgp -- measured, `/api/tools/chainStitchId` is 404 on both. `brc-chain-stitch-id` is live
+#: and active on both, so that is what this uses. ▶ This wrapper corresponds to WF-C's UDT
+#: edition, not its classic one; there is no variant of it that runs on a public server without
+#: the UDT, so no second edition is generated here.
+#:
+#: ⚠ FIVE registrations of `brc-chain-stitch-id` are active, created within twelve minutes of each
+#: other on 2026-09-01 -- a UDT cannot be updated in place, so each re-registration adds one. They
+#: are identical (version 0.1.0, inputs ['input'], outputs ['output']), so resolving by name is
+#: unambiguous in effect. If they ever diverge, that stops being true silently.
+#:
+#: ⚠ `ucsc_chainmergesort` is bare for a different reason: it is written in this same repository
+#: (tools/ucsc_chainmergesort) and has no published revision to pin. PIN IT once it is on the
+#: target server, or this document silently accepts any future version of the step the whole
+#: collapse turns on.
 IUC = "toolshed.g2.bx.psu.edu/repos/iuc"
 TOOLS = {
     "axtchain": f"{IUC}/ucsc_axtchain/ucsc_axtchain/482+galaxy2",
@@ -164,7 +177,7 @@ TOOLS = {
     "chainprenet": f"{IUC}/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0",
     "chainnet": f"{IUC}/ucsc_chainnet/ucsc_chainnet/482+galaxy0",
     "netchainsubset": f"{IUC}/ucsc_netchainsubset/ucsc_netchainsubset/482+galaxy0",
-    "chainstitchid": "chainStitchId",
+    "chainstitchid": "brc-chain-stitch-id",
     "chainswap": f"{IUC}/ucsc_chainswap/ucsc_chainswap/482+galaxy0",
     "chainsort": f"{IUC}/ucsc_chainsort/ucsc_chainsort/482+galaxy0",
     # ⚠ The AXT branch needs a collapse too, and it is NOT the chain one. A chain merge must be a
@@ -550,6 +563,15 @@ def self_test() -> int:
           pair["steps"]["growler"]["in"]["output_format"], "output_format")
     check("WF-C's gap model is carried over, not defaulted",
           pair["steps"]["axtchain"]["state"]["linear_gap_options"]["linear_gap"], "loose")
+
+    # ⛔ THE STITCH STEPS MUST NAME THE UDT, NOT THE CLASSIC ID. `chainStitchId` is what WF-C's
+    # classic edition says and it looks more correct, which is exactly why this is pinned: that id
+    # resolves on neither usegalaxy.org nor vgp, because the shed wrapper was never published.
+    # Both steps, because only one of them is the exported deliverable and a half-fixed pair would
+    # still lint, still import, and fail at the second job.
+    check("both stitch steps name the UDT that actually resolves",
+          [pair["steps"]["chainstitchid_clean"]["tool_id"], pair["steps"]["rb_stitch"]["tool_id"]],
+          ["brc-chain-stitch-id", "brc-chain-stitch-id"])
     check("the wrapper renders", yaml.safe_load(render_pair(child))["label"],
           "Growler pair (one genome pair, through chains)")
 
