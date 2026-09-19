@@ -174,7 +174,7 @@ def build(growler: dict) -> dict:
 IUC = "toolshed.g2.bx.psu.edu/repos/iuc"
 TOOLS = {
     "axtchain": f"{IUC}/ucsc_axtchain/ucsc_axtchain/482+galaxy2",
-    "chainmergesort": "toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy0",
+    "chainmergesort": "toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy1",
     "chainprenet": f"{IUC}/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0",
     "chainnet": f"{IUC}/ucsc_chainnet/ucsc_chainnet/482+galaxy0",
     "netchainsubset": f"{IUC}/ucsc_netchainsubset/ucsc_netchainsubset/482+galaxy0",

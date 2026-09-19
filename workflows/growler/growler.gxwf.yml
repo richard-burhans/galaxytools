@@ -82,7 +82,7 @@ steps:
     # every suffix in it. Since the suffixes moved out of macros.xml, kegalign's moves only when
     # KEGALIGN does. A shared-file edit (the requirement macros, the citations, @LASTZ_VERSION@)
     # still legitimately moves all three.
-    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.3+galaxy0
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.3+galaxy1
     label: kegalign
     doc: >
       Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it emit
@@ -98,6 +98,11 @@ steps:
       scoring_options|scoring: scores
     state:
       bundle_selector: collection
+      # ⚠ SET EXPLICITLY, THOUGH 0 IS THE DEFAULT. 0 means one element per chromosome pair, which
+      # is what Growler's fan-out assumes; above 0 the tool packs whole query sequences into
+      # elements of about that many segment lines instead. Leaving it unset would make this
+      # workflow's fan-out a property of whatever the installed tool currently defaults to.
+      batch_lines: 0
       sequence_options:
         strand_selector: both
       output_options:
@@ -112,7 +117,7 @@ steps:
     # growler_lastz ships from the SAME shed repository as kegalign, so once installed it is
     # `.../repos/richard-burhans/kegalign/growler_lastz/...` and the bare `growler_lastz` is a
     # 404 -- exactly what `/api/tools/chainStitchId` did on both .org and vgp.
-    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/growler_lastz/1.04.52+galaxy4
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/growler_lastz/1.04.52+galaxy5
     label: growler_lastz
     doc: >
       Gapped extension, mapped over the pair file collection: N independent jobs, one lastz each, and

@@ -4,7 +4,7 @@
         <!-- ▶ THIS TOOL'S SUFFIX LIVES HERE, NOT IN macros.xml. Shared files are what
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
-        <token name="@BATCHED_LASTZ_SUFFIX@">7</token>
+        <token name="@BATCHED_LASTZ_SUFFIX@">8</token>
         <!-- conda-forge, NOT bioconda: pigz has no bioconda build. Only this tool asks for
              it, through lastz_requirements' yield, because only this tool has a collapse to
              write. Growler LASTZ emits one plain alignment per job and needs nothing of the
