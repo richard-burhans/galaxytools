@@ -4,7 +4,7 @@ import argparse
 import collections.abc
 import concurrent.futures
 import contextlib
-import gzip
+import io
 import json
 import multiprocessing
 import os
@@ -19,24 +19,90 @@ import tempfile
 import time
 import typing
 
-#: gzip level for the concatenated output.
+#: Compression level for the concatenated output.
 #:
 #: ⚠ LEVEL 1, DELIBERATELY -- do not "fix" it back to the zlib default of 6. This single write is
-#: THE COLLAPSE: every per-command output file concatenated into one gzip stream by one thread,
-#: measured at ~62% of this job's wall clock (twice, on inputs differing 9x). Measured on real
-#: Cannabis MAF: level 6 writes at 22-26 MB/s, level 1 at 141-151 MB/s, for about +24% bytes.
-#: Object store is not the constraint; the serial write is.
+#: THE COLLAPSE: every per-command output file concatenated into one gzip stream, measured at ~62%
+#: of this job's wall clock (twice, on inputs differing 9x). Measured on real Cannabis AXT, 1.69 GB
+#: through one core: level 6 writes at 18 MB/s, level 1 at 137. Object store is not the constraint;
+#: the write is.
+#:
+#: ⚠ AND IT STAYS AT 1 NOW THAT THE WRITE IS PARALLEL, which is the opposite of what it looks like.
+#: With threads, level 6 becomes affordable -- 547 MB/s at 30 threads, four times faster than the
+#: SINGLE-threaded level 1 this replaces, and 40% smaller. But level 1 with the same threads is
+#: 2,456 MB/s, so against each other level 1 still wins on the axis that matters by 4.5x. Level 6
+#: is the right choice only if the bottleneck moves to I/O, where the smaller output would pay for
+#: itself -- ⚠ UNMEASURED, because the benchmark above read from page cache.
 COMPRESSLEVEL: typing.Final = 1
 
 
 @contextlib.contextmanager
-def open_file(filename: str) -> collections.abc.Iterator[typing.IO[str]]:
-    if filename.endswith(".gz"):
-        with gzip.open(filename, "wt", compresslevel=COMPRESSLEVEL) as f:
-            yield f
-    else:
+def open_file(filename: str, threads: int = 1) -> collections.abc.Iterator[typing.IO[str]]:
+    """The output handle. Gzipped output goes through `pigz`, which is why `threads` is here.
+
+    ⛔ THIS IS THE COLLAPSE, AND IT WAS SINGLE-THREADED. Python's `gzip` module has no parallel
+    mode, so the one write that dominates this job used one core while the other 29 sat idle --
+    the compute workers have all finished by the time this runs. Measured on 1.69 GB of real
+    Cannabis AXT:
+
+        gzip -6 (the original)      18 MB/s
+        gzip -1                    137 MB/s
+        pigz -1 -p 30            2,456 MB/s
+
+    ⚠ `-n` IS NOT OPTIONAL. pigz stores the input's name and modification time in the gzip header
+    by default, where Python's `gzip.open` did not; without `-n` the output bytes would stop being
+    a function of the content alone and two identical runs would differ. Measured, and it is the
+    one flag whose absence nothing downstream would complain about.
+
+    ⚠ `-i`/`--independent` IS DELIBERATELY ABSENT. pigz loads the previous block's last 32 KiB as
+    a preset dictionary, which is why its output is the same SIZE as gzip's at the same level
+    (measured: 0.53 GB, 3.17x, for both). `-i` would drop that for random access and partial error
+    recovery, neither of which a single streamed output needs.
+
+    ⚠ pigz reads the `GZIP` and `PIGZ` environment variables BEFORE its command line, so anything
+    set there silently overrides these flags. They are cleared for the child rather than trusted.
+
+    ▶ Decompression is NOT helped by any of this -- pigz's own manual says it "can't be
+    parallelized" -- so the tarball this job unpacks is unaffected. Compression only.
+    """
+    if not filename.endswith(".gz"):
         with open(filename, "w") as f:
             yield f
+        return
+
+    pigz = shutil.which("pigz")
+    if pigz is None:
+        # ⛔ LOUD, NOT A FALLBACK. A quiet drop back to Python's gzip would still produce correct
+        # output, several times slower, and would hide exactly the failure this wrapper's
+        # `pigz` requirement exists to prevent -- a container that resolves without it.
+        sys.exit(
+            "ERROR: pigz is not on PATH. This tool requires it (see the pigz requirement in "
+            "batched_lastz.xml); the environment the wrapper resolved does not provide it."
+        )
+
+    env = {k: v for k, v in os.environ.items() if k not in ("GZIP", "PIGZ")}
+    with open(filename, "wb") as raw:
+        process = subprocess.Popen(
+            [pigz, f"-{COMPRESSLEVEL}", "-n", "-p", str(max(1, threads)), "-c"],
+            stdin=subprocess.PIPE,
+            stdout=raw,
+            env=env,
+        )
+        if process.stdin is None:
+            sys.exit("ERROR: could not open a pipe to pigz")
+        # ⚠ `newline=""` so nothing rewrites the line endings the callers already wrote; the
+        # `gzip.open(..., "wt")` this replaces did not translate them either.
+        writer = typing.cast(typing.IO[str], io.TextIOWrapper(process.stdin, newline=""))
+        try:
+            yield writer
+        finally:
+            writer.close()
+            returncode = process.wait()
+        # ⛔ CHECKED. A pigz that died mid-stream leaves a short but perfectly valid .gz behind,
+        # and every reader downstream would accept it -- the same shape as the lastz failure mode
+        # this project has already been caught by, where a FAILURE still writes partial output.
+        if returncode != 0:
+            sys.exit(f"ERROR: pigz exited {returncode} while writing {filename}")
 
 
 lastz_output_format_regex = re.compile(
@@ -423,7 +489,9 @@ class TarRunner:
             final_output_format = f"{final_output_format}.gz"
 
         for file_type, file_list in self.output_files.items():
-            with open_file(f"output.{final_output_format}") as ofh:
+            # ▶ The compute workers are all finished by now, so the whole slot budget is free
+            # for the one write that is left. That is the entire point of the change.
+            with open_file(f"output.{final_output_format}", threads=self.parallel) as ofh:
                 if final_output_format == "maf.gz":
                     print("##maf version=1", file=ofh)
 

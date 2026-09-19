@@ -4,11 +4,17 @@
         <!-- ▶ THIS TOOL'S SUFFIX LIVES HERE, NOT IN macros.xml. Shared files are what
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
-        <token name="@BATCHED_LASTZ_SUFFIX@">5</token>
+        <token name="@BATCHED_LASTZ_SUFFIX@">6</token>
+        <!-- conda-forge, NOT bioconda: pigz has no bioconda build. Only this tool asks for
+             it, through lastz_requirements' yield, because only this tool has a collapse to
+             write. Growler LASTZ emits one plain alignment per job and needs nothing of the
+             sort, which is exactly why the token lives here and not in macros.xml. -->
+        <token name="@PIGZ_VERSION@">2.8</token>
         <import>macros.xml</import>
         <import>alignment_type_option.xml</import>
     </macros>
     <expand macro="lastz_requirements">
+        <requirement type="package" version="@PIGZ_VERSION@">pigz</requirement>
         <requirement type="package" version="3.12">python</requirement>
     </expand>
     <required_files>
