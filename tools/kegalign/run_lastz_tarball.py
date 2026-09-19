@@ -19,11 +19,20 @@ import tempfile
 import time
 import typing
 
+#: gzip level for the concatenated output.
+#:
+#: ⚠ LEVEL 1, DELIBERATELY -- do not "fix" it back to the zlib default of 6. This single write is
+#: THE COLLAPSE: every per-command output file concatenated into one gzip stream by one thread,
+#: measured at ~62% of this job's wall clock (twice, on inputs differing 9x). Measured on real
+#: Cannabis MAF: level 6 writes at 22-26 MB/s, level 1 at 141-151 MB/s, for about +24% bytes.
+#: Object store is not the constraint; the serial write is.
+COMPRESSLEVEL: typing.Final = 1
+
 
 @contextlib.contextmanager
 def open_file(filename: str) -> collections.abc.Iterator[typing.IO[str]]:
     if filename.endswith(".gz"):
-        with gzip.open(filename, "wt", compresslevel=6) as f:
+        with gzip.open(filename, "wt", compresslevel=COMPRESSLEVEL) as f:
             yield f
     else:
         with open(filename, "w") as f:
