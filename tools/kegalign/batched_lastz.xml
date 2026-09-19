@@ -1,6 +1,10 @@
 <tool id="batched_lastz" name="Batched LASTZ" version="@LASTZ_VERSION@+galaxy@BATCHED_LASTZ_SUFFIX@" profile="@PROFILE@">
     <description>: align batches of sequences</description>
     <macros>
+        <!-- ▶ THIS TOOL'S SUFFIX LIVES HERE, NOT IN macros.xml. Shared files are what
+             couple the three tools' versions together; a token only this tool uses has
+             no business in one. Bump it here and the other two stay where they are. -->
+        <token name="@BATCHED_LASTZ_SUFFIX@">5</token>
         <import>macros.xml</import>
         <import>alignment_type_option.xml</import>
     </macros>

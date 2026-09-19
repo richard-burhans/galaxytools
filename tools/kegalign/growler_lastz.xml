@@ -1,6 +1,10 @@
 <tool id="growler_lastz" name="Growler LASTZ" version="@LASTZ_VERSION@+galaxy@GROWLER_LASTZ_SUFFIX@" profile="@PROFILE@">
     <description>: gapped extension of one chromosome pair</description>
     <macros>
+        <!-- ▶ THIS TOOL'S SUFFIX LIVES HERE, NOT IN macros.xml. Shared files are what
+             couple the three tools' versions together; a token only this tool uses has
+             no business in one. Bump it here and the other two stay where they are. -->
+        <token name="@GROWLER_LASTZ_SUFFIX@">3</token>
         <import>macros.xml</import>
     </macros>
     <expand macro="lastz_requirements"/>

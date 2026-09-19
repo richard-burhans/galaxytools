@@ -2,24 +2,33 @@
     <!-- ⚠ THREE TOOLS SHARE THIS FILE, so nothing here may be called just "the" version.
          KegAlign resolves `kegalign-full`; Batched LASTZ and Growler LASTZ resolve `lastz`, and
          those two packages move on separate release cadences. A single @TOOL_VERSION@ token would
-         force them to agree, which is exactly the coupling this merge is meant to remove.
+         force them to agree, which is exactly the coupling this merge was meant to remove.
 
-         Each tool carries its own suffix, but ⚠ THEY DO NOT MOVE INDEPENDENTLY. One repository holds
-         all three, and editing anything shared (this file above all) makes planemo treat every tool
-         in it as changed, so ShedVersion demands a bump for each. Measured on #152: changing only
-         @KEGALIGN_VERSION@ failed the lint on batched_lastz and growler_lastz for being equal to
-         their published revisions. Bump all three whenever this file changes. -->
+         ⛔ NOTHING TOOL-SPECIFIC BELONGS IN THIS FILE, AND THE SUFFIXES USED TO. One repository
+         holds all three tools, and editing anything shared, this file above all, makes planemo
+         treat every tool in it as changed, so ShedVersion demands a bump for each. The suffixes
+         lived here, so bumping ONE of them edited this file and forced the other two: kegalign
+         went 0.3.2+galaxy0 -> +galaxy1 because batched_lastz changed its gzip level, which broke
+         a workflow's kegalign pin without kegalign changing at all.
+
+         That was circular, and it is fixed: each suffix now lives in its own tool's <macros>
+         block. Keep it that way. A token used by exactly one tool goes in that tool; only a
+         statement that is TRUE OF ALL THREE belongs here.
+
+         ⚠ AND ShedVersion WORKS ON FILE CHANGES, NOT ON RENDERED XML, which is the measurement
+         that made the decoupling worth doing and cost one last synchronised bump. Moving the
+         tokens left every tool's expanded XML byte-identical, and ShedVersion still refused all
+         three: "version 0.3.2+galaxy1 is less or equal than version of the latest installable
+         revision 0.3.2+galaxy1". So a shared file changing is enough on its own, whatever the
+         tools render to. That is exactly why nothing tool-specific may live here. -->
 
     <token name="@KEGALIGN_VERSION@">0.3.2</token>
-    <token name="@KEGALIGN_SUFFIX@">1</token>
 
     <!-- ⚠ 1.04.52 is not incidental. Both LASTZ tools allocate a 2G traceback buffer, and that
          value overflows a signed int before lastz 1.04.41; KegAlign's own copy of the reader uses
          1.99G for exactly that reason. Lowering this pin without lowering that value gives a tool
          that starts and then dies in the allocation. -->
     <token name="@LASTZ_VERSION@">1.04.52</token>
-    <token name="@BATCHED_LASTZ_SUFFIX@">4</token>
-    <token name="@GROWLER_LASTZ_SUFFIX@">2</token>
 
     <token name="@PROFILE@">22.01</token>
 
