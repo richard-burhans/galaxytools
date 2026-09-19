@@ -287,8 +287,15 @@ def build_pair(growler: dict) -> dict:
                 "label": "chainmergesort",
                 "doc": "⛔ THE COLLAPSE. The chromosome-pair collection meets a multiple=\"true\" "
                        "data input, so Galaxy consumes every element in ONE job rather than "
-                       "mapping over them. It also renumbers the chain ids, which is what repairs "
-                       "the collisions the independent axtChain jobs above necessarily produce.",
+                       "mapping over them. VERIFIED IN GALAXY'S SOURCE, not assumed: "
+                       "lib/galaxy/workflow/modules.py gives a multiple data param an effective "
+                       "collection type of `list` (\"acts like 'list' collection_type\") and only a "
+                       "SINGLE-valued data param reaches collections_to_match, which is what "
+                       "causes mapping. ⚠ The corollary matters if anyone ever flattens this "
+                       "workflow: handed a list:list, the same step would map over the OUTER "
+                       "level and consume the inner one. It also renumbers the chain ids, which "
+                       "is what repairs the collisions the independent axtChain jobs necessarily "
+                       "produce.",
                 "in": {"in_chains": "axtchain/out"},
                 "position": {"top": 0, "left": 900},
             },
