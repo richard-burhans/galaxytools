@@ -1,0 +1,84 @@
+<tool id="ucsc_chainmergesort" name="chainMergeSort" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: combine sorted chain files into one sorted chain file</description>
+    <macros>
+        <token name="@TOOL_VERSION@">482</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">ucsc-chainmergesort</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## ⛔ THE FILE LIST GOES IN A FILE, NOT ON THE COMMAND LINE. This tool exists to collapse an axis
+## that a pairwise workflow maps over, so the input is routinely a collection with one element per
+## chromosome pair -- a few hundred paths, each a long Galaxy dataset path. `chainMergeSort a b c
+## ...` would work until a panel got wide enough to hit ARG_MAX, and then fail on the size of the
+## panel rather than on anything about the data. `-inputList` is the option upstream provides for
+## exactly this and has no downside.
+#for $chain in $in_chains:
+echo '$chain' >> input_list.txt &&
+#end for
+chainMergeSort -inputList=input_list.txt -tempDir=./ > '$out'
+    ]]></command>
+    <inputs>
+        <param name="in_chains" format="chain" type="data" multiple="true" label="Chain datasets to merge"
+               help="Each input must already be sorted by score -- this is a merge, not a sort. In a pairwise pipeline that means one chainSort (or one axtChain, whose output is score-ordered) per element upstream of here."/>
+    </inputs>
+    <outputs>
+        <data name="out" format="chain"/>
+    </outputs>
+    <tests>
+        <!-- ▶ THE TEST IS THE TWO PROPERTIES THE CONSUMERS DEPEND ON, not merely that output appears.
+             The inputs interleave by score (5000/3000 against 4000/2000), so a run that simply
+             concatenated them would still produce four chains and a plausible-looking file. And
+             the ids are 7, 8, 3, 4: deliberately colliding across the two files, the way
+             independent axtChain runs collide, so the expected output pins the RENUMBERING. -->
+        <test expect_num_outputs="1">
+            <param name="in_chains" value="part_a.chain,part_b.chain" ftype="chain"/>
+            <output name="out" file="merged.chain">
+                <assert_contents>
+                    <has_line_matching expression="chain 5000 .* 1"/>
+                    <has_line_matching expression="chain 4000 .* 2"/>
+                    <has_line_matching expression="chain 3000 .* 3"/>
+                    <has_line_matching expression="chain 2000 .* 4"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+`chainMergeSort`_ combines several chain files that are each already sorted by score into one file
+sorted by score. It is a k-way merge: it streams its inputs rather than loading them, which is why
+``chainSort``'s own documentation points here for anything large.
+
+**Why a pairwise pipeline needs it**
+
+A whole-genome alignment can be computed one chromosome pair at a time, which is what lets Galaxy
+run the expensive stages in parallel. The chain/net stages that follow cannot be partitioned that
+way: ``chainPreNet`` and ``chainNet`` each walk one score-ordered stream marking target and query
+space *simultaneously*, so a chain on ``(tchr1, qchr5)`` competes with one on ``(tchr3, qchr5)``.
+This tool is where the per-chromosome-pair axis collapses back into one stream, and its output --
+score-ordered -- is exactly ``chainPreNet``'s precondition, so it replaces a final ``chainSort``
+rather than adding a pass.
+
+.. class:: warningmark
+
+**The ids are renumbered, and that is the point.** Independent ``axtChain`` runs each number their
+chains from 1, so chunks arriving here carry colliding ids -- and ``netChainSubset`` matches nets to
+chains **by id**. Renumbering is what repairs that. Upstream offers a ``-saveId`` flag to keep the
+existing ids; this wrapper deliberately does not expose it, because on the one workflow shape that
+makes this tool necessary, the flag that sounds conservative is the one that corrupts the result.
+
+For implementation details see chainMergeSort's `source code`_.
+
+.. _chainMergeSort: http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/FOOTER.txt
+.. _source code: https://github.com/ucscGenomeBrowser/kent/blob/master/src/hg/mouseStuff/chainMergeSort/chainMergeSort.c
+]]>    </help>
+    <citations>
+        <citation type="doi">10.1093/bib/bbs038</citation>
+    </citations>
+</tool>

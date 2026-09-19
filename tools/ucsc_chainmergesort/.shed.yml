@@ -1,0 +1,18 @@
+name: ucsc_chainmergesort
+owner: richard-burhans
+description: Combine sorted chain files into one sorted chain file
+long_description: |
+  chainMergeSort performs a k-way merge of chain files that are each
+  already sorted by score, producing one score-sorted file. It streams
+  its inputs rather than loading them, which is why chainSort's own
+  documentation points here for large sets.
+
+  In a pairwise alignment pipeline it is the step where a per-chromosome-pair
+  axis collapses back into a single stream, because chainPreNet and chainNet
+  cannot be partitioned by chromosome. It renumbers chain ids, which is what
+  repairs the id collisions that independent axtChain runs produce.
+homepage_url: http://hgdownload.cse.ucsc.edu/admin/exe/
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ucsc_chainmergesort
+type: unrestricted
+categories:
+  - Sequence Analysis
