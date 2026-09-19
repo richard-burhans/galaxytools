@@ -39,7 +39,6 @@ import argparse
 import pathlib
 import sys
 import zlib
-import zlib
 
 import yaml
 
