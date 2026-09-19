@@ -53,6 +53,16 @@ inputs:
     position:
       top: 260
       left: 0
+  output_format:
+    type: text
+    default: axt
+    doc: LASTZ output format, shared by every pair. Defaults to axt because the consumer is axtChain,
+      which accepts axt,psl only. Lifted to the panel rather than left at the subworkflow's default so
+      that ONE setting governs the whole panel -- a panel whose pairs disagreed about their format would
+      produce a collection its consumer can only partly read.
+    position:
+      top: 370
+      left: 0
 steps:
   pairs:
     tool_id: __CROSS_PRODUCT_FLAT__
@@ -153,6 +163,24 @@ steps:
           position:
             top: 220
             left: 0
+        output_format:
+          type: text
+          default: axt
+          doc: 'LASTZ output format for the gapped-extension stage: `axt`, `axt+`, `maf` or `maf-`.
+
+            ⛔ IT DEFAULTS TO axt BECAUSE THE CONSUMER DECIDES, AND GROWLER''S CONSUMER IS `axtChain`,
+            which accepts `axt,psl` ONLY. Hardcoded to `maf-`, as this workflow was until 2026-09-19,
+            Growler cannot feed the chain path at all. `maf-` remains the right choice for a standalone
+            run whose consumer parses MAF -- which is why this is an input rather than a second default.
+
+            ⚠ The tool maps axt/axt+ to the `axt` datatype through a change_format rule, so a downstream
+            step binds without a datatype override. Set this to a MAF variant and the chain steps will
+            refuse the connection, which is the failure you want: loud, at edit time.
+
+            '
+          position:
+            top: 330
+            left: 0
       outputs:
         alignments:
           outputSource: growler_lastz/output
@@ -167,6 +195,11 @@ steps:
           label: kegalign
           doc: 'Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it
             emit pair files instead of data_package.tgz; the tarball path is untouched and still available.
+
+            ⚠ The format set here is INERT on the collection path -- kegalign.xml says so in its own words:
+            `--format` still selects what KegAlign writes into its command lines, and nothing on this
+            path reads them. The format that reaches lastz is `output_format`, below. Do not "fix" the
+            two to agree; they are not the same setting.
 
             '
           in:
@@ -197,8 +230,8 @@ steps:
             target: kegalign/target_2bit
             query: kegalign/query_2bit
             scores: scores
+            format_selector: output_format
           state:
-            format_selector: maf-
             gappedthresh: 3000
             ydrop: 9430
             interpolation:
@@ -213,6 +246,7 @@ steps:
       target_fasta: targets/output_filtered
       query_fasta: queries/output_filtered
       scores: scores
+      output_format: output_format
     position:
       top: 0
       left: 800
