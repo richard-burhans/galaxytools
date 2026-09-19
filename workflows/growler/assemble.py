@@ -38,6 +38,8 @@ from __future__ import annotations
 import argparse
 import pathlib
 import sys
+import zlib
+import zlib
 
 import yaml
 
@@ -403,6 +405,50 @@ def build_pair(growler: dict) -> dict:
     }
 
 
+# ------------------------------------------------------------------------ the import size guard
+
+#: zlib bytes at which a single annotation is worth a note, and at which it is a problem.
+#:
+#: ⛔ usegalaxy.org answers `POST /api/workflows` with `500 {"err_msg": "Uncaught exception in
+#: exposed API method:"}` AND NO TRACEBACK once an annotation gets too big. gxformat2 converts the
+#: same file locally without complaint and `planemo workflow_lint` passes, so nothing in this
+#: repository's checks would notice -- an un-importable workflow reaches main unseen, which has
+#: already happened once in a sibling repository.
+#:
+#: ⚠ THE LIMIT TRACKS COMPRESSED SIZE, SO LENGTH IS THE WRONG THING TO MEASURE. Measured on
+#: usegalaxy.org 26.1 varying only the top-level doc: 4,200 characters of `'a'` compress to 28
+#: bytes and import fine; 3,000 characters of base64 compress to 2,290 and 500. A bisect over it
+#: looks incoherent -- one added space flips 200 to 500 -- because the trigger is a threshold on a
+#: derived size, not an offending substring.
+ANNOTATION_NOTE_BYTES = 1_600
+ANNOTATION_PROBLEM_BYTES = 1_900
+
+
+def annotation_sizes(document: dict) -> list[tuple[int, str, int]]:
+    """`(zlib bytes, where, characters)` for every annotation in a workflow, largest first.
+
+    Every `doc` is its own annotation and each is capped separately, so the SUM is not the thing to
+    measure either -- a document of many small docs is fine and one long step doc is not.
+    """
+    items = [("<workflow doc>", document.get("doc", ""))]
+    for section in ("inputs", "steps", "outputs"):
+        for name, value in (document.get(section) or {}).items():
+            if isinstance(value, dict):
+                items.append((f"{section[:-1]} {name}", value.get("doc", "")))
+    sized = [(len(zlib.compress((text or "").encode())), where, len(text or "")) for where, text in items]
+    return sorted(sized, reverse=True)
+
+
+def annotation_complaints(document: dict, label: str) -> list[str]:
+    """Anything at or over the problem threshold, as complaints. Empty means it should import."""
+    return [
+        f"{label}: {where} is {size:,} zlib bytes ({chars:,} chars) -- at or over the "
+        f"{ANNOTATION_PROBLEM_BYTES:,}-byte import limit; usegalaxy.org will 500 with no traceback"
+        for size, where, chars in annotation_sizes(document)
+        if size >= ANNOTATION_PROBLEM_BYTES
+    ]
+
+
 def render(growler: dict) -> str:
     return BANNER + yaml.safe_dump(build(growler), sort_keys=False, width=100, allow_unicode=True)
 
@@ -507,6 +553,28 @@ def self_test() -> int:
     check("the wrapper renders", yaml.safe_load(render_pair(child))["label"],
           "Growler pair (one genome pair, through chains)")
 
+    # ------------------------------------------------------------------- the import size guard
+    # ⛔ AND IT MUST BE ABLE TO FIRE. A guard that has never rejected anything is a guard nobody
+    # has tested. Incompressible text is used because the threshold is on COMPRESSED size: 3,000
+    # characters of base64 crossed it on usegalaxy.org while 4,200 characters of "a" did not.
+    import base64
+    import os
+
+    incompressible = base64.b64encode(os.urandom(3000)).decode()
+    check("a real document passes the guard", annotation_complaints(build_pair(child), "x"), [])
+    fat = {"doc": incompressible, "steps": {}, "inputs": {}}
+    check("an over-long workflow doc IS rejected", len(annotation_complaints(fat, "x")), 1)
+    fat_step = {"doc": "", "steps": {"s": {"doc": incompressible}}, "inputs": {}}
+    check("  and so is an over-long STEP doc, which is capped separately",
+          len(annotation_complaints(fat_step, "x")), 1)
+    # ⚠ LENGTH IS THE WRONG MEASURE, and a guard written on characters would pass this and fail
+    # the one above -- 4,200 compressible characters import fine.
+    check("  while 4,200 compressible characters do NOT trip it",
+          annotation_complaints({"doc": "a" * 4200, "steps": {}, "inputs": {}}, "x"), [])
+    check("sizes are reported largest first",
+          annotation_sizes({"doc": "aaa", "steps": {"s": {"doc": incompressible}}, "inputs": {}})[0][1],
+          "step s")
+
     if failures:
         print(f"\n{len(failures)} test(s) failed")
         return 1
@@ -525,6 +593,18 @@ def main() -> int:
 
     growler = yaml.safe_load(GROWLER.read_text())
     documents = [(PAIR, render_pair(growler)), (PANEL, render(growler))]
+    # ⛔ CHECKED ON EVERY RUN, INCLUDING A PLAIN WRITE. An over-long annotation does not fail here,
+    # it fails at `POST /api/workflows` with a 500 and no traceback -- long after this script, and
+    # after planemo and gxformat2 have both passed it.
+    complaints = [c for path, rendered in documents
+                  for c in annotation_complaints(yaml.safe_load(rendered), path.name)]
+    if complaints:
+        for complaint in complaints:
+            print(f"⛔ {complaint}", file=sys.stderr)
+        print("Shorten the annotation, or move the long explanation into the tool's own help, "
+              "which has no such cap.", file=sys.stderr)
+        return 1
+
     if args.check:
         stale = 0
         for path, rendered in documents:
@@ -540,7 +620,9 @@ def main() -> int:
 
     for path, rendered in documents:
         path.write_text(rendered)
-        print(f"wrote {path.name} ({len(rendered.splitlines())} lines)")
+        biggest = annotation_sizes(yaml.safe_load(rendered))[0]
+        print(f"wrote {path.name} ({len(rendered.splitlines())} lines; "
+              f"largest annotation {biggest[0]:,} zlib bytes, {biggest[1]})")
     return 0
 
 
