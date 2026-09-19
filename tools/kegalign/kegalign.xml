@@ -4,7 +4,8 @@
         <!-- ▶ THIS TOOL'S SUFFIX LIVES HERE, NOT IN macros.xml. Shared files are what
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
-        <token name="@KEGALIGN_SUFFIX@">2</token>
+        <token name="@KEGALIGN_VERSION@">0.3.3</token>
+        <token name="@KEGALIGN_SUFFIX@">0</token>
         <import>macros.xml</import>
         <import>sequence_options.xml</import>
         <import>scoring_options.xml</import>

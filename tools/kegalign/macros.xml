@@ -12,8 +12,10 @@
          a workflow's kegalign pin without kegalign changing at all.
 
          That was circular, and it is fixed: each suffix now lives in its own tool's <macros>
-         block. Keep it that way. A token used by exactly one tool goes in that tool; only a
-         statement that is TRUE OF ALL THREE belongs here.
+         block, and @KEGALIGN_VERSION@ followed it there for the same reason — only KegAlign uses
+         it, so a KegAlign RELEASE was still dragging the two LASTZ tools along. Keep it that way.
+         A token used by exactly one tool goes in that tool; only a statement that is TRUE OF ALL
+         THREE belongs here. @LASTZ_VERSION@ does, because both LASTZ tools resolve that package.
 
          ⚠ AND ShedVersion WORKS ON FILE CHANGES, NOT ON RENDERED XML, which is the measurement
          that made the decoupling worth doing and cost one last synchronised bump. Moving the
@@ -22,7 +24,6 @@
          revision 0.3.2+galaxy1". So a shared file changing is enough on its own, whatever the
          tools render to. That is exactly why nothing tool-specific may live here. -->
 
-    <token name="@KEGALIGN_VERSION@">0.3.2</token>
 
     <!-- ⚠ 1.04.52 is not incidental. Both LASTZ tools allocate a 2G traceback buffer, and that
          value overflows a signed int before lastz 1.04.41; KegAlign's own copy of the reader uses
