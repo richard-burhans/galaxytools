@@ -66,7 +66,12 @@ outputs:
 
 steps:
   kegalign:
-    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.2+galaxy0
+    # ⚠ THE SUFFIX MOVES FOR REASONS THAT HAVE NOTHING TO DO WITH KEGALIGN. One shed repository
+    # holds all three tools, so editing the shared macros.xml bumps every suffix in it -- kegalign
+    # went 0.3.2+galaxy0 -> +galaxy1 for a change to batched_lastz's gzip level, and this pin went
+    # stale without kegalign changing at all. Check it against the revision actually installed
+    # before a run, not against the last thing that happened to this file.
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.2+galaxy1
     label: kegalign
     doc: >
       Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it emit
