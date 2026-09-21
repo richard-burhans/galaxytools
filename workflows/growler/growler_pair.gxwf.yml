@@ -224,15 +224,21 @@ steps:
       top: 0
       left: 300
   axtchain:
-    tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_axtchain/ucsc_axtchain/482+galaxy2
+    tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_axtchain/ucsc_axtchain/482+galaxy3
     label: axtchain
-    doc: MAPPED over the chromosome-pair axis. The two genomes are plain data inputs, which Galaxy broadcasts
+    doc: 'MAPPED over the chromosome-pair axis. The two genomes are plain data inputs, which Galaxy broadcasts
       across the map -- that is allowed; it is broadcasting across NESTING LEVELS that is not, which is
       why Growler is nested rather than flattened.
+
+
+      ⚠ THE 2BITS, NOT THE FASTAs. axtChain parses a FASTA in full but reads only the sequences it needs
+      from a 2bit, and this step runs once per chromosome pair. Measured over three alignment sizes spanning
+      240x on a real EH23a.chr8 x EH23b.chr8 run: a FIXED +1.30 to +1.36 GB of peak RSS, with identical
+      chain counts in every arm. Growler already emits both 2bits, so this costs nothing to take.'
     in:
       in_aln: growler/alignments
-      in_target: target_fasta
-      in_query: query_fasta
+      in_target: growler/target_2bit
+      in_query: growler/query_2bit
     state:
       linear_gap_options:
         linear_gap: loose

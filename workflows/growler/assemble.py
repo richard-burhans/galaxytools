@@ -173,7 +173,7 @@ def build(growler: dict) -> dict:
 #: server that installs it from the shed rather than from a local tool_conf.xml.
 IUC = "toolshed.g2.bx.psu.edu/repos/iuc"
 TOOLS = {
-    "axtchain": f"{IUC}/ucsc_axtchain/ucsc_axtchain/482+galaxy2",
+    "axtchain": f"{IUC}/ucsc_axtchain/ucsc_axtchain/482+galaxy3",
     "chainmergesort": "toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy1",
     "chainprenet": f"{IUC}/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0",
     "chainnet": f"{IUC}/ucsc_chainnet/ucsc_chainnet/482+galaxy0",
@@ -293,9 +293,15 @@ def build_pair(growler: dict) -> dict:
                 "doc": "MAPPED over the chromosome-pair axis. The two genomes are plain data "
                        "inputs, which Galaxy broadcasts across the map -- that is allowed; it is "
                        "broadcasting across NESTING LEVELS that is not, which is why Growler is "
-                       "nested rather than flattened.",
-                "in": {"in_aln": "growler/alignments", "in_target": "target_fasta",
-                       "in_query": "query_fasta"},
+                       "nested rather than flattened.\n\n"
+                       "\u26a0 THE 2BITS, NOT THE FASTAs. axtChain parses a FASTA in full but "
+                       "reads only the sequences it needs from a 2bit, and this step runs once per "
+                       "chromosome pair. Measured over three alignment sizes spanning 240x on a "
+                       "real EH23a.chr8 x EH23b.chr8 run: a FIXED +1.30 to +1.36 GB of peak RSS, "
+                       "with identical chain counts in every arm. Growler already emits both "
+                       "2bits, so this costs nothing to take.",
+                "in": {"in_aln": "growler/alignments", "in_target": "growler/target_2bit",
+                       "in_query": "growler/query_2bit"},
                 "state": {"linear_gap_options": {"linear_gap": "loose"}},
                 "position": {"top": 0, "left": 600},
             },
@@ -623,6 +629,20 @@ def self_test() -> int:
           pair["steps"]["growler"]["in"]["output_format"], "output_format")
     check("WF-C's gap model is carried over, not defaulted",
           pair["steps"]["axtchain"]["state"]["linear_gap_options"]["linear_gap"], "loose")
+
+    # ⛔ axtChain TAKES THE 2BITS, NOT THE FASTAs, and the tool cannot tell you if it does not.
+    # `-faT`/`-faQ` follow each input's own datatype, so handing it a FASTA is perfectly valid and
+    # simply costs a FIXED +1.30 to +1.36 GB of peak RSS per job -- measured over three alignment
+    # sizes spanning 240x, with identical chain counts in every arm. Nothing fails, nothing warns,
+    # and this step runs once per chromosome pair. Growler already emits both 2bits.
+    check("axtChain is fed the 2bits Growler already emits",
+          [pair["steps"]["axtchain"]["in"]["in_target"], pair["steps"]["axtchain"]["in"]["in_query"]],
+          ["growler/target_2bit", "growler/query_2bit"])
+    # ▶ And the FASTAs are still an input, because KegAlign needs them -- this moved one consumer,
+    # it did not remove the genomes from the workflow.
+    check("  while the FASTAs still reach Growler itself",
+          [pair["steps"]["growler"]["in"]["target_fasta"], pair["steps"]["growler"]["in"]["query_fasta"]],
+          ["target_fasta", "query_fasta"])
 
     # ⛔ THE STITCH STEPS MUST NAME THE UDT, NOT THE CLASSIC ID. `chainStitchId` is what WF-C's
     # classic edition says and it looks more correct, which is exactly why this is pinned: that id
