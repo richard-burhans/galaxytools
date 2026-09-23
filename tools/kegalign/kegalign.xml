@@ -5,7 +5,7 @@
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
         <token name="@KEGALIGN_VERSION@">0.3.3</token>
-        <token name="@KEGALIGN_SUFFIX@">1</token>
+        <token name="@KEGALIGN_SUFFIX@">2</token>
         <import>macros.xml</import>
         <import>sequence_options.xml</import>
         <import>scoring_options.xml</import>
@@ -33,20 +33,30 @@
 ## the uncompressed copies do not sit beside the 2bit files for the life of the job.
 
 ##
-## ⛔ COLLECTION PATH ONLY, AND IT WAS UNCONDITIONAL. run_kegalign converts both genomes AGAIN
-## into its own $DATA_FOLDER (ref.2bit / query.2bit), and that is the pair the generated lastz
-## commands reference. These copies exist solely to be EMITTED as the target_2bit / query_2bit
-## datasets Growler LASTZ takes as fixed inputs -- and those two outputs are filtered off on the
-## tarball path, so on the default path a Cannabis-scale pair paid a second full conversion of
-## both genomes plus ~420 MB of job disk for two datasets that were then discarded.
-#if str($bundle_selector) == "collection"
+## ⛔ UNCONDITIONAL, AND MAKING IT COLLECTION-ONLY BROKE THE DEFAULT PATH. A previous revision
+## gated this on `bundle_selector == "collection"`, on the belief that "run_kegalign converts both
+## genomes AGAIN into its own $DATA_FOLDER". IT DOES NOT CONVERT ANYTHING. `data_folder` is an
+## INPUT to the aligner -- src/main.cpp declares it "folder with sequence files in 2bit format" --
+## and the aligner only concatenates it into the lastz command strings it emits
+## (src/segment_printer.cpp: `cfg.data_folder + "ref.2bit"`). It reads the FASTAs directly for its
+## own work, which is why the alignment SUCCEEDS and only the packaging fails.
+##
+## MEASURED, EH23a x EH23b on vgp 2026-09-23: the GPU pipeline completed (11.6e9 seeds, 79.6e6
+## HSPs, 387 s) and package_output.py then died with
+##     missing source file .../working/work/ref.2bit
+## because nothing on the tarball path had created it. The tarball MUST carry these: they are what
+## the commands inside it reference, and batched_lastz runs those commands.
+##
+## ⚠ THE DISK SAVING WAS REAL BUT IT WAS NOT THESE FILES' TO GIVE. What is discarded on the tarball
+## path is the two OUTPUT DATASETS, and `<filter>bundle_selector == "collection"</filter>` on
+## target_2bit / query_2bit already prevents those. The files themselves are load-bearing on both
+## paths.
 mkdir -p "\$(pwd)/work" &&
 gzip -cdfq '$target' > "\$(pwd)/work/ref.fa" &&
 faToTwoBit "\$(pwd)/work/ref.fa" "\$(pwd)/work/ref.2bit" &&
 gzip -cdfq '$query' > "\$(pwd)/work/query.fa" &&
 faToTwoBit "\$(pwd)/work/query.fa" "\$(pwd)/work/query.2bit" &&
 rm -f "\$(pwd)/work/ref.fa" "\$(pwd)/work/query.fa" &&
-#end if
 
 ## The scripts come from the kegalign package, which installs them to its bin
 ## directory alongside the aligner -- this tool no longer carries copies of them.
