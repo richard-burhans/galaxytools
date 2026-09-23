@@ -4,7 +4,23 @@
         <!-- ▶ THIS TOOL'S SUFFIX LIVES HERE, NOT IN macros.xml. Shared files are what
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
-        <token name="@BATCHED_LASTZ_SUFFIX@">9</token>
+        <!-- ⛔ `9.0`, NOT `10`, AND THE DOT IS LOAD-BEARING. The suffix is a PEP 440 local
+             segment. `galaxy10` is ONE alphanumeric segment - "galaxy" glued to "10" - compared
+             as a string, so it sorts BELOW `galaxy9`: the `1` compares before the `9`. Galaxy
+             orders revisions the same way, so a galaxy10 revision would never become the default.
+             Measured:
+
+                 Version("1.04.52+galaxy10")  > Version("1.04.52+galaxy9")   ->  False
+                 Version("1.04.52+galaxy9.0") > Version("1.04.52+galaxy9")   ->  True
+
+             The dot splits the label into `galaxy9` and `0`, and that second segment is purely
+             NUMERIC, so it keeps ordering indefinitely - `galaxy9.10 > galaxy9.9` is True, which
+             is exactly what `galaxy10 > galaxy9` is not. The whole ladder
+             galaxy8 < galaxy9 < galaxy9.0 < galaxy9.1 < galaxy9.9 < galaxy9.10 is monotonic.
+
+             ▶ THE RULE: never grow a digit run inside the alphanumeric segment; start a new
+             numeric segment. Next bump is 9.1, then 9.2 - not 10. -->
+        <token name="@BATCHED_LASTZ_SUFFIX@">9.0</token>
         <!-- conda-forge, NOT bioconda: pigz has no bioconda build. Only this tool asks for
              it, through lastz_requirements' yield, because only this tool has a collapse to
              write. Growler LASTZ emits one plain alignment per job and needs nothing of the
