@@ -61,95 +61,12 @@ inputs:
   output_format:
     type: text
     default: axt
-    doc: 'LASTZ output format for the gapped-extension stage: `axt`, `axt+`, `maf` or `maf-`.
-
-      ⛔ IT DEFAULTS TO axt BECAUSE THE CONSUMER DECIDES, AND GROWLER''S CONSUMER IS `axtChain`, which
-      accepts `axt,psl` ONLY. Hardcoded to `maf-`, as this workflow was until 2026-09-19, Growler cannot
-      feed the chain path at all. `maf-` remains the right choice for a standalone run whose consumer
-      parses MAF -- which is why this is an input rather than a second default.
-
-      ⚠ The tool maps axt/axt+ to the `axt` datatype through a change_format rule, so a downstream step
-      binds without a datatype override. Set this to a MAF variant and the chain steps will refuse the
-      connection, which is the failure you want: loud, at edit time.
-
-      '
+    doc: LASTZ output format. ⛔ The chain arm REQUIRES axt -- axtChain accepts axt,psl only. It is an
+      input rather than a constant so that one setting governs Growler and this document together, and
+      it is asserted in the generator's self-test because a wrong value fails at the axtChain job rather
+      than at edit time.
     position:
       top: 550
-      left: 0
-  step:
-    type: integer
-    default: 1
-    doc: 'Offset between successive target words considered for the seed table.
-
-      '
-    position:
-      top: 660
-      left: 0
-  notransition:
-    type: boolean
-    default: false
-    doc: 'Disallow one transition in a seed hit. False permits one, which is LASTZ''s default.
-
-      '
-    position:
-      top: 770
-      left: 0
-  hspthresh:
-    type: integer
-    default: 3000
-    doc: 'Segment score threshold for high-scoring pairs -- the ungapped-extension cutoff, and the only
-
-      knob that reduces how much work the gapped stage inherits.
-
-      '
-    position:
-      top: 880
-      left: 0
-  xdrop:
-    type: integer
-    default: 910
-    doc: 'X-drop value for gap-free extension.
-
-      '
-    position:
-      top: 990
-      left: 0
-  noentropy:
-    type: boolean
-    default: false
-    doc: 'Disable the entropy adjustment on ungapped scores. False leaves entropy ON.
-
-      ⚠ ON at USE time and OFF for TRAINING: entropy preferentially discards low-complexity
-
-      segments, which biases a training set but complements masking at use time.
-
-      '
-    position:
-      top: 1100
-      left: 0
-  num_gpu:
-    type: integer
-    default: 1
-    doc: 'GPUs to use. ⛔ THE TOOL DEFAULT IS -1, MEANING EVERY GPU ON THE NODE. That is not a
-
-      reasonable default for a shared machine, which is why this is stated here.
-
-      '
-    position:
-      top: 1210
-      left: 0
-  debug:
-    type: boolean
-    default: true
-    doc: 'Print per-phase timings. ⚠ Defaults TRUE here against the tool''s False: the timings are
-
-      unrecoverable after the job ends, and they are the only measurement of where a run spent
-
-      its GPU time.
-
-      '
-    position:
-      top: 1320
       left: 0
 steps:
   growler:
@@ -236,82 +153,6 @@ steps:
           position:
             top: 330
             left: 0
-        step:
-          type: integer
-          default: 1
-          doc: 'Offset between successive target words considered for the seed table.
-
-            '
-          position:
-            top: 550
-            left: 0
-        notransition:
-          type: boolean
-          default: false
-          doc: 'Disallow one transition in a seed hit. False permits one, which is LASTZ''s default.
-
-            '
-          position:
-            top: 660
-            left: 0
-        hspthresh:
-          type: integer
-          default: 3000
-          doc: 'Segment score threshold for high-scoring pairs -- the ungapped-extension cutoff, and the
-            only
-
-            knob that reduces how much work the gapped stage inherits.
-
-            '
-          position:
-            top: 770
-            left: 0
-        xdrop:
-          type: integer
-          default: 910
-          doc: 'X-drop value for gap-free extension.
-
-            '
-          position:
-            top: 880
-            left: 0
-        noentropy:
-          type: boolean
-          default: false
-          doc: 'Disable the entropy adjustment on ungapped scores. False leaves entropy ON.
-
-            ⚠ ON at USE time and OFF for TRAINING: entropy preferentially discards low-complexity
-
-            segments, which biases a training set but complements masking at use time.
-
-            '
-          position:
-            top: 990
-            left: 0
-        num_gpu:
-          type: integer
-          default: 1
-          doc: 'GPUs to use. ⛔ THE TOOL DEFAULT IS -1, MEANING EVERY GPU ON THE NODE. That is not a
-
-            reasonable default for a shared machine, which is why this is stated here.
-
-            '
-          position:
-            top: 1100
-            left: 0
-        debug:
-          type: boolean
-          default: true
-          doc: 'Print per-phase timings. ⚠ Defaults TRUE here against the tool''s False: the timings are
-
-            unrecoverable after the job ends, and they are the only measurement of where a run spent
-
-            its GPU time.
-
-            '
-          position:
-            top: 1210
-            left: 0
       outputs:
         alignments:
           outputSource: growler_lastz/output
@@ -332,31 +173,11 @@ steps:
             path reads them. The format that reaches lastz is `output_format`, below. Do not "fix" the
             two to agree; they are not the same setting.
 
-
-
-            ⛔ `seed` IS STATE, NOT AN INPUT, AND THAT IS GALAXY''S CONSTRAINT RATHER THAN A CHOICE. It
-            is a CONDITIONAL SELECTOR: the selected case determines the step''s structure, so it has to
-            be known when the workflow is defined. Wired to a `text` input, the workflow imports cleanly
-            with zero step errors and then refuses every invocation with `The selected case is unavailable/invalid`
-            -- measured on laila 2026-09-24. Every other seeding parameter is a plain scalar and connects
-            normally.
-
-            ⚠ So changing the seed means editing this document. `12of19` is both the tool default and
-            this project''s settled value; `14of22` was tested and rejected, and it is also what overran
-            the GPU seed buffer.
-
             '
           in:
             target: target_fasta
             query: query_fasta
             scoring_options|scoring: scores
-            seeding_options|step: step
-            seeding_options|notransition: notransition
-            ungapped_extension_options|hspthresh: hspthresh
-            ungapped_extension_options|xdrop: xdrop
-            ungapped_extension_options|noentropy: noentropy
-            system_options|num_gpu: num_gpu
-            system_options|debug: debug
           state:
             bundle_selector: collection
             batch_lines: 0
@@ -366,25 +187,6 @@ steps:
               format:
                 format_selector: maf
                 maf_type: maf-
-            scoring_options:
-              ambiguous_selector: x
-              ambiguous_params:
-                set_ambiguous_params_selector: 'false'
-            gapped_extension_options:
-              ydrop: 9430
-              gappedthresh: 3000
-              notrivial: false
-            interpolation_options:
-              inner: -1
-            developer:
-              alignment_type: vertebrates_default
-            system_options:
-              wga_chunk_size: 250000
-              lastz_interval_size: 10000000
-              seq_block_size: 400000000
-            seeding_options:
-              seed:
-                seed_selector: 12of19
           position:
             top: 0
             left: 260
@@ -418,13 +220,6 @@ steps:
       query_fasta: query_fasta
       scores: scores
       output_format: output_format
-      step: step
-      notransition: notransition
-      hspthresh: hspthresh
-      xdrop: xdrop
-      noentropy: noentropy
-      num_gpu: num_gpu
-      debug: debug
     position:
       top: 0
       left: 300
@@ -447,9 +242,6 @@ steps:
     state:
       linear_gap_options:
         linear_gap: loose
-      minScore: null
-      scoreScheme: null
-      details_output: false
     position:
       top: 0
       left: 600
@@ -475,13 +267,11 @@ steps:
       in_chain: chainmergesort/out
       target_reference_index_source|in_tar_ref_index: target_sizes
       query_reference_index_source|in_que_ref_index: query_sizes
-    state:
+    state: &id001
       target_reference_index_source:
         target_reference_index_source_selector: history
       query_reference_index_source:
         query_reference_index_source_selector: history
-      pad: null
-      inclHap: false
     position:
       top: 0
       left: 1200
@@ -492,16 +282,7 @@ steps:
       in_chain: chainprenet/out
       target_reference_index_source|in_tar_ref_index: target_sizes
       query_reference_index_source|in_que_ref_index: query_sizes
-    state:
-      target_reference_index_source:
-        target_reference_index_source_selector: history
-      query_reference_index_source:
-        query_reference_index_source_selector: history
-      minSpace: null
-      minFill: null
-      minScore: null
-      inclHap: false
-      verbose: null
+    state: *id001
     position:
       top: 0
       left: 1500
@@ -514,10 +295,6 @@ steps:
     position:
       top: 0
       left: 1800
-    state:
-      splitOnInsert: false
-      wholeChains: false
-      skipMissing: false
   chainstitchid_clean:
     tool_id: brc-chain-stitch-id
     label: chainstitchid_clean
@@ -545,8 +322,6 @@ steps:
     position:
       top: 200
       left: 2700
-    state:
-      sort_by: ''
   rb_net:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainnet/ucsc_chainnet/482+galaxy0
     label: rb_net
@@ -564,11 +339,6 @@ steps:
         target_reference_index_source_selector: history
       query_reference_index_source:
         query_reference_index_source_selector: history
-      minSpace: null
-      minFill: null
-      minScore: null
-      inclHap: false
-      verbose: null
     position:
       top: 200
       left: 3000
@@ -581,10 +351,6 @@ steps:
     position:
       top: 200
       left: 3300
-    state:
-      splitOnInsert: false
-      wholeChains: false
-      skipMissing: false
   rb_stitch:
     tool_id: brc-chain-stitch-id
     label: rb_stitch
@@ -611,8 +377,6 @@ steps:
     position:
       top: 200
       left: 4200
-    state:
-      sort_by: ''
   axt_concat:
     tool_id: toolshed.g2.bx.psu.edu/repos/mvdbeek/concatenate_multiple_datasets/cat_multiple/0.2
     label: axt_concat
