@@ -600,14 +600,12 @@ def render_pair(growler: dict) -> str:
 def self_test() -> int:
     failures = []
 
-
     def check(label, got, want):
         if got != want:
             print(f"not ok - {label}\n     got: {got}\nexpected: {want}")
             failures.append(label)
         else:
             print(f"ok - {label}")
-
 
     # ⛔ THE TABLE MUST NAME REAL STEPS, and every parameter must land. A renamed step would
     # otherwise leave its parameters unset and the document un-invokable again.
