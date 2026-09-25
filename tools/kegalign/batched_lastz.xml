@@ -20,7 +20,7 @@
 
              ▶ THE RULE: never grow a digit run inside the alphanumeric segment; start a new
              numeric segment. Next bump is 9.1, then 9.2 - not 10. -->
-        <token name="@BATCHED_LASTZ_SUFFIX@">9.0</token>
+        <token name="@BATCHED_LASTZ_SUFFIX@">9.1</token>
         <!-- conda-forge, NOT bioconda: pigz has no bioconda build. Only this tool asks for
              it, through lastz_requirements' yield, because only this tool has a collapse to
              write. Growler LASTZ emits one plain alignment per job and needs nothing of the

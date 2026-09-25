@@ -4,7 +4,7 @@
         <!-- ▶ THIS TOOL'S SUFFIX LIVES HERE, NOT IN macros.xml. Shared files are what
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
-        <token name="@GROWLER_LASTZ_SUFFIX@">7</token>
+        <token name="@GROWLER_LASTZ_SUFFIX@">8</token>
         <import>macros.xml</import>
     </macros>
     <expand macro="lastz_requirements"/>
@@ -30,28 +30,65 @@ ln -s '$query' query.2bit &&
 ## on the pair this was measured against -- into the job directory before running anything.
 gzip -cdfq '$pair' > pair.segments &&
 
-lastz
-    'target.2bit[nameparse=darkspace][multiple]'
-    'query.2bit[nameparse=darkspace]'
+## ⛔ ONE LASTZ PER <=50,000 SEGMENTS, NEVER ONE PER PAIR FILE. lastz's cost grows ~n^1.9 in the
+## segments handed to one call: a whole pair file (0.42-1.55 M segments) cost 389 core-hours over the
+## panel where batched_lastz, chunking the SAME segments at 50k, cost 42. On chr1 x chr1 (414k): 1131
+## user seconds in one call, 252 at 50k, 241 at 25k, 260 at 12.5k (the 2bit load starts to dominate).
+## An in-order split keeps plus before minus within every piece, so there is still no `--strand`.
+## Chunking is NOT output-neutral, exactly as batched_lastz's chunking never was: loci near a piece
+## boundary can come out twice (46 extra blocks on that chr1 set at 50k), and a few extend to a
+## slightly different score depending on which piece they land in (2 of 122,093). Pieces run
+## serially: the job holds one slot.
+split -l 50000 -a 4 pair.segments piece. &&
+
+## An empty pair file splits into NO pieces. Run lastz once on an empty piece anyway, so the output
+## is the same header-only file one call on the empty pair file produced.
+if [ ! -e piece.aaaa ]; then : > piece.aaaa; fi &&
+: > '$output' &&
+for piece in piece.*; do
+    lastz
+        'target.2bit[nameparse=darkspace][multiple]'
+        'query.2bit[nameparse=darkspace]'
 
 ## ⚠ 2G pins lastz >= 1.04.41: the value overflows a signed int in earlier builds, which is why
 ## KegAlign's own copy of the reader uses 1.99G and this one does not. @LASTZ_VERSION@ is 1.04.52.
-    --allocate:traceback=2G
-    --segments=pair.segments
+        --allocate:traceback=2G
+        --segments="\$piece"
 
 ## ⚠ NO `--strand`. A pair file holds both strands, written plus-before-minus as the lastz manual
 ## requires, and lastz's default is `both`. Passing `--strand=plus` here would silently drop
 ## every minus-strand segment in the pair file -- measured identical output with the flag omitted.
 #if $scores
-    --scores='$scores'
+        --scores='$scores'
 #end if
-    --format='$format_selector'
-    --gappedthresh=$gappedthresh
-    --ydrop=$ydrop
+        --format='$format_selector'
+        --gappedthresh=$gappedthresh
+        --ydrop=$ydrop
 #if str($interpolation.inner_selector) == "yes"
-    --inner=$interpolation.inner
+        --inner=$interpolation.inner
 #end if
-    --output='$output'
+        --output=piece.out
+    || exit 1;
+
+## Every piece's output opens with the same header (maf, axt and axt+; maf- has none). Keep the
+## first piece's and drop the rest, so the result is what one call would write. axt+ also puts
+## `# identity=` and `# coverage=` lines BEFORE EACH BLOCK; those are body, so the header ends at the
+## first line that is not a comment or is one of those. grep exits 1 for a header-only piece (no
+## alignments), which is not an error. AXT numbers its blocks from 0 in every piece; the number is a
+## counter, not an identifier, and batched_lastz output has always restarted it once per command.
+##
+## ⛔ NO AWK OR SED ON THE OUTPUT. The container's are BusyBox, and both exit 0 on a failed write
+## (measured against /dev/full), so a full disk would be a green job with a truncated alignment.
+## grep only reads here; tail and cat do the writing and both fail on a write error.
+    if [ "\$piece" = piece.aaaa ]; then
+        cat piece.out >> '$output' || exit 1;
+    else
+        body=\$(grep -n -m1 -E '^([^\#]|\# (identity|coverage)=|\$)' piece.out) || [ \$? -eq 1 ] || exit 1;
+        if [ -n "\$body" ]; then
+            tail -n +"\${body%%:*}" piece.out >> '$output' || exit 1;
+        fi;
+    fi;
+done
     ]]></command>
     <inputs>
         <param name="pair" type="data" format="tabular.gz" label="Chromosome pair"

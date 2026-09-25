@@ -5,7 +5,7 @@
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
-        <token name="@KEGALIGN_SUFFIX@">0</token>
+        <token name="@KEGALIGN_SUFFIX@">1</token>
         <import>macros.xml</import>
         <import>sequence_options.xml</import>
         <import>scoring_options.xml</import>
