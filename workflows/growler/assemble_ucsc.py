@@ -208,6 +208,50 @@ def build(growler: dict) -> dict:
             "inputs": inputs, "outputs": outputs, "steps": steps}
 
 
+CHAIN_OUT = HERE / "growler_ucsc_chain.gxwf.yml"
+#: The chain-only document keeps these of PARAMS; the rest drive seeding and lastz, which it skips.
+CHAIN_PARAMS = ("chain_min_score",)
+
+
+def build_chain_only(full: dict) -> dict:
+    """growler_ucsc_pair from axtChain onward, reading a COLLECTION of existing alignments.
+
+    ▶ For parameter sweeps and for alignments computed elsewhere. Derived from `full`, never written:
+    the seeding and lastz steps are removed and their outputs rewired to inputs, so every chain/net
+    step is the pair document's own, and `assert_chain_arm_identical` proves it.
+    axtChain takes AXT or PSL, so the collection may be either.
+    """
+    doc = copy.deepcopy(full)
+    doc["label"] = "Growler UCSC chain/net (from existing alignments, flat)"
+    for k in ("kegalign", "lastz_lav", "lavtopsl"):
+        del doc["steps"][k]
+    rewire = {"kegalign/target_2bit": "target_2bit", "kegalign/query_2bit": "query_2bit",
+              "lavtopsl/output": "alignments"}
+    for st in doc["steps"].values():
+        st["in"] = {k: rewire.get(v, v) for k, v in st["in"].items()}
+    keep = {k: v for k, v in doc["inputs"].items() if k in DATA and k not in ("target_fasta", "query_fasta")}
+    keep.update({k: doc["inputs"][k] for k in CHAIN_PARAMS})
+    doc["inputs"] = {"alignments": {"type": "collection", "collection_type": "list",
+                                    "doc": "AXT or PSL, one element per piece (e.g. growler_lastz output)."},
+                     "target_2bit": {"type": "data"}, "query_2bit": {"type": "data"}, **keep}
+    del doc["outputs"]["lav"]
+    return doc
+
+
+def assert_chain_arm_identical(full: dict, chain: dict) -> list[str]:
+    """Every step the chain-only document has must equal the pair document's, up to the rewiring."""
+    rewire = {"kegalign/target_2bit": "target_2bit", "kegalign/query_2bit": "query_2bit",
+              "lavtopsl/output": "alignments"}
+    bad = []
+    for name, st in chain["steps"].items():
+        ref = copy.deepcopy(full["steps"][name])
+        ref["in"] = {k: rewire.get(v, v) for k, v in ref["in"].items()}
+        if ref != st:
+            bad.append(name)
+    missing = set(full["steps"]) - set(chain["steps"]) - {"kegalign", "lastz_lav", "lavtopsl"}
+    return bad + [f"missing {m}" for m in sorted(missing)]
+
+
 #: (step, input, must read from) -- the wiring that makes this UCSC's pipeline and not a lookalike.
 UCSC_ORDER = [
     ("lavtopsl", "input", "lastz_lav/output"),
@@ -273,9 +317,18 @@ def self_test() -> int:
     check("  and netChainSubset on the PRE-NETTED chain is caught", assert_ucsc_order(bad) != [])
     for g in ("loose", "medium"):
         check(f"gap/{g}.lineargap is present", (HERE / "gap" / f"{g}.lineargap").exists())
+    chain = build_chain_only(doc)
+    check("chain-only: no dangling connection", dangling(chain) == [])
+    check("chain-only: every step identical to the pair document's", assert_chain_arm_identical(doc, chain) == [])
+    check("chain-only: axtChain reads the alignments collection", chain["steps"]["axtchain"]["in"]["in_aln"] == "alignments")
+    tampered = copy.deepcopy(chain)
+    tampered["steps"]["net"]["state"]["minSpace"] = 25
+    check("  and a drifted chain step is caught", assert_chain_arm_identical(doc, tampered) == ["net"])
     if OUT.exists():
         committed = yaml.safe_load(OUT.read_text(encoding="utf-8"))
         check("the committed document matches a fresh build", committed == doc)
+    if CHAIN_OUT.exists():
+        check("the committed chain-only document matches", yaml.safe_load(CHAIN_OUT.read_text(encoding="utf-8")) == chain)
     print("\nall tests passed" if not fails else f"\n{fails} FAILED")
     return 1 if fails else 0
 
@@ -292,14 +345,19 @@ def main() -> int:
     problems = dangling(doc) + assert_ucsc_order(doc)
     if problems:
         sys.exit("REFUSING:\n  " + "\n  ".join(problems))
-    text = BANNER + yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=100)
-    if a.check:
-        if not OUT.exists() or yaml.safe_load(OUT.read_text(encoding="utf-8")) != doc:
-            sys.exit(f"{OUT.name} is stale -- run assemble_ucsc.py and commit")
-        print(f"{OUT.name} is current")
-        return 0
-    OUT.write_text(text, encoding="utf-8")
-    print(f"wrote {OUT.name} ({len(doc['steps'])} steps)")
+    chain = build_chain_only(doc)
+    problems = assert_chain_arm_identical(doc, chain) + dangling(chain)
+    if problems:
+        sys.exit("REFUSING the chain-only document:\n  " + "\n  ".join(problems))
+    for path, d in ((OUT, doc), (CHAIN_OUT, chain)):
+        if a.check:
+            if not path.exists() or yaml.safe_load(path.read_text(encoding="utf-8")) != d:
+                sys.exit(f"{path.name} is stale -- run assemble_ucsc.py and commit")
+            print(f"{path.name} is current")
+            continue
+        path.write_text(BANNER + yaml.safe_dump(d, sort_keys=False, allow_unicode=True, width=100),
+                        encoding="utf-8")
+        print(f"wrote {path.name} ({len(d['steps'])} steps)")
     return 0
 
 
