@@ -35,6 +35,8 @@
 ## so inline Python cannot survive there. The configfile uses no Cheetah references -- its inputs
 ## arrive as argv -- which is what lets udt_convert.py carry it into a UDT as a heredoc.
 ## ⚠ No Cheetah directives and no helper script beside the wrapper, for the same reason.
+## ⚠ The driver reads `null` as 0 for inner/masking: a UDT integer defaulting to 0 fails Galaxy 26.1's
+## tool lint, so the generated UDT declares them optional, and an unset optional renders as `null`.
 ln -s '$target' target.2bit &&
 ln -s '$query' query.2bit &&
 python3 '$driver' '$pair' '$scores' '$gappedthresh' '$ydrop' '$inner' '$masking' '$output'
@@ -46,6 +48,8 @@ import subprocess
 import sys
 
 pair, scores, gappedthresh, ydrop, inner, masking, output = sys.argv[1:8]
+inner = '0' if inner in ('null', '') else inner
+masking = '0' if masking in ('null', '') else masking
 CHUNK = 50000
 FLUSH = 20000
 

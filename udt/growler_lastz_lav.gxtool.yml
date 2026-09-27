@@ -5,8 +5,8 @@
 # provenance:
 #   source: tools/growler_lastz_lav/growler_lastz_lav.xml
 #   tool_id: growler_lastz_lav
-#   command_sha256: 2ba149d214e8a516bb3f9d8d405d254c7384bd7236a32ca2d4e4265209ea3b7a
-#   configfile_driver_sha256: ef2b651ac56870112528e27c6bf43f92e39fb208524630a83d136c427c732c5c
+#   command_sha256: 87fed8ccf8e8d5ddf869e3809dca0b80adc5153b2679f4f74bf3baab4c9a4cac
+#   configfile_driver_sha256: 17447286514009844bd0ddcd1f7abc39249ef599f043bd6dbce07fe6e83869d8
 #   requirements: kegalign-full=0.3.4
 #   macros_sha256: (no macros.xml)
 #   container: quay.io/biocontainers/kegalign-full:0.3.4--hdfd78af_0
@@ -26,6 +26,8 @@ shell_command: |
   import sys
 
   pair, scores, gappedthresh, ydrop, inner, masking, output = sys.argv[1:8]
+  inner = '0' if inner in ('null', '') else inner
+  masking = '0' if masking in ('null', '') else masking
   CHUNK = 50000
   FLUSH = 20000
 
@@ -128,12 +130,12 @@ inputs:
     label: "Y-drop"
   - name: inner
     type: integer
-    value: 0
+    optional: true
     label: "Interpolation threshold (blastz H)"
     help: "0 is lastz's default, off; measured byte-identical to omitting the option. UCSC's hg38 x panTro6 run used H=2000."
   - name: masking
     type: integer
-    value: 0
+    optional: true
     label: "Dynamic masking count (blastz M)"
     help: "0 is lastz's default, off. UCSC's hg38 x panTro6 run used M=254."
 outputs:
