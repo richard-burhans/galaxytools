@@ -2,7 +2,7 @@
     <description>gapped extension of one KegAlign pair file, one target per lastz call, LAV out</description>
     <macros>
         <token name="@TOOL_VERSION@">1.04.52</token>
-        <token name="@VERSION_SUFFIX@">0</token>
+        <token name="@VERSION_SUFFIX@">1</token>
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
     </macros>
     <requirements>
@@ -37,7 +37,7 @@
 ## ⚠ No Cheetah directives and no helper script beside the wrapper, for the same reason.
 ln -s '$target' target.2bit &&
 ln -s '$query' query.2bit &&
-python3 '$driver' '$pair' '$scores' '$gappedthresh' '$ydrop' '$output'
+python3 '$driver' '$pair' '$scores' '$gappedthresh' '$ydrop' '$inner' '$masking' '$output'
     ]]></command>
     <configfiles>
         <configfile name="driver"><![CDATA[import gzip
@@ -45,7 +45,7 @@ import os
 import subprocess
 import sys
 
-pair, scores, gappedthresh, ydrop, output = sys.argv[1:6]
+pair, scores, gappedthresh, ydrop, inner, masking, output = sys.argv[1:8]
 CHUNK = 50000
 FLUSH = 20000
 
@@ -102,6 +102,7 @@ with open(output, 'wb') as out:
                        'query.2bit[nameparse=darkspace]', '--allocate:traceback=2G',
                        '--segments=chunk.segments', '--scores=' + scores,
                        '--gappedthresh=' + gappedthresh, '--ydrop=' + ydrop,
+                       '--inner=' + inner, '--masking=' + masking,
                        '--format=lav', '--output=chunk.lav']
                 rc = subprocess.run(cmd).returncode
                 if rc != 0:
@@ -125,6 +126,10 @@ print('%d target(s), %d lastz call(s)' % (len(order), calls))
                help="Required, not optional: it must match the scoring KegAlign seeded with, and a UDT cannot express an optional argument."/>
         <param argument="--gappedthresh" type="integer" value="3000" label="Gapped extension threshold"/>
         <param argument="--ydrop" type="integer" value="9430" label="Y-drop"/>
+        <param argument="--inner" type="integer" value="0" min="0" label="Interpolation threshold (blastz H)"
+               help="0 is lastz's default, off; measured byte-identical to omitting the option. UCSC's hg38 x panTro6 run used H=2000."/>
+        <param argument="--masking" type="integer" value="0" min="0" label="Dynamic masking count (blastz M)"
+               help="0 is lastz's default, off. UCSC's hg38 x panTro6 run used M=254."/>
     </inputs>
     <outputs>
         <data name="output" format="lav" label="${tool.name} on ${on_string}"/>

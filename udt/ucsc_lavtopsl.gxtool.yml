@@ -12,7 +12,7 @@
 #   converter: scripts/udt_convert.py 0.2.0
 class: GalaxyUserTool
 id: gt-ucsc-lavtopsl
-version: "0.1.0"
+version: "482+galaxy0"
 name: ucsc_lavtopsl (UDT)
 description: ": convert lastz LAV alignments to PSL"
 container: quay.io/biocontainers/ucsc-lavtopsl:482--h0b57e2e_0
