@@ -1,0 +1,12 @@
+name: ucsc_lavtopsl
+owner: richard-burhans
+description: Convert lastz LAV alignments to PSL
+long_description: |
+  lavToPsl converts lastz's native LAV output to PSL, the format UCSC's
+  pairwise pipeline chains with axtChain -psl. PSL carries no sequence, so it
+  is a fraction of the size of AXT for the same alignments.
+homepage_url: http://hgdownload.cse.ucsc.edu/admin/exe/
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ucsc_lavtopsl
+type: unrestricted
+categories:
+  - Sequence Analysis

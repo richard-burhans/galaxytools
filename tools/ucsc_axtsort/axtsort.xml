@@ -1,0 +1,51 @@
+<tool id="ucsc_axtsort" name="axtSort" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: sort AXT alignments by target position</description>
+    <macros>
+        <token name="@TOOL_VERSION@">482</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">ucsc-axtsort</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## ⚠ In memory: axtSort loads every block before sorting. Right for net-derived AXT (the multiz
+## input), wrong for raw lastz output of a whole genome pair.
+axtSort '$input' '$output'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="axt" label="AXT alignments"/>
+    </inputs>
+    <outputs>
+        <data name="output" format="axt"/>
+    </outputs>
+    <tests>
+        <!-- ▶ Three blocks out of order across two targets and both strands. Sorted, they come out
+             by target NAME then START, whatever the strand: chrA 100, chrA 900, chrB 500. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="unsorted.axt" ftype="axt"/>
+            <output name="output" file="sorted.axt"/>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Sorts AXT blocks by target sequence name (``strcmp``), then target start -- ``axtCmpTarget`` in kent's
+``src/lib/axt.c``.
+
+UCSC runs it between ``netToAxt`` and ``axtToMaf`` when building multiz input
+(``doBlastzChainNet.pl``: ``netToAxt ... | axtSort stdin stdout``). ``netToAxt`` emits blocks in net
+order, where nested fills follow their parent, so its output is not target-sorted -- and multiz fed
+unsorted pairwise alignments merges them wrongly with exit status 0.
+
+.. warning:: Every block is held in memory. Use it on net-derived AXT, not raw lastz output.
+
+.. _source code: https://github.com/ucscGenomeBrowser/kent/tree/master/src/hg/mouseStuff/axtSort
+]]></help>
+    <citations>
+        <citation type="doi">10.1093/bib/bbs038</citation>
+    </citations>
+</tool>

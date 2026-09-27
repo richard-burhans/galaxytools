@@ -1,0 +1,52 @@
+<tool id="ucsc_lavtopsl" name="lavToPsl" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: convert lastz LAV alignments to PSL</description>
+    <macros>
+        <token name="@TOOL_VERSION@">482</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">ucsc-lavtopsl</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## ⛔ AN EMPTY LAV IS NOT AN ERROR HERE, BUT lavToPsl MAKES IT ONE: it exits 255 with "is empty".
+## A KegAlign pair file with no segments legitimately produces an empty LAV, so a mapped run would
+## fail on the pair that has nothing to align. An empty input writes an empty PSL instead.
+## ⚠ `&&` and `||` only, no `;` and no Cheetah directive, so a UDT can be generated from this file.
+( test -s '$input' || : > '$output' ) &&
+( test ! -s '$input' || lavToPsl '$input' '$output' )
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="lav" label="LAV alignments"
+               help="Several lastz runs concatenated into one file are fine: the result is the same PSL rows as converting each run separately (measured)."/>
+    </inputs>
+    <outputs>
+        <data name="output" format="psl"/>
+    </outputs>
+    <tests>
+        <!-- ▶ TWO lastz RUNS IN ONE FILE, one per target, both strands: what Growler LASTZ (LAV)
+             writes. The four rows pin both targets and both strands. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="two_calls.lav" ftype="lav"/>
+            <output name="output" file="two_calls.psl"/>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Converts lastz's native LAV output to PSL, the format UCSC's ``doBlastzChainNet.pl`` feeds to
+``axtChain -psl``. PSL carries coordinates and block structure but no sequence; axtChain reads the
+sequence from the 2bit files it is given anyway, so nothing is lost -- on a real Cannabis chunk the
+chains from PSL and from AXT were identical, and the PSL was a tenth the size.
+
+An empty input produces an empty output rather than an error.
+
+.. _source code: https://github.com/ucscGenomeBrowser/kent/tree/master/src/hg/mouseStuff/lavToPsl
+]]></help>
+    <citations>
+        <citation type="doi">10.1093/bib/bbs038</citation>
+    </citations>
+</tool>
