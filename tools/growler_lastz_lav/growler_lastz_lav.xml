@@ -2,7 +2,7 @@
     <description>gapped extension of one KegAlign pair file, one target per lastz call, LAV out</description>
     <macros>
         <token name="@TOOL_VERSION@">1.04.52</token>
-        <token name="@VERSION_SUFFIX@">1</token>
+        <token name="@VERSION_SUFFIX@">2</token>
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
     </macros>
     <requirements>
@@ -35,6 +35,9 @@
 ## so inline Python cannot survive there. The configfile uses no Cheetah references -- its inputs
 ## arrive as argv -- which is what lets udt_convert.py carry it into a UDT as a heredoc.
 ## ⚠ No Cheetah directives and no helper script beside the wrapper, for the same reason.
+## ⛔ by_target/ IS EMPTIED FIRST. The per-target files are written in append mode, so a second run in
+## the same directory -- re-running a job script by hand, the usual way to debug one -- doubled every
+## segment file and lastz then failed on plus lines after minus ones (measured 2026-09-27).
 ## ⚠ The driver reads `null` as 0 for inner/masking: a UDT integer defaulting to 0 fails Galaxy 26.1's
 ## tool lint, so the generated UDT declares them optional, and an unset optional renders as `null`.
 ln -s '$target' target.2bit &&
@@ -44,6 +47,7 @@ python3 '$driver' '$pair' '$scores' '$gappedthresh' '$ydrop' '$inner' '$masking'
     <configfiles>
         <configfile name="driver"><![CDATA[import gzip
 import os
+import shutil
 import subprocess
 import sys
 
@@ -57,7 +61,8 @@ with open(pair, 'rb') as fh:
     gz = fh.read(2) == b'\x1f\x8b'
 reader = gzip.open(pair, 'rb') if gz else open(pair, 'rb')
 
-os.makedirs('by_target', exist_ok=True)
+shutil.rmtree('by_target', ignore_errors=True)
+os.makedirs('by_target')
 order = []
 index = {}
 buffers = {}

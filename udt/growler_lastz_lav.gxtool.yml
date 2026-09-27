@@ -5,15 +5,15 @@
 # provenance:
 #   source: tools/growler_lastz_lav/growler_lastz_lav.xml
 #   tool_id: growler_lastz_lav
-#   command_sha256: 87fed8ccf8e8d5ddf869e3809dca0b80adc5153b2679f4f74bf3baab4c9a4cac
-#   configfile_driver_sha256: 17447286514009844bd0ddcd1f7abc39249ef599f043bd6dbce07fe6e83869d8
+#   command_sha256: c11e992b9f27794062617349f26cf6bccc36268a519a37d979c6713d555a38fa
+#   configfile_driver_sha256: 2016774d64ff0a116008346d6d5d048ad8ad569fbebd55eae67e68141d6df250
 #   requirements: kegalign-full=0.3.4
 #   macros_sha256: (no macros.xml)
 #   container: quay.io/biocontainers/kegalign-full:0.3.4--hdfd78af_0
 #   converter: scripts/udt_convert.py 0.2.0
 class: GalaxyUserTool
 id: gt-growler-lastz-lav
-version: "1.04.52+galaxy1"
+version: "1.04.52+galaxy2"
 name: growler_lastz_lav (UDT)
 description: "gapped extension of one KegAlign pair file, one target per lastz call, LAV out"
 container: quay.io/biocontainers/kegalign-full:0.3.4--hdfd78af_0
@@ -22,6 +22,7 @@ shell_command: |
   cat > driver.cfg <<'CONFIGFILE_DRIVER'
   import gzip
   import os
+  import shutil
   import subprocess
   import sys
 
@@ -35,7 +36,8 @@ shell_command: |
       gz = fh.read(2) == b'\x1f\x8b'
   reader = gzip.open(pair, 'rb') if gz else open(pair, 'rb')
 
-  os.makedirs('by_target', exist_ok=True)
+  shutil.rmtree('by_target', ignore_errors=True)
+  os.makedirs('by_target')
   order = []
   index = {}
   buffers = {}
