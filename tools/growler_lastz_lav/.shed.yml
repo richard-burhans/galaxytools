@@ -1,0 +1,14 @@
+name: growler_lastz_lav
+owner: richard-burhans
+description: Gapped extension of a KegAlign pair file with lastz, one target per call, LAV output
+long_description: |
+  Growler LASTZ (LAV) runs lastz gapped extension over one element of KegAlign's
+  pair-file collection. It partitions the pair file by target sequence (a stable
+  partition that keeps lastz's ordering rules), runs at most 50,000 segments per
+  lastz call with a single target selected, and writes lastz's native LAV. Convert
+  with lavToPsl and chain with axtChain -psl, as UCSC's pairwise pipeline does.
+homepage_url: https://github.com/galaxyproject/KegAlign
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/growler_lastz_lav
+type: unrestricted
+categories:
+  - Sequence Analysis

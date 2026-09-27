@@ -1,0 +1,12 @@
+name: ucsc_axtsort
+owner: richard-burhans
+description: Sort AXT alignments by target position
+long_description: |
+  axtSort orders AXT blocks by target sequence and start. UCSC runs it between
+  netToAxt and axtToMaf when building multiz input, which requires
+  reference-sorted pairwise alignments.
+homepage_url: http://hgdownload.cse.ucsc.edu/admin/exe/
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ucsc_axtsort
+type: unrestricted
+categories:
+  - Sequence Analysis

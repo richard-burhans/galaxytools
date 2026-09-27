@@ -1,0 +1,94 @@
+# ✅ CANONICAL as of 2026-09-15. Adopted on held-out evidence, not on argument.
+#
+# WHAT CHANGED from cannabis_chiaromonte_b85-95.lastz (now superseded):
+#   1. the training segments are COLINEAR-FILTERED -- Chiaromonte et al. (2002) §2 retains "only
+#      the matched segments that occur in the same order and orientation in both species", a step
+#      this project had skipped. Measured to separate orthologous from paralogous chromosome pairs
+#      by 18x at one chain per pair; see reports/chain_cap_sweep_2026-09-15.log for why one.
+#   2. annotated CDS is excluded from the REFERENCE, as her §2 deletes protein-coding segments.
+#      Measured immaterial (it moves cells 1-3 points) -- kept because it is the paper's step.
+#   3. counts are SYMMETRISED by Figure 1's four infers, which is her default. Also measured
+#      immaterial here; the asymmetry it averages away was settled as assembly-comparability bias
+#      in reports/strand_asymmetry_settled_2026-09-15.md.
+#
+# WHY IT REPLACED THE PREVIOUS MATRIX. Held-out evaluation by her §3 corner-threshold protocol on
+# Cb2 chr1 x cs10 chr1 -- NEITHER genome trained it. It beat the superseded matrix in both regimes
+# tested: 39-1 unmasked at 20 Mb, and 30-10 with the reference masked at 1 Mb (her scale), where
+# the margin is 4.4-13.5%. It also beat HOXD70 and the +-100/-100 unit matrix.
+# Full record: reports/heldout_evaluation_2026-09-15.md.
+#
+# ✅ PAIR THIS WITH LASTZ's ENTROPY ADJUSTMENT AT USE TIME -- `noentropy=false`. Settled
+# 2026-09-17 by a 2x2 (masking x entropy) under this matrix, gapped, hspthresh 3000, on the
+# held-out Cb2 x cs10 pair:
+#
+#     arm                     correct   incorrect  correct%
+#     masked,   entropy OFF   544,788     483,044    53.00%
+#     masked,   entropy ON    542,457     410,260    56.94%
+#     unmasked, entropy OFF   797,137   3,063,423    20.65%
+#     unmasked, entropy ON    793,580   2,834,702    21.87%
+#
+# Entropy costs ~0.44% of correct and removes 7-15% of incorrect. Masking removes 84.2% of the
+# noise and entropy a further 15.07% of WHAT SURVIVES -- a larger relative bite than the 7.47% it
+# takes unmasked, so the two COMPLEMENT rather than substitute.
+#
+# ⛔ THE OPPOSITE CLAIM USED TO STAND HERE and does not replicate: "entropy won unmasked 35-5 and
+# LOST masked 14-26, so it substitutes for masking". That test predated this matrix, ran GAP-FREE,
+# and was scored by a bare win/loss tally -- the statistic shown to invert when the corner curves
+# cross. Full record: reports/entropy_2x2_2026-09-17.md.
+#
+# ⛔ BUT KEEP IT OFF FOR TRAINING -- `noentropy=true` when deriving a matrix, because entropy
+# preferentially discards low-complexity segments at a fixed threshold and so biases the
+# composition of the training set. Every census behind THIS file used noentropy=true, which
+# remains correct; no derivation is invalidated.
+#
+# ⚠ CONFOUND TO CARRY: at fixed hspthresh, entropy-on is effectively more stringent (blocks drop
+# 31-36%), so part of the noise reduction is stringency rather than discrimination. The corner
+# protocol controls for it and agrees, but crosses 12 times -- two weak instruments agreeing, not
+# one strong result.
+#
+# ⚠ OPEN: this matrix was DERIVED under noentropy=true; nobody has checked whether it would come
+# out differently if training used entropy.
+#
+# LASTZ scoring file DERIVED from this project's own aligned-pair censuses.
+#
+# Chiaromonte, Yap & Miller (2002) Equation 1, s(i,j) = log2( p(i,j) / (q_i q'_j) ), with
+# the two marginals taken separately from the census's row and column sums, no lambda, and
+# the largest score normalised to 100 at the end.
+#
+# Derived from:
+#   data/processed/segment_census_EH23a_x_EH23b__colinear_noexon_strata.tsv (identity bands [85, 95))
+#   data/processed/segment_census_DPSVa_x_TWSVa__colinear_noexon_strata.tsv (identity bands [85, 95))
+# pooled aligned pairs : 331,051,784
+# Ts/Tv               : 2.119
+# H (mutual info)     : 1.4140 bits
+# scale factor        : 48.1684 (raw log2 units -> this file's units)
+# symmetrisation      : both
+# ⚠ counts were symmetrised (both); the measured asymmetry has been averaged away
+#
+# training bands      : identity bands [85, 95)
+# ⚠ The training range is above the <= 70% identity regime in which the paper established
+# that ONE matrix suffices, so that equivalence is NOT inherited here. See
+# notes/chiaromonte_2001_scoring.md.
+# ⛔ An earlier version of this header said 'the panel aligns at 95-99.5% identity'. That
+# was never measured and is wrong: the panel's kept segments run 53.0-99.5% with the bulk
+# near 73-74%, and only 3.6% of pooled aligned pairs are above 95%.
+
+bad_score          = X:-1000
+fill_score         = -198
+
+# ⛔ GAP PENALTIES ARE SCALED TO THIS MATRIX, NOT INHERITED FROM HOXD70. LASTZ's defaults
+# (400/30) are calibrated against HOXD70, whose transversions sit near -114; this matrix
+# puts them near -194, so carrying 400/30 over would make a gap about 1.7x
+# cheaper RELATIVE to a mismatch than LASTZ intends, and the aligner would prefer gaps to
+# mismatches far more often than in any tested configuration. These values preserve LASTZ's
+# own open:mismatch and extend:mismatch ratios.
+# ⚠ PROPORTIONALITY IS AN ARGUMENT, NOT A MEASUREMENT. Nothing here has been tuned against
+# an alignment outcome; treat these as a starting point, not a calibrated result.
+gap_open_penalty   = 682
+gap_extend_penalty = 51
+
+         A     C     G     T
+A       80  -191   -92  -198
+C     -191   100  -197   -92
+G      -92  -197   100  -191
+T     -198   -92  -191    80
