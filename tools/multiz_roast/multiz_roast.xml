@@ -2,7 +2,7 @@
     <description>: reference-guided multiple alignment of pairwise MAFs (multiz autoMZ)</description>
     <macros>
         <token name="@TOOL_VERSION@">11.2</token>
-        <token name="@VERSION_SUFFIX@">0</token>
+        <token name="@VERSION_SUFFIX@">1</token>
     </macros>
     <xrefs>
         <xref type="bio.tools">multiz</xref>
@@ -13,27 +13,36 @@
     <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
     <command detect_errors="exit_code"><![CDATA[
 ## Galaxy flattens newlines in <command>, so the work is a POSIX sh script (the multiz image is BusyBox).
-sh '$script'
+## Its inputs are argv, never Cheetah, so the same script runs as a UDT.
+sh '$script' '$reference' '$tree' '$output' '$pairwise'
+## ⚠ The script uses backticks, never \$( ): in a UDT, \$( ... ) is Galaxy's expression syntax, and a
+## shell command substitution written that way is evaluated as JavaScript and fails the job.
     ]]></command>
     <configfiles>
-        <configfile name="script"><![CDATA[#set $names = [str($m.element_identifier) for $m in $pairwise]
-set -eu
-ref='$reference'
+        <configfile name="script"><![CDATA[set -eu
+ref="\$1"; treefile="\$2"; output="\$3"; files="\$4"
 case "\$ref" in ''|*[!A-Za-z0-9_]*) echo "reference name must be letters, digits or _: \$ref" >&2; exit 1;; esac
 mkdir work
-## UCSC's tree preparation (kent src/hg/makeDb/doc/hg38/multiz5way.txt): branch lengths, the ';' and
-## newlines go, commas become spaces: ((hg38 (tupChi1 galVar1)) (mm10 cavPor3)).
-tree=\$(sed 's/:[-0-9.eE]*//g; s/;//; /^ *\$/d' '$tree' | tr '\n' ' ' | sed 's/ //g; s/,/ /g')
-species=\$(echo "\$tree" | tr '()' '  ')
-echo " \$species " | grep -q " \$ref " || { echo "reference \$ref is not in the tree" >&2; exit 1; }
-#for $m in $pairwise
-name='$m.element_identifier'
-case "\$name" in ''|*[!A-Za-z0-9_]*) echo "element identifier must be letters, digits or _: \$name" >&2; exit 1;; esac
-echo " \$species " | grep -q " \$name " || { echo "\$name is not in the tree" >&2; exit 1; }
-if [ -s '$m' ]; then ln -s '$m' "work/\$ref.\$name.sing.maf"; else echo '\#\#maf version=1 scoring=autoMZ' > "work/\$ref.\$name.sing.maf"; fi
-#end for
-## a species in the tree with no alignment in this piece gets UCSC's empty stub (autoMultiz.csh)
-for s in \$species; do
+\#\# UCSC's tree preparation (kent src/hg/makeDb/doc/hg38/multiz5way.txt): branch lengths, the ';' and
+\#\# newlines go, commas become spaces: ((hg38 (tupChi1 galVar1)) (mm10 cavPor3)).
+tree=`sed 's/:[-0-9.eE]*//g; s/;//; /^ *\$/d' "\$treefile" | tr '\n' ' ' | sed 's/ //g; s/,/ /g'`
+leaves=" `echo "\$tree" | tr '()' '  ' | tr -s ' '` "
+case "\$leaves" in *" \$ref "*) ;; *) echo "reference \$ref is not in the tree" >&2; exit 1;; esac
+\#\# The species is read from the file, not from a dataset name: the first row that is not the reference.
+\#\# A file with no blocks names no species and is skipped; the stub below covers that species.
+IFS=','
+for f in \$files; do
+    unset IFS
+    name=`awk -v ref="\$ref" '/^s /{ split(\$2, p, "."); if (p[1] != ref) { print p[1]; exit } }' "\$f"`
+    IFS=','
+    [ -n "\$name" ] || continue
+    case "\$leaves" in *" \$name "*) ;; *) echo "\$name is not in the tree" >&2; exit 1;; esac
+    if [ -e "work/\$ref.\$name.sing.maf" ]; then echo "\$name is given twice" >&2; exit 1; fi
+    ln -s "\$f" "work/\$ref.\$name.sing.maf"
+done
+unset IFS
+\#\# a species in the tree with no alignment in this piece gets UCSC's empty stub (autoMultiz.csh)
+for s in \$leaves; do
     [ "\$s" = "\$ref" ] && continue
     [ -e "work/\$ref.\$s.sing.maf" ] || echo '\#\#maf version=1 scoring=autoMZ' > "work/\$ref.\$s.sing.maf"
 done
@@ -41,12 +50,13 @@ echo "tree: \$tree"
 cd work
 mkdir tmp
 roast + T="\$PWD/tmp" E="\$ref" "\$tree" \$ref.*.sing.maf out.maf > /dev/null
-mv out.maf '$output'
+cd ..
+mv work/out.maf "\$output"
 ]]></configfile>
     </configfiles>
     <inputs>
-        <param name="pairwise" type="data_collection" collection_type="list" format="maf" label="Pairwise MAFs, one per species"
-               help="Each element's identifier is the species name used in its MAF rows (e.g. mm10 for rows named mm10.chr1); the reference is the top row of every block, and each file is sorted by reference position."/>
+        <param name="pairwise" type="data" format="maf" multiple="true" label="Pairwise MAFs, one per species"
+               help="One MAF per species, its rows named species.sequence (mm10.chr1), the reference as the top row of every block, sorted by reference position. The species is read from the rows, so the dataset names do not matter; map over the outer level of a nested list to run one piece per inner list."/>
         <param name="reference" type="text" value="" label="Reference name" help="As it prefixes the reference rows (hg38 for hg38.chr1). Letters, digits and _ only.">
             <validator type="regex" message="Letters, digits and _ only">^[A-Za-z0-9_]+$</validator>
         </param>
@@ -62,14 +72,7 @@ mv out.maf '$output'
              UCSC's patched build agree, so the expected output holds for both. lines_diff covers the 12 roast
              comment lines that record temp paths and a PID. -->
         <test expect_num_outputs="1">
-            <param name="pairwise">
-                <collection type="list">
-                    <element name="tupChi1" value="chr21_20M.hg38.tupChi1.maf" ftype="maf"/>
-                    <element name="galVar1" value="chr21_20M.hg38.galVar1.maf" ftype="maf"/>
-                    <element name="mm10" value="chr21_20M.hg38.mm10.maf" ftype="maf"/>
-                    <element name="cavPor3" value="chr21_20M.hg38.cavPor3.maf" ftype="maf"/>
-                </collection>
-            </param>
+            <param name="pairwise" value="chr21_20M.hg38.tupChi1.maf,chr21_20M.hg38.galVar1.maf,chr21_20M.hg38.mm10.maf,chr21_20M.hg38.cavPor3.maf" ftype="maf"/>
             <param name="reference" value="hg38"/>
             <param name="tree" value="hg38.5way.nh" ftype="newick"/>
             <output name="output" file="chr21_20M.5way.maf" compare="diff" lines_diff="24"/>
@@ -80,13 +83,7 @@ mv out.maf '$output'
         <!-- ▶ A species in the tree with no input gets UCSC's empty stub: mm10 is left out, and roast still runs
              over all five leaves. -->
         <test expect_num_outputs="1">
-            <param name="pairwise">
-                <collection type="list">
-                    <element name="tupChi1" value="chr21_20M.hg38.tupChi1.maf" ftype="maf"/>
-                    <element name="galVar1" value="chr21_20M.hg38.galVar1.maf" ftype="maf"/>
-                    <element name="cavPor3" value="chr21_20M.hg38.cavPor3.maf" ftype="maf"/>
-                </collection>
-            </param>
+            <param name="pairwise" value="chr21_20M.hg38.tupChi1.maf,chr21_20M.hg38.galVar1.maf,chr21_20M.hg38.cavPor3.maf" ftype="maf"/>
             <param name="reference" value="hg38"/>
             <param name="tree" value="hg38.5way.nh" ftype="newick"/>
             <output name="output" file="chr21_20M.no_mm10.maf" compare="diff" lines_diff="24">
@@ -96,13 +93,10 @@ mv out.maf '$output'
                 </assert_contents>
             </output>
         </test>
-        <!-- ▶ Refusals: an element that is not a leaf of the tree, and a reference that is not. -->
+        <!-- ▶ Refusals, all read from the MAF rows: a species that is not a leaf of the tree (panTro6 is the
+             tupChi1 file renamed), the same species given twice, and a reference that is not a leaf. -->
         <test expect_failure="true">
-            <param name="pairwise">
-                <collection type="list">
-                    <element name="panTro6" value="chr21_20M.hg38.tupChi1.maf" ftype="maf"/>
-                </collection>
-            </param>
+            <param name="pairwise" value="chr21_20M.hg38.panTro6.maf" ftype="maf"/>
             <param name="reference" value="hg38"/>
             <param name="tree" value="hg38.5way.nh" ftype="newick"/>
             <assert_stderr>
@@ -110,11 +104,15 @@ mv out.maf '$output'
             </assert_stderr>
         </test>
         <test expect_failure="true">
-            <param name="pairwise">
-                <collection type="list">
-                    <element name="mm10" value="chr21_20M.hg38.mm10.maf" ftype="maf"/>
-                </collection>
-            </param>
+            <param name="pairwise" value="chr21_20M.hg38.mm10.maf,chr21_20M.hg38.mm10.maf" ftype="maf"/>
+            <param name="reference" value="hg38"/>
+            <param name="tree" value="hg38.5way.nh" ftype="newick"/>
+            <assert_stderr>
+                <has_text text="mm10 is given twice"/>
+            </assert_stderr>
+        </test>
+        <test expect_failure="true">
+            <param name="pairwise" value="chr21_20M.hg38.mm10.maf" ftype="maf"/>
             <param name="reference" value="mm39"/>
             <param name="tree" value="hg38.5way.nh" ftype="newick"/>
             <assert_stderr>
@@ -132,7 +130,7 @@ Runs ``roast`` (multiz's ``autoMZ``) over one set of pairwise MAFs that share a 
 
     autoMZ + T=$tmp E=$db "`cat tree.nh`" $db.*.sing.maf $c
 
-Each input becomes ``<reference>.<species>.sing.maf``. A species in the tree with no input, or an
+Each input becomes ``<reference>.<species>.sing.maf``, the species read from the file's first non-reference row, so dataset names play no part. A species in the tree with no input, or an
 empty one, gets UCSC's stub ``##maf version=1 scoring=autoMZ``, so one piece of a genome split can
 be run without every species aligning to it.
 

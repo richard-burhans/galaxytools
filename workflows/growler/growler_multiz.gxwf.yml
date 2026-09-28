@@ -1,0 +1,76 @@
+class: GalaxyWorkflow
+label: Growler multiz (UCSC multizNway, before gap annotation)
+doc: >-
+  UCSC's multizNway recipe (kent src/hg/makeDb/doc/hg38/multiz5way.txt) up to mafAddIRows: each species'
+  pairwise MAF split into hashed buckets of reference sequences, regrouped by bucket, roast per bucket, and the
+  result split into one MAF per reference sequence.
+inputs:
+  pairwise:
+    type: collection
+    collection_type: list
+    doc: One pairwise MAF per species, rows named species.sequence, reference on top, sorted by reference position.
+  tree:
+    type: data
+    doc: Species tree (Newick); branch lengths are ignored.
+  reference:
+    type: string
+    doc: The reference's name, as it prefixes its rows (hg38 for hg38.chr1).
+outputs:
+  per_sequence:
+    outputSource: by_sequence/output
+    doc: One multiple-alignment MAF per reference sequence, before mafAddIRows.
+steps:
+  split:
+    tool_id: gt-ucsc-mafsplit
+    tool_version: 482+galaxy1
+    doc: mafSplit -byTarget -useHashedName=8, per species.
+    in:
+      input: pairwise
+    state:
+      hash_bits: 8
+  by_bucket:
+    tool_id: __APPLY_RULES__
+    tool_version: 1.1.0
+    doc: species -> bucket becomes bucket -> species.
+    in:
+      input: split/pieces
+    state:
+      rules:
+        rules:
+          - type: add_column_metadata
+            value: identifier0
+          - type: add_column_metadata
+            value: identifier1
+        mapping:
+          - type: list_identifiers
+            columns: [1, 0]
+  roast:
+    tool_id: gt-multiz-roast
+    tool_version: 11.2+galaxy1
+    doc: autoMZ per bucket; each bucket's species list feeds the multiple input.
+    in:
+      pairwise: by_bucket/output
+      tree: tree
+      reference: reference
+  split_sequences:
+    tool_id: gt-ucsc-mafsplit
+    tool_version: 482+galaxy1
+    doc: mafSplit -byTarget -useFullSequenceName, per bucket.
+    in:
+      input: roast/output
+    state:
+      hash_bits: 0
+  by_sequence:
+    tool_id: __APPLY_RULES__
+    tool_version: 1.1.0
+    doc: bucket -> sequence becomes a list by sequence; each sequence is in exactly one bucket.
+    in:
+      input: split_sequences/pieces
+    state:
+      rules:
+        rules:
+          - type: add_column_metadata
+            value: identifier1
+        mapping:
+          - type: list_identifiers
+            columns: [0]

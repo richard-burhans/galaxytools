@@ -2,7 +2,7 @@
     <description>: split a MAF into one file per reference sequence or hashed bucket</description>
     <macros>
         <token name="@TOOL_VERSION@">482</token>
-        <token name="@VERSION_SUFFIX@">0</token>
+        <token name="@VERSION_SUFFIX@">1</token>
     </macros>
     <xrefs>
         <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
@@ -12,27 +12,23 @@
     </requirements>
     <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
     <command detect_errors="exit_code"><![CDATA[
-mkdir out && cd out &&
-mafSplit -byTarget
-#if $mode.how == "hashed"
-    -useHashedName=$mode.bits
-#else
-    -useFullSequenceName
-#end if
-    /dev/null . '$input'
+## The choice of mode is made in the script, from argv, so the same script runs as a UDT.
+sh '$script' '$input' '$hash_bits'
     ]]></command>
+    <configfiles>
+        <configfile name="script"><![CDATA[set -eu
+input="\$1"; bits="\$2"
+case "\$bits" in ''|*[!0-9]*) echo "hash bits must be a whole number: \$bits" >&2; exit 1;; esac
+if [ "\$bits" -eq 0 ]; then mode=-useFullSequenceName; else mode=-useHashedName=\$bits; fi
+mkdir out
+cd out
+mafSplit -byTarget \$mode /dev/null . "\$input"
+]]></configfile>
+    </configfiles>
     <inputs>
         <param name="input" type="data" format="maf" label="MAF" help="The reference must be the top row of every block."/>
-        <conditional name="mode">
-            <param name="how" type="select" label="Split into">
-                <option value="hashed" selected="true">Hashed buckets of reference sequences (-useHashedName)</option>
-                <option value="full">One file per reference sequence (-useFullSequenceName)</option>
-            </param>
-            <when value="hashed">
-                <param name="bits" type="integer" value="8" min="1" max="16" label="Hash bits" help="Up to 2^N buckets. A sequence always lands in the same bucket, so splits of different species' MAFs line up by bucket name. UCSC's multizNway builds use 8."/>
-            </when>
-            <when value="full"/>
-        </conditional>
+        <param name="hash_bits" type="integer" value="8" min="0" max="16" label="Hash bits (0: one file per reference sequence)"
+               help="N &gt; 0: split into up to 2^N hashed buckets of reference sequences (-useHashedName=N), as UCSC's multizNway builds do before multiz, with 8. A sequence always lands in the same bucket, so splits of different species' MAFs line up by bucket name. 0: one file per reference sequence (-useFullSequenceName), as they do before mafAddIRows."/>
     </inputs>
     <outputs>
         <collection name="pieces" type="list" label="${tool.name} on ${on_string}">
@@ -45,10 +41,7 @@ mafSplit -byTarget
              (UCSC's own mafSplit gives 160, 163 and 177 for these), so they are stable across species. -->
         <test expect_num_outputs="1">
             <param name="input" value="three_refs.maf" ftype="maf"/>
-            <conditional name="mode">
-                <param name="how" value="hashed"/>
-                <param name="bits" value="8"/>
-            </conditional>
+            <param name="hash_bits" value="8"/>
             <output_collection name="pieces" type="list" count="3">
                 <element name="160">
                     <assert_contents>
@@ -72,9 +65,7 @@ mafSplit -byTarget
         <!-- ▶ One file per reference sequence, named with the version kept. -->
         <test expect_num_outputs="1">
             <param name="input" value="three_refs.maf" ftype="maf"/>
-            <conditional name="mode">
-                <param name="how" value="full"/>
-            </conditional>
+            <param name="hash_bits" value="0"/>
             <output_collection name="pieces" type="list" count="3">
                 <element name="NC_044371.1">
                     <assert_contents>
