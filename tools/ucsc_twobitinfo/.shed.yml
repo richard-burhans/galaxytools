@@ -1,0 +1,11 @@
+name: ucsc_twobitinfo
+owner: richard-burhans
+description: Sequence sizes, or N-run and soft-mask BED, of a 2bit file
+long_description: |
+  kent's twoBitInfo. With -nBed it writes the per-species N-run BED that UCSC's
+  multizNway builds pass to mafAddIRows -nBeds.
+homepage_url: http://hgdownload.cse.ucsc.edu/admin/exe/
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ucsc_twobitinfo
+type: unrestricted
+categories:
+  - Sequence Analysis

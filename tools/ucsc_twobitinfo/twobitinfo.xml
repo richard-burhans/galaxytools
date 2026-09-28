@@ -1,0 +1,71 @@
+<tool id="ucsc_twobitinfo" name="twoBitInfo" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: sequence sizes, or N-run and soft-mask BED, of a 2bit file</description>
+    <macros>
+        <token name="@TOOL_VERSION@">482</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">ucsc-twobitinfo</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+twoBitInfo $report '$input' '$output'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="twobit" label="2bit file"/>
+        <param name="report" type="select" label="Report">
+            <option value="-nBed" selected="true">Runs of N, as BED (-nBed)</option>
+            <option value="-maskBed">Soft-masked (lowercase) runs, as BED (-maskBed)</option>
+            <option value="">Sequence sizes</option>
+            <option value="-noNs">Sequence sizes, not counting N (-noNs)</option>
+        </param>
+    </inputs>
+    <outputs>
+        <data name="output" format="bed">
+            <change_format>
+                <when input="report" value="" format="len"/>
+                <when input="report" value="-noNs" format="len"/>
+            </change_format>
+        </data>
+    </outputs>
+    <tests>
+        <!-- ▶ Two sequences with N runs at the start, middle and end, and one lowercase run each:
+             chr1 = ACGT NNNNN acgtacgt ACGT NN, chr2 = NNNN ACGTACGT acgt ACGT. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="small.2bit" ftype="twobit"/>
+            <param name="report" value="-nBed"/>
+            <output name="output" file="small.n.bed" ftype="bed"/>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="input" value="small.2bit" ftype="twobit"/>
+            <param name="report" value="-maskBed"/>
+            <output name="output" file="small.mask.bed" ftype="bed"/>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="input" value="small.2bit" ftype="twobit"/>
+            <param name="report" value=""/>
+            <output name="output" file="small.len" ftype="len"/>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="input" value="small.2bit" ftype="twobit"/>
+            <param name="report" value="-noNs"/>
+            <output name="output" file="small.noNs.len" ftype="len"/>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Runs kent's ``twoBitInfo``. With ``-nBed`` it writes one BED record per run of ``N``: what UCSC's
+multizNway builds make for every species (``twoBitInfo -nBed ${DB}.2bit ${DB}.N.bed``) and hand to
+``mafAddIRows -nBeds``, which uses them to mark a species' gap as missing sequence rather than
+unaligned sequence.
+
+.. _source code: https://github.com/ucscGenomeBrowser/kent/tree/master/src/utils/twoBitInfo
+]]></help>
+    <citations>
+        <citation type="doi">10.1093/bib/bbs038</citation>
+    </citations>
+</tool>

@@ -1,0 +1,13 @@
+name: multiz_roast
+owner: richard-burhans
+description: Reference-guided multiple alignment of pairwise MAFs with multiz roast (autoMZ)
+long_description: |
+  Runs multiz's roast (UCSC's autoMZ) over one set of pairwise MAFs that share a
+  reference, as UCSC's autoMultiz.csh does for each piece of a multizNway build:
+  species absent from a piece get an empty stub, and the species tree is
+  prepared as UCSC prepares it.
+homepage_url: https://github.com/multiz/multiz
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/multiz_roast
+type: unrestricted
+categories:
+  - Sequence Analysis

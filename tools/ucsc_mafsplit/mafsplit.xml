@@ -1,0 +1,121 @@
+<tool id="ucsc_mafsplit" name="mafSplit" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: split a MAF into one file per reference sequence or hashed bucket</description>
+    <macros>
+        <token name="@TOOL_VERSION@">482</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">ucsc-mafsplit</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+mkdir out && cd out &&
+mafSplit -byTarget
+#if $mode.how == "hashed"
+    -useHashedName=$mode.bits
+#else
+    -useFullSequenceName
+#end if
+    /dev/null . '$input'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="maf" label="MAF" help="The reference must be the top row of every block."/>
+        <conditional name="mode">
+            <param name="how" type="select" label="Split into">
+                <option value="hashed" selected="true">Hashed buckets of reference sequences (-useHashedName)</option>
+                <option value="full">One file per reference sequence (-useFullSequenceName)</option>
+            </param>
+            <when value="hashed">
+                <param name="bits" type="integer" value="8" min="1" max="16" label="Hash bits" help="Up to 2^N buckets. A sequence always lands in the same bucket, so splits of different species' MAFs line up by bucket name. UCSC's multizNway builds use 8."/>
+            </when>
+            <when value="full"/>
+        </conditional>
+    </inputs>
+    <outputs>
+        <collection name="pieces" type="list" label="${tool.name} on ${on_string}">
+            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.maf$" directory="out" format="maf" sort_by="filename"/>
+        </collection>
+    </outputs>
+    <tests>
+        <!-- ▶ Three reference sequences with versioned accessions (cs10.NC_044371.1, the way cannabis rows are
+             named), NC_044371.1 with two blocks. The bucket numbers are kent's hash of each sequence name
+             (UCSC's own mafSplit gives 160, 163 and 177 for these), so they are stable across species. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="three_refs.maf" ftype="maf"/>
+            <conditional name="mode">
+                <param name="how" value="hashed"/>
+                <param name="bits" value="8"/>
+            </conditional>
+            <output_collection name="pieces" type="list" count="3">
+                <element name="160">
+                    <assert_contents>
+                        <has_n_lines n="9"/>
+                        <has_text text="s cs10.NC_044371.1 90 4"/>
+                        <not_has_text text="NC_044372.1"/>
+                    </assert_contents>
+                </element>
+                <element name="163">
+                    <assert_contents>
+                        <has_text text="s cs10.NW_023364.1 5 4"/>
+                    </assert_contents>
+                </element>
+                <element name="177">
+                    <assert_contents>
+                        <has_text text="s cs10.NC_044372.1 20 4"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <!-- ▶ One file per reference sequence, named with the version kept. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="three_refs.maf" ftype="maf"/>
+            <conditional name="mode">
+                <param name="how" value="full"/>
+            </conditional>
+            <output_collection name="pieces" type="list" count="3">
+                <element name="NC_044371.1">
+                    <assert_contents>
+                        <has_text text="s cs10.NC_044371.1 10 4"/>
+                        <has_text text="s cs10.NC_044371.1 90 4"/>
+                    </assert_contents>
+                </element>
+                <element name="NC_044372.1">
+                    <assert_contents>
+                        <has_text text="s cs10.NC_044372.1 20 4"/>
+                    </assert_contents>
+                </element>
+                <element name="NW_023364.1">
+                    <assert_contents>
+                        <has_text text="s cs10.NW_023364.1 5 4"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Runs kent's ``mafSplit -byTarget`` and returns the pieces as a collection, named by bucket (``033``)
+or by reference sequence (``chr21``, ``NC_044371.1``).
+
+UCSC's multizNway builds use it twice (kent ``src/hg/makeDb/doc/hg38/multiz5way.txt``):
+
+* **before multiz**, per species: ``mafSplit -byTarget -useHashedName=8 /dev/null . hg38.<species>.synNet.maf.gz``.
+  Every species' split uses the same hash of the reference sequence name, so bucket ``033`` of every
+  species covers the same reference sequences, and roast runs once per bucket.
+* **before mafAddIRows**, on the combined multiple alignment:
+  ``mafSplit -byTarget -useFullSequenceName``, because ``mafAddIRows`` handles one reference sequence
+  per file.
+
+The species prefix is everything before the first ``.`` of a row's source, so a versioned accession
+(``cs10.NC_044371.1``) keeps its version in the piece name.
+
+.. _source code: https://github.com/ucscGenomeBrowser/kent/tree/master/src/hg/ratStuff/mafSplit
+]]></help>
+    <citations>
+        <citation type="doi">10.1093/bib/bbs038</citation>
+    </citations>
+</tool>
