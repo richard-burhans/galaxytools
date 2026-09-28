@@ -8,27 +8,51 @@ inputs:
     type: collection
     collection_type: list
     doc: AXT or PSL, one element per piece (e.g. growler_lastz output).
+    position:
+      left: 0
+      top: 304
   target_2bit:
     type: data
+    position:
+      left: 0
+      top: 380
   query_2bit:
     type: data
+    position:
+      left: 0
+      top: 456
   target_sizes:
     type: data
     doc: Target chromosome sizes (name<TAB>length).
+    position:
+      left: 0
+      top: 1008
   query_sizes:
     type: data
     doc: Query chromosome sizes.
+    position:
+      left: 0
+      top: 1084
   scores:
     type: data
     doc: 'lastz scoring matrix, uploaded as tabular: KegAlign and lastz read it as text, axtChain as tabular.'
+    position:
+      left: 0
+      top: 656
   linear_gap:
     type: data
     doc: 'axtChain gap-cost table: gap/loose.lineargap (chicken-human) or gap/medium.lineargap (mouse-human
       and closer).'
+    position:
+      left: 0
+      top: 732
   chain_min_score:
     type: integer
     default: 1000
     doc: axtChain -minScore. doBlastzChainNet.pl's default is axtChain's own, 1000.
+    position:
+      left: 0
+      top: 808
 outputs:
   all_chain:
     outputSource: chainmergesort/out
@@ -65,7 +89,22 @@ steps:
     state:
       linear_gap_options:
         linear_gap: linear_gap_file
+        lineargap_input:
+          __class__: ConnectedValue
       details_output: false
+      in_aln:
+        __class__: ConnectedValue
+      in_target:
+        __class__: ConnectedValue
+      in_query:
+        __class__: ConnectedValue
+      scoreScheme:
+        __class__: ConnectedValue
+      minScore:
+        __class__: ConnectedValue
+    position:
+      left: 380
+      top: 363
   chainantirepeat:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainantirepeat/ucsc_chainantirepeat/482+galaxy0
     label: chainantirepeat
@@ -76,11 +115,26 @@ steps:
     state:
       minScore: null
       noCheckScore: null
+      in_chain:
+        __class__: ConnectedValue
+      in_target:
+        __class__: ConnectedValue
+      in_query:
+        __class__: ConnectedValue
+    position:
+      left: 680
+      top: 363
   chainmergesort:
     tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy1
     label: chainmergesort
     in:
       in_chains: chainantirepeat/out
+    state:
+      in_chains:
+        __class__: ConnectedValue
+    position:
+      left: 980
+      top: 363
   prenet:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0
     label: prenet
@@ -91,10 +145,19 @@ steps:
     state:
       target_reference_index_source:
         target_reference_index_source_selector: history
+        in_tar_ref_index:
+          __class__: ConnectedValue
       query_reference_index_source:
         query_reference_index_source_selector: history
+        in_que_ref_index:
+          __class__: ConnectedValue
       pad: null
       inclHap: false
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 1280
+      top: 764
   net:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainnet/ucsc_chainnet/482+galaxy0
     label: net
@@ -105,18 +168,33 @@ steps:
     state:
       target_reference_index_source:
         target_reference_index_source_selector: history
+        in_tar_ref_index:
+          __class__: ConnectedValue
       query_reference_index_source:
         query_reference_index_source_selector: history
+        in_que_ref_index:
+          __class__: ConnectedValue
       minSpace: 1
       minScore: null
       minFill: null
       inclHap: false
       verbose: null
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 1580
+      top: 764
   netsyntenic:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netsyntenic/ucsc_netsyntenic/482+galaxy0
     label: netsyntenic
     in:
       in_net: net/targetNet
+    state:
+      in_net:
+        __class__: ConnectedValue
+    position:
+      left: 1880
+      top: 764
   over_subset:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netchainsubset/ucsc_netchainsubset/482+galaxy0
     label: over_subset
@@ -127,11 +205,24 @@ steps:
       splitOnInsert: false
       wholeChains: false
       skipMissing: false
+      in_net:
+        __class__: ConnectedValue
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 2180
+      top: 764
   over_chain:
     tool_id: brc-chain-stitch-id
     label: over_chain
     in:
       input: over_subset/out
+    state:
+      input:
+        __class__: ConnectedValue
+    position:
+      left: 2480
+      top: 764
   syn_net:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netfilter/ucsc_netfilter/482+galaxy0
     label: syn_net
@@ -145,6 +236,11 @@ steps:
         minSynSize: null
         minSynAli: null
       minGap: null
+      in_net:
+        __class__: ConnectedValue
+    position:
+      left: 380
+      top: 1395
   synnet_axt:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_nettoaxt/ucsc_nettoaxt/482+galaxy0
     label: synnet_axt
@@ -157,11 +253,28 @@ steps:
       qChain: false
       maxGap: null
       noSplit: false
+      in_net:
+        __class__: ConnectedValue
+      in_chain:
+        __class__: ConnectedValue
+      in_target:
+        __class__: ConnectedValue
+      in_query:
+        __class__: ConnectedValue
+    position:
+      left: 980
+      top: 1395
   synnet_sorted:
     tool_id: gt-ucsc-axtsort
     label: synnet_sorted
     in:
       input: synnet_axt/out
+    state:
+      input:
+        __class__: ConnectedValue
+    position:
+      left: 1280
+      top: 1395
   synnet_maf:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_axttomaf/ucsc_axtomaf/482+galaxy1
     label: synnet_maf
@@ -172,22 +285,43 @@ steps:
     state:
       target_reference_index_source:
         target_reference_index_source_selector: history
+        in_tar_ref_index:
+          __class__: ConnectedValue
       query_reference_index_source:
         query_reference_index_source_selector: history
+        in_que_ref_index:
+          __class__: ConnectedValue
       t_prefix: null
       q_prefix: null
       score: false
       scoreZero: false
+      in_axt:
+        __class__: ConnectedValue
+    position:
+      left: 1580
+      top: 1395
   rb_stitch1:
     tool_id: brc-chain-stitch-id
     label: rb_stitch1
     in:
       input: over_chain/output
+    state:
+      input:
+        __class__: ConnectedValue
+    position:
+      left: 980
+      top: 1910
   rb_swap1:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainswap/ucsc_chainswap/482+galaxy0
     label: rb_swap1
     in:
       in_chain: rb_stitch1/output
+    state:
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 1280
+      top: 1910
   rb_sort1:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainsort/ucsc_chainsort/482+galaxy0
     label: rb_sort1
@@ -195,6 +329,11 @@ steps:
       in_chain: rb_swap1/out
     state:
       sort_by: ''
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 1580
+      top: 1910
   rb_prenet_q:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0
     label: rb_prenet_q
@@ -205,10 +344,19 @@ steps:
     state:
       target_reference_index_source:
         target_reference_index_source_selector: history
+        in_tar_ref_index:
+          __class__: ConnectedValue
       query_reference_index_source:
         query_reference_index_source_selector: history
+        in_que_ref_index:
+          __class__: ConnectedValue
       pad: null
       inclHap: false
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 1880
+      top: 1910
   rb_net_q:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainnet/ucsc_chainnet/482+galaxy0
     label: rb_net_q
@@ -219,18 +367,33 @@ steps:
     state:
       target_reference_index_source:
         target_reference_index_source_selector: history
+        in_tar_ref_index:
+          __class__: ConnectedValue
       query_reference_index_source:
         query_reference_index_source_selector: history
+        in_que_ref_index:
+          __class__: ConnectedValue
       minSpace: 1
       minScore: 0
       minFill: null
       inclHap: false
       verbose: null
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 2180
+      top: 1910
   rb_syn_q:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netsyntenic/ucsc_netsyntenic/482+galaxy0
     label: rb_syn_q
     in:
       in_net: rb_net_q/targetNet
+    state:
+      in_net:
+        __class__: ConnectedValue
+    position:
+      left: 2480
+      top: 1910
   rb_subset:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netchainsubset/ucsc_netchainsubset/482+galaxy0
     label: rb_subset
@@ -241,16 +404,35 @@ steps:
       splitOnInsert: false
       wholeChains: false
       skipMissing: false
+      in_net:
+        __class__: ConnectedValue
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 2780
+      top: 1910
   rb_stitch2:
     tool_id: brc-chain-stitch-id
     label: rb_stitch2
     in:
       input: rb_subset/out
+    state:
+      input:
+        __class__: ConnectedValue
+    position:
+      left: 380
+      top: 2541
   rb_swap2:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainswap/ucsc_chainswap/482+galaxy0
     label: rb_swap2
     in:
       in_chain: rb_stitch2/output
+    state:
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 680
+      top: 2541
   rb_chain:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainsort/ucsc_chainsort/482+galaxy0
     label: rb_chain
@@ -258,6 +440,11 @@ steps:
       in_chain: rb_swap2/out
     state:
       sort_by: ''
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 980
+      top: 2541
   rb_prenet_t:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0
     label: rb_prenet_t
@@ -268,10 +455,19 @@ steps:
     state:
       target_reference_index_source:
         target_reference_index_source_selector: history
+        in_tar_ref_index:
+          __class__: ConnectedValue
       query_reference_index_source:
         query_reference_index_source_selector: history
+        in_que_ref_index:
+          __class__: ConnectedValue
       pad: null
       inclHap: false
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 1280
+      top: 2541
   rb_net_t:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainnet/ucsc_chainnet/482+galaxy0
     label: rb_net_t
@@ -282,18 +478,33 @@ steps:
     state:
       target_reference_index_source:
         target_reference_index_source_selector: history
+        in_tar_ref_index:
+          __class__: ConnectedValue
       query_reference_index_source:
         query_reference_index_source_selector: history
+        in_que_ref_index:
+          __class__: ConnectedValue
       minSpace: 1
       minScore: 0
       minFill: null
       inclHap: false
       verbose: null
+      in_chain:
+        __class__: ConnectedValue
+    position:
+      left: 1580
+      top: 2541
   rb_net:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netsyntenic/ucsc_netsyntenic/482+galaxy0
     label: rb_net
     in:
       in_net: rb_net_t/targetNet
+    state:
+      in_net:
+        __class__: ConnectedValue
+    position:
+      left: 1880
+      top: 2541
   rbest_axt:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_nettoaxt/ucsc_nettoaxt/482+galaxy0
     label: rbest_axt
@@ -306,11 +517,28 @@ steps:
       qChain: false
       maxGap: null
       noSplit: false
+      in_net:
+        __class__: ConnectedValue
+      in_chain:
+        __class__: ConnectedValue
+      in_target:
+        __class__: ConnectedValue
+      in_query:
+        __class__: ConnectedValue
+    position:
+      left: 2180
+      top: 3038
   rbest_sorted:
     tool_id: gt-ucsc-axtsort
     label: rbest_sorted
     in:
       input: rbest_axt/out
+    state:
+      input:
+        __class__: ConnectedValue
+    position:
+      left: 2480
+      top: 3038
   rbest_maf:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_axttomaf/ucsc_axtomaf/482+galaxy1
     label: rbest_maf
@@ -321,9 +549,168 @@ steps:
     state:
       target_reference_index_source:
         target_reference_index_source_selector: history
+        in_tar_ref_index:
+          __class__: ConnectedValue
       query_reference_index_source:
         query_reference_index_source_selector: history
+        in_que_ref_index:
+          __class__: ConnectedValue
       t_prefix: null
       q_prefix: null
       score: false
       scoreZero: false
+      in_axt:
+        __class__: ConnectedValue
+    position:
+      left: 2780
+      top: 3038
+comments:
+- type: markdown
+  position:
+  - 0
+  - 0
+  size:
+  - 3000
+  - 190
+  color: none
+  text: '## Growler UCSC chain/net (from existing alignments, flat)
+
+
+    **How to read this workflow.** Columns follow a topological sort of the steps, wrapped into
+
+    bands read like lines of text, with the inputs in yellow down the left; the grey outer frames are
+    UCSC''s
+
+    two scripts, and each numbered frame inside is one stage. Everything after KegAlign is a command from
+    UCSC''s own scripts, wired in their order
+
+    (kent @d4e9b27): **blue, green, orange** are `doBlastzChainNet.pl`, **pink, red** are `doRecipBest.pl`;
+    the
+
+    frame titles give the commands and script line numbers. The orange and red MAFs are the multiz
+
+    inputs: synNet for close genomes, reciprocal best for the rest. Generated by galaxytools
+
+    `workflows/growler/assemble_ucsc.py`, which asserts this wiring.'
+- type: frame
+  position:
+  - 335
+  - 230
+  size:
+  - 2410
+  - 952
+  color: black
+  title: 'doBlastzChainNet.pl: align, chain, net, liftOver chain, synNet MAF  (kent @d4e9b27)'
+- type: frame
+  position:
+  - 335
+  - 1262
+  size:
+  - 1510
+  - 435
+  color: black
+  title: 'doBlastzChainNet.pl: align, chain, net, liftOver chain, synNet MAF  (kent @d4e9b27)  (cont.)'
+- type: frame
+  position:
+  - 935
+  - 1777
+  size:
+  - 2110
+  - 551
+  color: black
+  title: 'doRecipBest.pl: the reciprocal-best net and its MAF  (kent @d4e9b27)'
+- type: frame
+  position:
+  - 335
+  - 2408
+  size:
+  - 2710
+  - 932
+  color: black
+  title: 'doRecipBest.pl: the reciprocal-best net and its MAF  (kent @d4e9b27)  (cont.)'
+- type: frame
+  position:
+  - 350
+  - 289
+  size:
+  - 880
+  - 381
+  color: blue
+  title: '1  Align and chain: KegAlign seeds on the GPU; lastz, one target per call; lavToPsl; axtChain
+    -psl | chainAntiRepeat | chainMergeSort -> all.chain  (lines 809-889)'
+- type: frame
+  position:
+  - 1250
+  - 690
+  size:
+  - 1480
+  - 477
+  color: green
+  title: '2  Net: chainPreNet | chainNet -minSpace=1 | netSyntenic -> noClass.net; netChainSubset | chainStitchId
+    -> over.chain  (lines 1012-1018)'
+- type: frame
+  position:
+  - 350
+  - 1321
+  size:
+  - 1480
+  - 361
+  color: orange
+  title: '3  synNet MAF, the multiz input for close genomes: netFilter -syn | netToAxt | axtSort | axtToMaf  (lines
+    1861-1870)'
+- type: frame
+  position:
+  - 950
+  - 1836
+  size:
+  - 2080
+  - 477
+  color: pink
+  title: '4  Reciprocal best, query side: stitch and swap over.chain, net it with the query as reference  (lines
+    144-171)'
+- type: frame
+  position:
+  - 350
+  - 2467
+  size:
+  - 1780
+  - 477
+  color: pink
+  title: '5  Reciprocal best, target side: swap back and net again -> rbest.chain, rbest.net  (lines 144-171)'
+- type: frame
+  position:
+  - 2150
+  - 2964
+  size:
+  - 880
+  - 361
+  color: red
+  title: '6  Reciprocal-best MAF, the multiz input for other genomes: netToAxt | axtSort | axtToMaf  (lines
+    252-258)'
+- type: frame
+  position:
+  - -30
+  - 230
+  size:
+  - 280
+  - 332
+  color: yellow
+  title: Genomes
+- type: frame
+  position:
+  - -30
+  - 582
+  size:
+  - 280
+  - 332
+  color: yellow
+  title: Scoring
+- type: frame
+  position:
+  - -30
+  - 934
+  size:
+  - 280
+  - 256
+  color: yellow
+  title: Chromosome sizes (for the nets and MAFs)

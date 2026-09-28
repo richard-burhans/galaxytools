@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import json
 import pathlib
 import sys
 
@@ -210,10 +211,47 @@ def build(growler: dict) -> dict:
         "rbest_maf": {"outputSource": "rbest_maf/out", "doc": "multiz input for other genomes"},
         "lav": {"outputSource": "lastz_lav/output", "doc": "per-element LAV, kept: the raw alignment record"},
     }
-    return {"class": "GalaxyWorkflow", "label": "Growler UCSC pair (KegAlign + UCSC chain/net, flat)",
-            "doc": "One genome pair: KegAlign seeding, then kent's doBlastzChainNet.pl and doRecipBest.pl "
-                   "steps. See assemble_ucsc.py for the line-by-line provenance.",
-            "inputs": inputs, "outputs": outputs, "steps": steps}
+    return with_connected_values(
+        {"class": "GalaxyWorkflow", "label": "Growler UCSC pair (KegAlign + UCSC chain/net, flat)",
+         "doc": "One genome pair: KegAlign seeding, then kent's doBlastzChainNet.pl and doRecipBest.pl "
+                "steps. See assemble_ucsc.py for the line-by-line provenance.",
+         "inputs": inputs, "outputs": outputs, "steps": steps})
+
+
+CONNECTED = {"__class__": "ConnectedValue"}
+
+
+def with_connected_values(doc: dict) -> dict:
+    """Mark every connected tool input `ConnectedValue` in the step's state, as Galaxy's editor does.
+
+    ⛔ WITHOUT IT THE EDITOR WARNS ON EVERY CONNECTION. gxformat2 does not add the placeholder for an
+    `in:` connection, so the stored tool state has no value there, and opening the workflow lists
+    "No value found for ... Using default" for all 118 connections (vgp, 2026-09-28) -- harmless to a
+    run, where the connection supplies the value, but alarming to anyone reading it. A `section|param`
+    key is nested as Galaxy nests it. `unmarked_connections` is the check.
+    """
+    for st in doc["steps"].values():
+        if st.get("state") is None:
+            st["state"] = {}
+        for key in st["in"]:
+            *path, leaf = key.split("|")
+            node = st["state"]
+            for part in path:
+                node = node.setdefault(part, {})
+            node[leaf] = dict(CONNECTED)
+    return doc
+
+
+def unmarked_connections(doc: dict) -> list[str]:
+    bad = []
+    for name, st in doc["steps"].items():
+        for key in st["in"]:
+            node = st.get("state") or {}
+            for part in key.split("|"):
+                node = node.get(part) if isinstance(node, dict) else None
+            if node != CONNECTED:
+                bad.append(f"{name}.{key}")
+    return bad
 
 
 CHAIN_OUT = HERE / "growler_ucsc_chain.gxwf.yml"
@@ -295,6 +333,217 @@ def dangling(doc: dict) -> list[str]:
     return out
 
 
+#: THE EDITOR LAYOUT (`layout`). Columns come from a topological sort; these say what the boxes are:
+#: grey frames for UCSC's two scripts, numbered stage frames inside them titled with the commands and
+#: kent line numbers, and yellow input groups down the left.
+#: ⚠ Every step must sit in exactly one stage; `lane_problems` says which do not.
+KENT = "kent @d4e9b27"
+SCRIPTS = [("doBlastzChainNet.pl: align, chain, net, liftOver chain, synNet MAF", (1, 2, 3)),
+           ("doRecipBest.pl: the reciprocal-best net and its MAF", (4, 5, 6))]
+#: (number, title, colour, steps)
+LANES = [
+    (1, "Align and chain: KegAlign seeds on the GPU; lastz, one target per call; lavToPsl; "
+        "axtChain -psl | chainAntiRepeat | chainMergeSort -> all.chain  (lines 809-889)", "blue",
+     ["kegalign", "lastz_lav", "lavtopsl", "axtchain", "chainantirepeat", "chainmergesort"]),
+    (2, "Net: chainPreNet | chainNet -minSpace=1 | netSyntenic -> noClass.net; "
+        "netChainSubset | chainStitchId -> over.chain  (lines 1012-1018)", "green",
+     ["prenet", "net", "netsyntenic", "over_subset", "over_chain"]),
+    (3, "synNet MAF, the multiz input for close genomes: netFilter -syn | netToAxt | axtSort | axtToMaf  "
+        "(lines 1861-1870)", "orange", ["syn_net", "synnet_axt", "synnet_sorted", "synnet_maf"]),
+    (4, "Reciprocal best, query side: stitch and swap over.chain, net it with the query as reference  "
+        "(lines 144-171)", "pink",
+     ["rb_stitch1", "rb_swap1", "rb_sort1", "rb_prenet_q", "rb_net_q", "rb_syn_q", "rb_subset"]),
+    (5, "Reciprocal best, target side: swap back and net again -> rbest.chain, rbest.net  (lines 144-171)",
+     "pink", ["rb_stitch2", "rb_swap2", "rb_chain", "rb_prenet_t", "rb_net_t", "rb_net"]),
+    (6, "Reciprocal-best MAF, the multiz input for other genomes: netToAxt | axtSort | axtToMaf  "
+        "(lines 252-258)", "red", ["rbest_axt", "rbest_sorted", "rbest_maf"]),
+]
+#: Left column: inputs grouped by what they control, top to bottom; anything unlisted joins the last.
+INPUT_GROUPS = [
+    ("Genomes", ["target_fasta", "query_fasta", "target_2bit", "query_2bit", "alignments"]),
+    ("Scoring", ["scores", "linear_gap", "chain_min_score"]),
+    ("lastz / KegAlign parameters (UCSC's K L X Y H M T)",
+     ["hspthresh", "gappedthresh", "xdrop", "ydrop", "inner", "masking", "notransition", "noentropy",
+      "batch_lines", "num_gpu"]),
+    ("Chromosome sizes (for the nets and MAFs)", ["target_sizes", "query_sizes"]),
+]
+#: Editor geometry, in Galaxy canvas pixels.
+#: ROW is one terminal row: Galaxy lists every connected input and EVERY tool output, and labels such
+#: as "Dataset with chrom sizes for query sequence. Typically a .fai file." wrap to 2-3 lines in its
+#: 200 px (12.5rem) node, so a row is sized for two lines. Too big a frame is harmless; too small spills.
+COL, WIDTH, GAP, HEAD, ROW, PAD, INPUT_H, TOP = 300, 220, 40, 44, 44, 30, 76, 230
+#: Extra space between the inputs column and the first step column (layout).
+GUTTER = 80
+
+
+TERMINALS = HERE / "node_terminals.json"
+
+
+def _wrapped(text: str, width: int) -> int:
+    lines, cur = 1, 0
+    for word in text.split():
+        if cur and cur + 1 + len(word) > width:
+            lines, cur = lines + 1, len(word)
+        else:
+            cur += (1 if cur else 0) + len(word)
+    return lines
+
+
+def node_height(step: dict, used_outputs: int) -> int:
+    """A step's height in the editor, from the labels it shows when they are known, else ROW per row.
+
+    ▶ From node_terminals.json (what vgp's editor lists for this tool): each label word-wrapped at
+    the node's width (~25 characters an input line, ~20 an output line beside its buttons), 19.5 px
+    a line, plus 10%. Used only when the step connects as many inputs as the snapshot shows.
+    """
+    known = json.loads(TERMINALS.read_text(encoding="utf-8"))["tools"].get(step["tool_id"]) if TERMINALS.exists() else None
+    if not known or len(known["inputs"]) != len(step["in"]):
+        return HEAD + ROW * (len(step["in"]) + max(2, used_outputs + 1))
+    px = (32 + sum(6 + 19.5 * _wrapped(t, 25) for t in known["inputs"]) + 10
+          + sum(8 + 19.5 * _wrapped(t, 20) for t in known["outputs"]) + 10)
+    return int(px * 1.1)
+
+
+def lane_problems(doc: dict, partial: bool = False) -> list[str]:
+    """Steps in no stage or two; with `partial` (the chain-only document) a stage may name absent steps."""
+    placed = [n for *_, names in LANES for n in names]
+    return ([f"{n} is in no lane" for n in doc["steps"] if n not in placed]
+            + [f"{n} is in a lane but not a step" for n in placed if n not in doc["steps"] and not partial]
+            + [f"{n} is in two lanes" for n in sorted({n for n in placed if placed.count(n) > 1})])
+
+
+def layout(doc: dict, max_band: int = 9) -> dict:
+    """A copy of `doc` placed by a topological sort for x and the hand-drawn STAGES for y and frames.
+
+    Column: a step sits one past its deepest source; an input one before its FIRST consumer, so a
+    shared input (sizes, scores) waits beside the stage that needs it. The columns are wrapped into
+    bands, read like lines of text, of at most `max_band` columns, and never inside a stage. Within a band each stage of
+    LANES gets its own track and frame, so the boxes never overlap; a stage that wraps continues in
+    a second frame marked (cont.). Inputs are the yellow track at the top.
+    """
+    d = copy.deepcopy(doc)
+    src = {n: [v.split("/")[0] for v in s["in"].values()] for n, s in d["steps"].items()}
+    outs: dict[str, set] = {n: set() for n in d["steps"]}
+    users: dict[str, list] = {n: [] for n in [*d["inputs"], *d["steps"]]}
+    for n, s in d["steps"].items():
+        for v in s["in"].values():
+            users[v.split("/")[0]].append(n)
+            if "/" in v:
+                outs[v.split("/")[0]].add(v.split("/", 1)[1])
+    layer: dict[str, int] = {}
+    todo = dict(src)
+    while todo:                                           # Kahn's algorithm, over the steps
+        ready = [n for n, ss in todo.items() if all(s in layer or s in d["inputs"] for s in ss)]
+        if not ready:
+            raise SystemExit(f"cycle among {sorted(todo)}")
+        for n in ready:
+            layer[n] = 1 + max((layer[s] for s in src[n] if s in layer), default=-1)
+            del todo[n]
+
+    def height(n: str) -> int:
+        if n in d["inputs"]:
+            return INPUT_H - 8
+        return node_height(d["steps"][n], len(outs[n]))
+
+    # ▶ x from the sort; y from the STAGE: within a band every stage of LANES gets its own track, so
+    # each stage's frame is a clean box, and a stage that wraps gets a second frame marked (cont.).
+    # Column 0 of a band holds the inputs whose first consumer is in it, grouped as INPUT_GROUPS.
+    stage, meta = {}, {}
+    for num, title, colour, names in LANES:
+        meta[num] = (f"{num}  {title}", colour)
+        stage.update({n: num for n in names if n in d["steps"]})
+    # ▶ A STAGE IS NEVER SPLIT: it joins the current band if all its columns fit, else it opens the
+    # next band with its first column there. Parallel stages (3 beside 4) make every fixed wrap
+    # point cut one of them; this keeps each stage's frame whole.
+    span: dict[int, tuple] = {}
+    for n, st in stage.items():
+        lo, hi = span.get(st, (layer[n], layer[n]))
+        span[st] = (min(lo, layer[n]), max(hi, layer[n]))
+    starts, band_of_stage = [], {}
+    for st in sorted(span, key=lambda k: span[k]):
+        lo, hi = span[st]
+        if not starts or hi - starts[-1] >= max_band:
+            starts.append(lo)
+        band_of_stage[st] = len(starts) - 1
+    n_bands = len(starts)
+    band_of = {n: band_of_stage[stage[n]] for n in d["steps"]}
+    col_of = {n: layer[n] - starts[band_of[n]] for n in d["steps"]}
+    per_band = max(col_of.values()) + 1
+    first = {n: min((band_of[u] for u in users[n]), default=0) for n in d["inputs"]}
+    group_of = {n: t for t, ns in INPUT_GROUPS for n in ns}
+    cells: dict[tuple, list] = {}                          # (band, stage, column) -> steps
+    for n in d["steps"]:
+        cells.setdefault((band_of[n], stage[n], 1 + col_of[n]), []).append(n)
+
+    script_of = {num: t for t, nums in SCRIPTS for num in nums}
+    # ▶ Script frames are stacked GUTTER apart -- the same space as between the inputs column and the
+    # first step column -- and the inputs column runs down the left on its own, so a tall input
+    # group never pushes the next band down.
+    y, frames, outer, seen, seen_script, band_top = TOP, [], [], set(), set(), {}
+    for band in range(n_bands):
+        band_top[band], current, boxes = y, None, []
+        for st in sorted({k[1] for k in cells if k[0] == band}):
+            if script_of.get(st) != current:              # a new script frame opens: leave its header
+                if boxes:
+                    outer.append((current, boxes))
+                    y = boxes[-1][1] + boxes[-1][3] + PAD // 2 + GUTTER
+                current, boxes = script_of.get(st), []
+                y += HEAD + PAD // 2
+            mine = {c: ns for (bb, ss, c), ns in cells.items() if bb == band and ss == st}
+            tall = max(sum(height(n) + GAP // 2 for n in ns) for ns in mine.values()) - GAP // 2
+            for c, ns in mine.items():
+                ty = y + PAD + HEAD
+                for n in ns:
+                    d["steps"][n]["position"] = {"left": GUTTER + COL * c, "top": ty}
+                    ty += height(n) + GAP // 2
+            lo, hi = min(mine), max(mine)
+            title, colour = meta[st]
+            box = [GUTTER + COL * lo - PAD, y, COL * (hi - lo) + WIDTH + 2 * PAD, tall + HEAD + 2 * PAD]
+            boxes.append(box)
+            frames.append({"type": "frame", "position": box[:2], "size": box[2:],
+                           "color": colour, "title": title + ("  (cont.)" if st in seen else "")})
+            seen.add(st)
+            y += box[3] + GAP // 2
+        if boxes:
+            outer.append((current, boxes))
+            y = boxes[-1][1] + boxes[-1][3] + PAD // 2 + GUTTER
+    iy = TOP
+    for band in range(n_bands):                            # each group starts no higher than its band
+        for gtitle, _ in [*INPUT_GROUPS, ("Inputs", [])]:
+            ns = [n for n in d["inputs"] if first[n] == band and group_of.get(n, "Inputs") == gtitle]
+            if not ns:
+                continue
+            iy = max(iy, band_top[band])
+            for i, n in enumerate(ns):
+                d["inputs"][n]["position"] = {"left": 0, "top": iy + HEAD + PAD + INPUT_H * i}
+            h = HEAD + 2 * PAD + INPUT_H * len(ns)
+            frames.append({"type": "frame", "position": [-PAD, iy], "size": [WIDTH + 2 * PAD, h],
+                           "color": "yellow", "title": gtitle})
+            iy += h + GAP // 2
+    scripts = []
+    for title, boxes in outer:                             # one frame per script per band, around its stages
+        x0 = min(bx[0] for bx in boxes) - PAD // 2
+        y0 = min(bx[1] for bx in boxes) - HEAD - PAD // 2
+        x1 = max(bx[0] + bx[2] for bx in boxes) + PAD // 2
+        y1 = max(bx[1] + bx[3] for bx in boxes) + PAD // 2
+        # black is Galaxy's palette's nearest to grey: a frame is a faint tint, so it reads as light grey
+        scripts.append({"type": "frame", "position": [x0, y0], "size": [x1 - x0, y1 - y0], "color": "black",
+                        "title": f"{title}  ({KENT})" + ("  (cont.)" if title in seen_script else "")})
+        seen_script.add(title)
+    d["comments"] = [{"type": "markdown", "position": [0, 0], "size": [COL * (per_band + 1), TOP - GAP],
+                      "color": "none", "text": f"## {d['label']}\n\n{NOTE}"}] + scripts + frames
+    return d
+
+
+NOTE = f"""**How to read this workflow.** Columns follow a topological sort of the steps, wrapped into
+bands read like lines of text, with the inputs in yellow down the left; the grey outer frames are UCSC's
+two scripts, and each numbered frame inside is one stage. Everything after KegAlign is a command from UCSC's own scripts, wired in their order
+({KENT}): **blue, green, orange** are `doBlastzChainNet.pl`, **pink, red** are `doRecipBest.pl`; the
+frame titles give the commands and script line numbers. The orange and red MAFs are the multiz
+inputs: synNet for close genomes, reciprocal best for the rest. Generated by galaxytools
+`workflows/growler/assemble_ucsc.py`, which asserts this wiring."""
+
+
 def self_test() -> int:
     doc = build(yaml.safe_load(GROWLER.read_text(encoding="utf-8")))
     fails = 0
@@ -305,6 +554,11 @@ def self_test() -> int:
         print(f"  {'ok ' if cond else 'FAIL'} {name}")
 
     check("no dangling connection", dangling(doc) == [])
+    check("every connection is marked ConnectedValue", unmarked_connections(doc) == [])
+    unmarked = copy.deepcopy(doc)
+    unmarked["steps"]["prenet"]["state"]["target_reference_index_source"].pop("in_tar_ref_index")
+    check("  and an unmarked nested connection is caught",
+          unmarked_connections(unmarked) == ["prenet.target_reference_index_source|in_tar_ref_index"])
     check("wired in UCSC's order", assert_ucsc_order(doc) == [])
     check("no nested subworkflow", not any("run" in s for s in doc["steps"].values()))
     nets = {k: doc["steps"][k]["state"] for k in ("net", "rb_net_q", "rb_net_t")}
@@ -326,6 +580,17 @@ def self_test() -> int:
     for g in ("loose", "medium"):
         check(f"gap/{g}.lineargap is present", (HERE / "gap" / f"{g}.lineargap").exists())
     chain = build_chain_only(doc)
+    check("every step sits in exactly one layout stage", lane_problems(doc) == [])
+    stray = copy.deepcopy(doc)
+    stray["steps"]["extra"] = stray["steps"]["lavtopsl"]
+    check("  and a step in no stage is caught", lane_problems(stray) == ["extra is in no lane"])
+    placed = layout(doc)
+    nodes = [*placed["inputs"].values(), *placed["steps"].values()]
+    check("layout places every input and step", all("position" in n for n in nodes))
+    check("layout changes nothing but positions and comments",
+          {k: v for k, v in placed.items() if k != "comments"} == {**doc, "steps": {
+              n: {**st, "position": placed["steps"][n]["position"]} for n, st in doc["steps"].items()},
+              "inputs": {n: {**i, "position": placed["inputs"][n]["position"]} for n, i in doc["inputs"].items()}})
     check("chain-only: no dangling connection", dangling(chain) == [])
     check("chain-only: every step identical to the pair document's", assert_chain_arm_identical(doc, chain) == [])
     check("chain-only: axtChain reads the alignments collection", chain["steps"]["axtchain"]["in"]["in_aln"] == "alignments")
@@ -334,9 +599,10 @@ def self_test() -> int:
     check("  and a drifted chain step is caught", assert_chain_arm_identical(doc, tampered) == ["net"])
     if OUT.exists():
         committed = yaml.safe_load(OUT.read_text(encoding="utf-8"))
-        check("the committed document matches a fresh build", committed == doc)
+        check("the committed document matches a fresh build", committed == layout(doc))
     if CHAIN_OUT.exists():
-        check("the committed chain-only document matches", yaml.safe_load(CHAIN_OUT.read_text(encoding="utf-8")) == chain)
+        check("the committed chain-only document matches",
+              yaml.safe_load(CHAIN_OUT.read_text(encoding="utf-8")) == layout(chain))
     print("\nall tests passed" if not fails else f"\n{fails} FAILED")
     return 1 if fails else 0
 
@@ -350,14 +616,15 @@ def main() -> int:
     if a.self_test:
         return self_test()
     doc = build(yaml.safe_load(GROWLER.read_text(encoding="utf-8")))
-    problems = dangling(doc) + assert_ucsc_order(doc)
+    problems = dangling(doc) + assert_ucsc_order(doc) + unmarked_connections(doc) + lane_problems(doc)
     if problems:
         sys.exit("REFUSING:\n  " + "\n  ".join(problems))
     chain = build_chain_only(doc)
     problems = assert_chain_arm_identical(doc, chain) + dangling(chain)
     if problems:
         sys.exit("REFUSING the chain-only document:\n  " + "\n  ".join(problems))
-    for path, d in ((OUT, doc), (CHAIN_OUT, chain)):
+    # positions are applied last, to what is written; every check above ran on the unplaced documents
+    for path, d in ((OUT, layout(doc)), (CHAIN_OUT, layout(chain))):
         if a.check:
             if not path.exists() or yaml.safe_load(path.read_text(encoding="utf-8")) != d:
                 sys.exit(f"{path.name} is stale -- run assemble_ucsc.py and commit")
