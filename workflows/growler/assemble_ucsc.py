@@ -16,7 +16,8 @@
   chainMergeSort                                                             (line 889)
   chainPreNet | chainNet -minSpace=1 | netSyntenic -> noClass.net            (line 1012-1014)
   netChainSubset noClass.net all.chain | chainStitchId -> over.chain        (line 1017-1018)
-  netFilter -syn | netToAxt | axtSort | axtToMaf -> synNet maf               (line 1861-1870)
+  netFilter -syn | netToAxt | axtSort | axtToMaf -> synNet maf               (line 1861-1870;
+      netToAxt reads over.chain rather than all.chain -- identical output, see build())
   doRecipBest.pl: over.chain | chainStitchId | chainSwap | chainSort; chainPreNet |
       chainNet -minSpace=1 -minScore=0 | netSyntenic; netChainSubset | chainStitchId; chainSwap |
       chainSort; chainPreNet | chainNet -minSpace=1 -minScore=0 | netSyntenic  (line 144-171)
@@ -170,7 +171,14 @@ def build(growler: dict) -> dict:
                              {"synteny": {"syn_filter": "filtersyn", "syntype": "-syn",
                                           "minSynScore": None, "minSynSize": None, "minSynAli": None},
                               "minGap": None})
-    steps.update(_to_maf("synnet", "syn_net/out", "chainmergesort/out"))
+    # ⛔ THE SYNNET MAF READS over.chain, NOT all.chain -- the one deliberate departure from
+    # doBlastzChainNet.pl (line 1867), which hands netToAxt the full chain file. netToAxt loads every
+    # chain it is given; all.chain is 7.6 GB for cs10 x 79X, and the job was OOM-killed on vgp (and at
+    # a 12 GB cap locally). over.chain is netChainSubset(noClass.net, all.chain) | chainStitchId, and a
+    # synNet's fills are a subset of the net's, so it holds every chain part netToAxt can look up.
+    # Measured byte-identical AXT: hg38 x panTro6 chr21 (1,727 blocks) and cs10 x EH23a.chr1 (31,346
+    # blocks, peak 2.6 -> 0.48 GB); cs10 x 79X now runs in 1.6 GB from a 42 MB chain file.
+    steps.update(_to_maf("synnet", "syn_net/out", "over_chain/output"))
     # --- doRecipBest.pl 144-171
     steps["rb_stitch1"] = _step("chainstitchid", "rb_stitch1", {"input": "over_chain/output"})
     steps["rb_swap1"] = _step("chainswap", "rb_swap1", {"in_chain": "rb_stitch1/output"})
@@ -264,7 +272,7 @@ UCSC_ORDER = [
     ("over_subset", "in_net", "netsyntenic/out"),
     ("over_subset", "in_chain", "chainmergesort/out"),   # all.chain, NOT the pre-netted chain
     ("syn_net", "in_net", "netsyntenic/out"),
-    ("synnet_axt", "in_chain", "chainmergesort/out"),
+    ("synnet_axt", "in_chain", "over_chain/output"),   # see build(): identical output, bounded memory
     ("rb_stitch1", "input", "over_chain/output"),
     ("rb_net_q", "in_chain", "rb_prenet_q/out"),
     ("rb_subset", "in_chain", "rb_sort1/out"),

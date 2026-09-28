@@ -150,7 +150,7 @@ steps:
     label: synnet_axt
     in:
       in_net: syn_net/out
-      in_chain: chainmergesort/out
+      in_chain: over_chain/output
       in_target: target_2bit
       in_query: query_2bit
     state:
