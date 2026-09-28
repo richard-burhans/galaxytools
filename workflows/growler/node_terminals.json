@@ -1,0 +1,178 @@
+{
+ "_comment": "Terminal labels as vgp's editor shows them for growler_ucsc_pair's wiring (GET /api/workflows/<id>/download?style=editor, 2026-09-28). Used ONLY to size nodes in the editor layout.",
+ "tools": {
+  "brc-chain-stitch-id": {
+   "inputs": [
+    "Input chain file"
+   ],
+   "outputs": [
+    "stitched chains"
+   ]
+  },
+  "gt-growler-lastz-lav": {
+   "inputs": [
+    "Pair file",
+    "Target sequence (2bit)",
+    "Query sequence (2bit)",
+    "Scoring file in LASTZ format",
+    "Gapped extension threshold",
+    "Y-drop",
+    "Interpolation threshold (blastz H)",
+    "Dynamic masking count (blastz M)"
+   ],
+   "outputs": [
+    "output"
+   ]
+  },
+  "gt-ucsc-axtsort": {
+   "inputs": [
+    "AXT alignments"
+   ],
+   "outputs": [
+    "output"
+   ]
+  },
+  "gt-ucsc-lavtopsl": {
+   "inputs": [
+    "LAV alignments"
+   ],
+   "outputs": [
+    "output"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_axtchain/ucsc_axtchain/482+galaxy3": {
+   "inputs": [
+    "Alignments",
+    "Target sequence",
+    "Query sequence",
+    "Read the linear gap costs from",
+    "Minimum score for chain",
+    "Scoring matrix"
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_axttomaf/ucsc_axtomaf/482+galaxy1": {
+   "inputs": [
+    "axt file",
+    "Dataset with chrom sizes for target sequence. Typically a '.fai' file.",
+    "Dataset with chrom sizes for query sequence. Typically a '.fai' file."
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainantirepeat/ucsc_chainantirepeat/482+galaxy0": {
+   "inputs": [
+    "Chain dataset",
+    "Dataset with target sequence",
+    "Dataset with query sequence"
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainnet/ucsc_chainnet/482+galaxy0": {
+   "inputs": [
+    "Chain dataset",
+    "Dataset with chrom sizes for target sequence. Typically a '.fai' file.",
+    "Dataset with chrom sizes for query sequence. Typically a '.fai' file."
+   ],
+   "outputs": [
+    "chainNet on input dataset(s): target.net",
+    "chainNet on input dataset(s): query.net"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0": {
+   "inputs": [
+    "Chain dataset",
+    "Dataset with chrom sizes for target sequence. Typically a '.fai' file.",
+    "Dataset with chrom sizes for query sequence. Typically a '.fai' file."
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainsort/ucsc_chainsort/482+galaxy0": {
+   "inputs": [
+    "Chain dataset"
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainswap/ucsc_chainswap/482+galaxy0": {
+   "inputs": [
+    "chain dataset"
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netchainsubset/ucsc_netchainsubset/482+galaxy0": {
+   "inputs": [
+    "net dataset",
+    "chain dataset"
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netfilter/ucsc_netfilter/482+galaxy0": {
+   "inputs": [
+    "net dataset"
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netsyntenic/ucsc_netsyntenic/482+galaxy0": {
+   "inputs": [
+    "Input net"
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/iuc/ucsc_nettoaxt/ucsc_nettoaxt/482+galaxy0": {
+   "inputs": [
+    "Net dataset",
+    "Chain dataset",
+    "Dataset with target sequence",
+    "Dataset with query sequence"
+   ],
+   "outputs": [
+    "out"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.4+galaxy1": {
+   "inputs": [
+    "Target sequence file in FASTA format",
+    "Query sequence file in FASTA format",
+    "Scoring file in LASTZ format",
+    "Don't allow one transition in a seed hit",
+    "X-drop value for gap-free extension",
+    "Segment score threshold for high scoring pairs",
+    "Don't adjust low score segment pair scores using entropy factor after filtering stage",
+    "Y-drop value for gapped extension",
+    "Score threshold for gapped alignments",
+    "Specify number of GPUs to use - -1 if all the GPUs should be used",
+    "Segment lines per element"
+   ],
+   "outputs": [
+    "KegAlign chromosome pairs on input dataset(s)",
+    "KegAlign target 2bit on input dataset(s)",
+    "KegAlign query 2bit on input dataset(s)"
+   ]
+  },
+  "toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy1": {
+   "inputs": [
+    "Chain datasets to merge"
+   ],
+   "outputs": [
+    "out"
+   ]
+  }
+ }
+}
