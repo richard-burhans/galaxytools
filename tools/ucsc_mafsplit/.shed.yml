@@ -1,0 +1,13 @@
+name: ucsc_mafsplit
+owner: richard-burhans
+description: Split a MAF into one file per reference sequence or hashed bucket
+long_description: |
+  kent's mafSplit -byTarget, returning the pieces as a collection. UCSC's
+  multizNway builds use it to split each species' pairwise MAF into hashed
+  buckets before multiz, and to split the multiple alignment per reference
+  sequence before mafAddIRows.
+homepage_url: http://hgdownload.cse.ucsc.edu/admin/exe/
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ucsc_mafsplit
+type: unrestricted
+categories:
+  - Sequence Analysis

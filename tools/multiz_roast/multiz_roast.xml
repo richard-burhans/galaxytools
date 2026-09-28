@@ -1,0 +1,156 @@
+<tool id="multiz_roast" name="roast" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: reference-guided multiple alignment of pairwise MAFs (multiz autoMZ)</description>
+    <macros>
+        <token name="@TOOL_VERSION@">11.2</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">multiz</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">multiz</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## Galaxy flattens newlines in <command>, so the work is a POSIX sh script (the multiz image is BusyBox).
+sh '$script'
+    ]]></command>
+    <configfiles>
+        <configfile name="script"><![CDATA[#set $names = [str($m.element_identifier) for $m in $pairwise]
+set -eu
+ref='$reference'
+case "\$ref" in ''|*[!A-Za-z0-9_]*) echo "reference name must be letters, digits or _: \$ref" >&2; exit 1;; esac
+mkdir work
+## UCSC's tree preparation (kent src/hg/makeDb/doc/hg38/multiz5way.txt): branch lengths, the ';' and
+## newlines go, commas become spaces: ((hg38 (tupChi1 galVar1)) (mm10 cavPor3)).
+tree=\$(sed 's/:[-0-9.eE]*//g; s/;//; /^ *\$/d' '$tree' | tr '\n' ' ' | sed 's/ //g; s/,/ /g')
+species=\$(echo "\$tree" | tr '()' '  ')
+echo " \$species " | grep -q " \$ref " || { echo "reference \$ref is not in the tree" >&2; exit 1; }
+#for $m in $pairwise
+name='$m.element_identifier'
+case "\$name" in ''|*[!A-Za-z0-9_]*) echo "element identifier must be letters, digits or _: \$name" >&2; exit 1;; esac
+echo " \$species " | grep -q " \$name " || { echo "\$name is not in the tree" >&2; exit 1; }
+if [ -s '$m' ]; then ln -s '$m' "work/\$ref.\$name.sing.maf"; else echo '\#\#maf version=1 scoring=autoMZ' > "work/\$ref.\$name.sing.maf"; fi
+#end for
+## a species in the tree with no alignment in this piece gets UCSC's empty stub (autoMultiz.csh)
+for s in \$species; do
+    [ "\$s" = "\$ref" ] && continue
+    [ -e "work/\$ref.\$s.sing.maf" ] || echo '\#\#maf version=1 scoring=autoMZ' > "work/\$ref.\$s.sing.maf"
+done
+echo "tree: \$tree"
+cd work
+mkdir tmp
+roast + T="\$PWD/tmp" E="\$ref" "\$tree" \$ref.*.sing.maf out.maf > /dev/null
+mv out.maf '$output'
+]]></configfile>
+    </configfiles>
+    <inputs>
+        <param name="pairwise" type="data_collection" collection_type="list" format="maf" label="Pairwise MAFs, one per species"
+               help="Each element's identifier is the species name used in its MAF rows (e.g. mm10 for rows named mm10.chr1); the reference is the top row of every block, and each file is sorted by reference position."/>
+        <param name="reference" type="text" value="" label="Reference name" help="As it prefixes the reference rows (hg38 for hg38.chr1). Letters, digits and _ only.">
+            <validator type="regex" message="Letters, digits and _ only">^[A-Za-z0-9_]+$</validator>
+        </param>
+        <param name="tree" type="data" format="newick,nhx,txt" label="Species tree" help="Newick; branch lengths are ignored. Every species (and the reference) must be a leaf."/>
+    </inputs>
+    <outputs>
+        <data name="output" format="maf"/>
+    </outputs>
+    <tests>
+        <!-- ▶ UCSC's own inputs: hg38 chr21:20,000,000-20,050,000 of the four synNet MAFs behind hg38 multiz5way
+             (hgdownload vsTupChi1/vsGalVar1/vsMm10/vsCavPor3), split as UCSC splits them (mafSplit -byTarget
+             -useHashedName=8), with UCSC's hg38.5way.nh, branch lengths and all. A window where multiz 11.2 and
+             UCSC's patched build agree, so the expected output holds for both. lines_diff covers the 12 roast
+             comment lines that record temp paths and a PID. -->
+        <test expect_num_outputs="1">
+            <param name="pairwise">
+                <collection type="list">
+                    <element name="tupChi1" value="chr21_20M.hg38.tupChi1.maf" ftype="maf"/>
+                    <element name="galVar1" value="chr21_20M.hg38.galVar1.maf" ftype="maf"/>
+                    <element name="mm10" value="chr21_20M.hg38.mm10.maf" ftype="maf"/>
+                    <element name="cavPor3" value="chr21_20M.hg38.cavPor3.maf" ftype="maf"/>
+                </collection>
+            </param>
+            <param name="reference" value="hg38"/>
+            <param name="tree" value="hg38.5way.nh" ftype="newick"/>
+            <output name="output" file="chr21_20M.5way.maf" compare="diff" lines_diff="24"/>
+            <assert_stdout>
+                <has_text text="tree: ((hg38 (tupChi1 galVar1)) (mm10 cavPor3))"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ A species in the tree with no input gets UCSC's empty stub: mm10 is left out, and roast still runs
+             over all five leaves. -->
+        <test expect_num_outputs="1">
+            <param name="pairwise">
+                <collection type="list">
+                    <element name="tupChi1" value="chr21_20M.hg38.tupChi1.maf" ftype="maf"/>
+                    <element name="galVar1" value="chr21_20M.hg38.galVar1.maf" ftype="maf"/>
+                    <element name="cavPor3" value="chr21_20M.hg38.cavPor3.maf" ftype="maf"/>
+                </collection>
+            </param>
+            <param name="reference" value="hg38"/>
+            <param name="tree" value="hg38.5way.nh" ftype="newick"/>
+            <output name="output" file="chr21_20M.no_mm10.maf" compare="diff" lines_diff="24">
+                <assert_contents>
+                    <not_has_text text="s mm10."/>
+                    <has_text text="s cavPor3."/>
+                </assert_contents>
+            </output>
+        </test>
+        <!-- ▶ Refusals: an element that is not a leaf of the tree, and a reference that is not. -->
+        <test expect_failure="true">
+            <param name="pairwise">
+                <collection type="list">
+                    <element name="panTro6" value="chr21_20M.hg38.tupChi1.maf" ftype="maf"/>
+                </collection>
+            </param>
+            <param name="reference" value="hg38"/>
+            <param name="tree" value="hg38.5way.nh" ftype="newick"/>
+            <assert_stderr>
+                <has_text text="panTro6 is not in the tree"/>
+            </assert_stderr>
+        </test>
+        <test expect_failure="true">
+            <param name="pairwise">
+                <collection type="list">
+                    <element name="mm10" value="chr21_20M.hg38.mm10.maf" ftype="maf"/>
+                </collection>
+            </param>
+            <param name="reference" value="mm39"/>
+            <param name="tree" value="hg38.5way.nh" ftype="newick"/>
+            <assert_stderr>
+                <has_text text="reference mm39 is not in the tree"/>
+            </assert_stderr>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Runs ``roast`` (multiz's ``autoMZ``) over one set of pairwise MAFs that share a reference, as UCSC's
+``autoMultiz.csh`` does for each piece of a multizNway build:
+
+::
+
+    autoMZ + T=$tmp E=$db "`cat tree.nh`" $db.*.sing.maf $c
+
+Each input becomes ``<reference>.<species>.sing.maf``. A species in the tree with no input, or an
+empty one, gets UCSC's stub ``##maf version=1 scoring=autoMZ``, so one piece of a genome split can
+be run without every species aligning to it.
+
+The tree is prepared as UCSC does: branch lengths, ``;`` and newlines are removed and commas become
+spaces, giving ``((hg38 (tupChi1 galVar1)) (mm10 cavPor3))``. UCSC's scripts also strip a lowercase
+``name_`` prefix, which exists for their common-name trees; it is not applied here, because the leaves
+must be the species names the MAF rows use.
+
+.. warning:: Pairwise inputs must be sorted by reference position. multiz merges unsorted input
+   wrongly with exit status 0. ``netToAxt | axtSort | axtToMaf`` (or ``mafSplit`` of such a file)
+   gives the right order.
+
+**Output** is roast's MAF: header ``##maf version=1 scoring=roast.v3.3``, blocks with the reference on
+top, and a final ``##eof maf``. Gap annotation (``mafAddIRows``) is a separate, per-sequence step.
+
+.. _multiz: https://github.com/multiz/multiz
+]]></help>
+    <citations>
+        <citation type="doi">10.1101/gr.1933104</citation>
+    </citations>
+</tool>
