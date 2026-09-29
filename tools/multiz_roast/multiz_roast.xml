@@ -21,6 +21,9 @@ sh '$script' '$reference' '$tree' '$output' '$pairwise'
     <configfiles>
         <configfile name="script"><![CDATA[set -eu
 ref="\$1"; treefile="\$2"; output="\$3"; files="\$4"
+\#\# No input at all can only mean the inputs did not arrive (a piece of a split always has at least one
+\#\# species); roast would run on stubs alone and write headers with no blocks, so refuse instead.
+[ -n "\$files" ] || { echo "no pairwise MAFs reached the job" >&2; exit 1; }
 case "\$ref" in ''|*[!A-Za-z0-9_]*) echo "reference name must be letters, digits or _: \$ref" >&2; exit 1;; esac
 mkdir work
 \#\# UCSC's tree preparation (kent src/hg/makeDb/doc/hg38/multiz5way.txt): branch lengths, the ';' and

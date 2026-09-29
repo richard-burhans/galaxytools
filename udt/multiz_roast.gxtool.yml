@@ -6,7 +6,7 @@
 #   source: tools/multiz_roast/multiz_roast.xml
 #   tool_id: multiz_roast
 #   command_sha256: bfa8caeb26f6df441080aa902f1e363049cbfb39b14992f72f32e2db32e6c3bc
-#   configfile_script_sha256: 14bcfc040d92cb903cb11a75e147b52c4bc0f2b1c3d2462214ae3a43140c86a0
+#   configfile_script_sha256: a3c1ccfe393da203eccaf58bde5bdd704b8c49bf419731a19b792b9e3d4e9ff0
 #   requirements: multiz=11.2
 #   macros_sha256: (no macros.xml)
 #   container: quay.io/biocontainers/multiz:11.2--hec16e2b_4
@@ -22,6 +22,9 @@ shell_command: |
   cat > script.cfg <<'CONFIGFILE_SCRIPT'
   set -eu
   ref="$1"; treefile="$2"; output="$3"; files="$4"
+  ## No input at all can only mean the inputs did not arrive (a piece of a split always has at least one
+  ## species); roast would run on stubs alone and write headers with no blocks, so refuse instead.
+  [ -n "$files" ] || { echo "no pairwise MAFs reached the job" >&2; exit 1; }
   case "$ref" in ''|*[!A-Za-z0-9_]*) echo "reference name must be letters, digits or _: $ref" >&2; exit 1;; esac
   mkdir work
   ## UCSC's tree preparation (kent src/hg/makeDb/doc/hg38/multiz5way.txt): branch lengths, the ';' and
@@ -54,7 +57,7 @@ shell_command: |
   cd ..
   mv work/out.maf "$output"
   CONFIGFILE_SCRIPT
-  sh script.cfg '$(inputs.reference)' '$(inputs.tree.path)' output.dat '$(inputs.pairwise.map(function(e){ return e.path; }).join(','))'
+  sh script.cfg '$(inputs.reference)' '$(inputs.tree.path)' output.dat '$(inputs.pairwise.reduce(function(a, x){ return a.concat(x && x.path ? [x] : Object.keys(x).map(function(k){ return x[k]; })); }, []).map(function(e){ return e.path; }).join(','))'
 inputs:
   - name: pairwise
     type: data
