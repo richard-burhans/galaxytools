@@ -124,8 +124,13 @@ if galaxy_slots_env_var is None and galaxy_memory_mb_env_var is None:
 galaxy_slots = max(get_allocated_cpus(galaxy_slots_env_var), MINIMUM_CPUS)
 galaxy_memory_gb = max(get_allocated_memory(galaxy_memory_mb_env_var), MINIMUM_MEMORY)
 
-galaxy_threads = 16
-galaxy_nodes = 16
+# Cap the per-process thread/node counts to the Galaxy allocation. The upstream
+# 'multi_cpu' / 'multi_node' tiers set ``cpus = params.threads`` (and the default
+# is 16), so on a small allocation a single process would request more CPUs than
+# the job was granted and Nextflow aborts with "Process requirement exceeds
+# available CPUs". Clamp to galaxy_slots (never above the upstream default of 16).
+galaxy_threads = min(16, galaxy_slots)
+galaxy_nodes = min(16, galaxy_slots)
 
 # Environment-dependent numbers. Floors keep the values valid (Nextflow rejects
 # cpus = 0 / memory = 0.GB) on small allocations.
@@ -153,6 +158,14 @@ params.threads = {galaxy_threads}
 params.nodes = {galaxy_nodes}
 params.num_cpus_per_node = {num_cpus_per_node}
 params.gigabase_pairs = {gigabase_pairs}
+
+// Pin the local executor's resource pool to the Galaxy allocation. Without this
+// Nextflow derives "available CPUs" from the cgroup/JVM view (which can be 1 in
+// a slot-limited container) and rejects any process whose cpus exceed it.
+executor {{
+    cpus = {galaxy_slots}
+    memory = {galaxy_memory_gb}.GB
+}}
 
 process {{
     cpus = {std_cpu_job}

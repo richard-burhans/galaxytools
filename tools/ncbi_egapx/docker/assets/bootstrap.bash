@@ -134,6 +134,13 @@ if [ -e "requirements.txt" ]; then
     pip install -r "requirements.txt"
 fi
 
+## EGAPx >= 1.0 report/MultiQC plane runs in-process under this venv's python
+## (the venv is first on PATH), so its non-stdlib imports must be installed here.
+## Currently only xmltodict (used by nf/subworkflows/ncbi/utilities.nf for the
+## multiqc format steps); egapx's own requirements.txt ships only PyYAML. The
+## `multiqc` binary itself is resolved from the base image via PATH fallthrough.
+pip install xmltodict
+
 python3 ui/egapx.py ./examples/input_D_farinae_small.yaml -o example_out || true
 
 cat > "$project_root/egapx/egapx_config/galaxy.config" <<EOF
