@@ -4,7 +4,7 @@
             <container type="docker">quay.io/galaxy/egapx:@TOOL_VERSION@</container>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">0.5.2</token>
+    <token name="@TOOL_VERSION@">1.0.1</token>
     <token name="@VERSION_SUFFIX@">0</token>
     <token name="@PROFILE@">25.0</token>
     <xml name="edam_ontology">
@@ -18,7 +18,7 @@
                 @misc{githubegapx,
                     author = {NCBI},
                     year = 2024,
-                    title = {Eukaryotic Genome Annotation Pipeline - External (EGAPx)},
+                    title = {Eukaryotic Genome Annotation Pipeline (EGAPx)},
                     publisher = {GitHub},
                     journal = {GitHub repository},
                     url = {https://github.com/ncbi/egapx}
@@ -154,6 +154,17 @@
             <element name="run_params" ftype="yaml">
                 <assert_contents>
                     <has_size min="1"/>
+                </assert_contents>
+            </element>
+        </output_collection>
+        <!-- MultiQC report (EGAPx >= 1.0): egapx_out/multiqc_report/ contains
+             multiqc_report.html plus a multiqc_report_data/ directory. Only the
+             stable HTML element is asserted here; the number of contributing
+             data files varies per run, so extra elements are allowed. -->
+        <output_collection name="multiqc_report" type="list">
+            <element name="multiqc_report" ftype="html">
+                <assert_contents>
+                    <has_size min="0"/>
                 </assert_contents>
             </element>
         </output_collection>
