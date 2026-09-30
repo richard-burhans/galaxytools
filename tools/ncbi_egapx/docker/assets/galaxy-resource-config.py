@@ -75,9 +75,13 @@ def get_allocated_memory(value: str | None) -> int:
     except Exception:
         pass
 
+    # ``value`` is GALAXY_MEMORY_MB (megabytes); everything else in this function
+    # works in gigabytes (available_memory, DEFAULT_MEMORY, the returned value),
+    # so convert MB -> GB. Previously the MB figure was used as GB, so e.g.
+    # GALAXY_MEMORY_MB=65536 (64 GB) was treated as 65536 GB.
     if value is not None:
         try:
-            requested_memory = int(value)
+            requested_memory = int(value) // 1024
         except Exception:
             pass
 
