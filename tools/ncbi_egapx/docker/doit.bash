@@ -67,6 +67,11 @@ for egapx_version in $egapx_versions; do
         continue
     fi
 
+    # only build the 1.0.1 augmented container; 1.0 is not needed
+    if [[ "$egapx_version" == "1.0" ]]; then
+        continue
+    fi
+
     echo "$egapx_version"
 
     docker buildx build --progress=plain --build-arg "EGAPx_TAG=$egapx_version" --tag "quay.io/galaxy/egapx:$egapx_version" .

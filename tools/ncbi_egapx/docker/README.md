@@ -13,9 +13,9 @@ robot token comes from the environment (never commit it):
 QUAY_ROBOT_PASSWORD=… ./doit.bash
 ```
 
-Supported releases are EGAPx **>= 1.0** (currently `1.0` and `1.0.1`); the loop
-skips the 0.x line because the `assets/patches/` set now targets the 1.0 source
-layout. Already-pushed 0.5.x tags on quay.io are left in place.
+Only EGAPx **`1.0.1`** is built here. The loop skips the 0.x line (the
+`assets/patches/` set now targets the 1.0 source layout) and also skips `1.0`
+(not needed). Already-pushed older tags on quay.io are left in place.
 
 `bootstrap.bash` (run inside the image build) clones EGAPx from GitHub at the
 release tag, then applies every patch in `assets/patches/` to the checkout — see
