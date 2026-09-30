@@ -181,13 +181,19 @@ process {{
         memory = {large_memory_job}.GB
     }}
 
-    // Cap concurrent multi-cpu/multi-node jobs to how many params.threads-sized
-    // jobs fit on the node (= num_cpus_per_node). The old script divided
-    // num_cpus_per_node by params.threads again, yielding a fractional maxForks.
+    // Override the per-label cpus directly. process_resources.config sets
+    // `cpus = params.threads` for these labels, but that is evaluated when the
+    // includeConfig above is parsed (params.threads is still 16 at that point),
+    // so reassigning params.threads afterwards does NOT lower the baked cpus.
+    // Setting cpus here (after the include) is what actually clamps a process
+    // like star_index:build_index to the Galaxy allocation.
+    // maxForks caps how many such jobs run concurrently (= num_cpus_per_node).
     withLabel: 'multi_cpu' {{
+        cpus = {galaxy_threads}
         maxForks = params.num_cpus_per_node
     }}
     withLabel: 'multi_node' {{
+        cpus = {galaxy_threads}
         maxForks = params.num_cpus_per_node
     }}
 }}
