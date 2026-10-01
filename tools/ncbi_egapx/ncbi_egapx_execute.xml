@@ -120,12 +120,23 @@ Annotates a eukaryotic genome assembly with `EGAPx <https://github.com/ncbi/egap
 
 Inputs:
 
-- **EGAPx configuration YAML**: the same configuration given to (or produced by) **NCBI EGAPx prepare input**.
+- **EGAPx configuration YAML**: the same YAML configuration that was given to **NCBI EGAPx prepare input**. Its genome, reads and proteins must be URLs or SRA accessions/queries.
 - **EGAPx local cache**: the cache produced by **NCBI EGAPx prepare input** for that configuration.
 
+The SRA query limit in *Developer options* applies to SRA Entrez queries in the configuration.
 To download and annotate in one step, use **NCBI EGAPx**.
 
-@HELP_COMMON@
+@HELP_OVERVIEW@
+
+@HELP_RESOURCES@
+
+@HELP_GENOME@
+
+@HELP_YAML@
+
+@HELP_OUTPUT@
+
+@HELP_MORE@
     ]]></help>
     <expand macro="citations"/>
     <expand macro="creators"/>

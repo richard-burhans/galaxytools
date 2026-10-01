@@ -7,7 +7,7 @@
     <token name="@TOOL_VERSION@">1.0.1</token>
     <token name="@VERSION_SUFFIX@">0</token>
     <token name="@PROFILE@">25.0</token>
-    <token name="@HELP_COMMON@"><![CDATA[
+    <token name="@HELP_OVERVIEW@"><![CDATA[
 EGAPx overview
 ==============
 
@@ -36,17 +36,21 @@ Fungi, protists and nematodes are out of scope for EGAPx. Runs with an unsupport
 
 EGAPx has dependencies that include several thousand files from the `NCBI C++ toolkit <https://www.ncbi.nlm.nih.gov/toolkit>`_ and more than a million lines of code.
 Static Application Security Testing has shown a small number of verified buffer overrun vulnerabilities. Consult your organizational security team regarding risks.
-
+]]></token>
+    <token name="@HELP_RESOURCES@"><![CDATA[
 Resource requirements
 =====================
 
 .. class:: warningmark
 
 This tool runs the entire EGAPx Nextflow pipeline inside a single Galaxy job, so the job needs all of the resources the pipeline uses.
-NCBI recommends a machine with 32 CPUs and 256 GB RAM for real genomes. The CPUs and memory Galaxy assigns to the job are used to cap the pipeline's resource requests.
-A run can take many hours (for example, a 144 Mb fly genome with one short-read run took about 71 CPU hours).
+The EGAPx README lists a machine with 32 CPUs and 256 GB RAM (or a cluster / AWS Batch) as a prerequisite.
+The job's Galaxy allocation (``GALAXY_SLOTS`` / ``GALAXY_MEMORY_MB``) is used to size the pipeline's processes, with a minimum of 4 CPUs and 6 GB;
+some steps (for example BUSCO) may still use all CPU cores visible to the job.
+A run can take many hours: NCBI reports that a 144 Mb fly genome with one short-read run took 71 CPU hours (3 hours wall clock on AWS Batch).
 This tool is not recommended for public servers.
-
+]]></token>
+    <token name="@HELP_GENOME@"><![CDATA[
 Input
 =====
 
@@ -58,11 +62,13 @@ The required inputs are a genome assembly and an NCBI taxid (look it up on the `
 - Screen the assembly for contamination before annotating, for example with the NCBI `Foreign Contamination Screen <https://github.com/ncbi/fcs>`_. EGAPx fails with ``Too many protein hits to proks`` when too many gene models hit prokaryotes or viruses.
 - Keep organelle sequences in the FASTA to prevent inaccurate read mapping, but note that EGAPx does not annotate organelles.
 - Short, simple sequence names are less likely to cause problems.
-
+]]></token>
+    <token name="@HELP_FORM@"><![CDATA[
 **RNA-seq reads**
 
-Short and/or long reads can be given as history datasets, remote URLs, SRA run accessions, or an SRA Entrez query. Reads from individual sequencing runs should be provided as separate files, never combined.
-Long reads must be FASTA or FASTQ, not BAM.
+In the tool form, short and/or long reads can be selected from the history (fastqsanger, optionally gzipped), or typed in as a list of remote URLs and/or SRA run accessions.
+Reads from individual sequencing runs should be provided as separate files, never combined. Long reads must be FASTA or FASTQ, not BAM.
+An SRA Entrez query cannot be typed into the read list (it is split into separate words); supply it in a YAML configuration or the *Additional yaml* field instead.
 
 .. class:: warningmark
 
@@ -74,12 +80,15 @@ EGAPx refuses queries that return more runs than the **SRA query limit** (defaul
 
 - ``miniprot`` is the default protein aligner. ``ProSplign`` is slightly more accurate but more expensive, and may help when little RNA-seq evidence is available.
 - The protein evidence set is chosen from the taxid. You can change the number of organisms used, add extra proteins, or exclude taxids. NCBI recommends keeping the default set.
-- rRNAs are always predicted from `Rfam <https://rfam.org/>`_. tRNA prediction (tRNAscan-SE) and rRNA/snoRNA/snRNA prediction (cmsearch) can be enabled.
+- No noncoding RNAs are predicted by default. Enable ``cmsearch`` to predict rRNAs, snoRNAs and snRNAs from `Rfam <https://rfam.org/>`_, and ``tRNAscan`` to predict tRNAs.
+]]></token>
+    <token name="@HELP_YAML@"><![CDATA[
+YAML configuration
+==================
 
-**YAML configuration**
-
-Instead of filling in the form, you can supply an EGAPx YAML configuration from your history. Sample files are in the `EGAPx examples directory <https://github.com/ncbi/egapx/tree/main/examples>`_.
-In a YAML file, give reads as SRA accessions or URLs, since files on your own computer are not visible to the Galaxy server. The small test example ``input_D_farinae_small.yaml`` is::
+An EGAPx run can be described by a YAML configuration from your history. Sample files are in the `EGAPx examples directory <https://github.com/ncbi/egapx/tree/v1.0.1/examples>`_.
+In a YAML configuration, the genome, reads and protein files must be given as URLs or SRA accessions/queries: history datasets and files on your own computer cannot be referenced.
+An excerpt of the small test example ``input_D_farinae_small.yaml``::
 
   genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/020/809/275/GCA_020809275.1_ASM2080927v1/GCA_020809275.1_ASM2080927v1_genomic.fna.gz
   taxid: 6954
@@ -92,11 +101,13 @@ In a YAML file, give reads as SRA accessions or URLs, since files on your own co
        - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.2
   locus_tag_prefix: egapxtmp
 
-Other read formats::
+Reads can also be a list of SRA runs::
 
-  short_reads:              # a list of SRA runs
+  short_reads:
     - SRR8506572
     - SRR9005248
+
+or an SRA Entrez query (``long_reads`` takes the same forms)::
 
   short_reads: txid43150[Organism] AND 50:350[ReadLength] AND (illumina[Platform] OR bgiseq[Platform]) AND biomol_rna[Properties]
   long_reads: txid43150[Organism] AND (oxford_nanopore[Platform] OR pacbio_smrt[Platform]) AND biomol_rna[Properties]
@@ -123,7 +134,8 @@ For example, to relax alignment criteria when using RNA-seq from a different spe
     star_wnode:
       star_wnode: -pct-identity 85
   max_intron: 700000        # otherwise calculated automatically
-
+]]></token>
+    <token name="@HELP_OUTPUT@"><![CDATA[
 Output
 ======
 
@@ -141,12 +153,12 @@ Output
   complete_proteins              Annotated protein products in FASTA format
   annotation_data                Annotation structured comment, used for GenBank submission
   sra_metadata                   Metadata for the SRA runs used
-  gnomon_accept_ftable_annot     Gnomon accepted annotation models
+  gnomon_accept_ftable_annot     Empty with EGAPx 1.0.1 (this file is no longer exported)
   gnomon_contam_rpt              Gnomon contamination report
   gnomon_report                  Evidence supporting each Gnomon transcript model
   gnomon_quality_report          Per-model summary of supporting evidence
-  busco_report                   BUSCO short summary (text)
-  busco_report_json              BUSCO short summary (JSON)
+  busco_report                   BUSCO short summary (text); empty if BUSCO failed
+  busco_report_json              BUSCO short summary (JSON); empty if BUSCO failed
   stats_feature_counts           Feature counts by model prediction category
   stats_feature_stats            Transcript, exon and feature length statistics
   validated_all_unannotated      Validation warnings and errors (unannotated sequences)
@@ -163,7 +175,7 @@ Interpreting the output
 **MultiQC report**: one HTML report with feature counts and length statistics, BUSCO scores, genome masking statistics, and RNA-seq and protein alignment statistics.
 Alignment information for RNA-seq or proteins supplied as local data may currently be inaccurate or missing (see the `EGAPx release notes <https://github.com/ncbi/egapx/releases>`_).
 
-**Feature counts**: summary counts are printed at the end of the job's standard output and are also in *stats_feature_counts*.
+**Feature counts**: summary counts are printed near the end of the job's standard output and are also in *stats_feature_counts*.
 Counts of protein-coding genes should be compared with similar species. Low counts may mean insufficient evidence; high counts may mean genome fragmentation, uncollapsed haplotypes, or genes annotated on transposons.
 
 .. class:: warningmark
@@ -171,28 +183,32 @@ Counts of protein-coding genes should be compared with similar species. Low coun
 Genes with a ``major correction`` are likely protein-coding genes with frameshifts and/or internal stops. They have "LOW QUALITY PROTEIN" in the protein FASTA title and are adjusted to meet GenBank criteria.
 RefSeq releases an annotation only if no more than 10% of protein-coding genes have major corrections; polish the assembly if the rate is higher.
 
-**BUSCO**: run in proteins mode on the longest isoform per gene, using the lineage chosen from the taxid. Low scores can indicate assembly problems, or an organism divergent from those used to build the BUSCO models.
+**BUSCO**: run in proteins mode on the longest isoform per gene, using the lineage chosen from the taxid. A BUSCO failure does not fail the job; the BUSCO reports are then empty.
+Low scores can indicate assembly problems, or an organism divergent from those used to build the BUSCO models.
 Expected BUSCO content for related organisms can be found on `NCBI Datasets <https://www.ncbi.nlm.nih.gov/datasets/genome/>`_.
 
 **Contamination report** (*gnomon_contam_rpt*): per-sequence counts of gene models, single-exon models, and models whose best hit is to prokaryotes or viruses.
 Look for longer contigs with a high fraction of prokaryote hits, especially single-exon models; for example, sequences with at least 10 models where at least 50% hit prokaryotes or viruses.
 
 **Gnomon reports**: *gnomon_report* lists each line of evidence (protein, long-read, short-read, *ab initio*) supporting each transcript model, and *gnomon_quality_report* summarizes the evidence per model.
-The best models have no *ab initio* contribution, high RNA-seq coverage, and few alignments needed for the minimal intron set. Column descriptions are in the `EGAPx README <https://github.com/ncbi/egapx#interpreting-output>`_.
+The best models have no *ab initio* contribution, high RNA-seq coverage, and few alignments needed for the minimal intron set. Column descriptions are in the `EGAPx README <https://github.com/ncbi/egapx/blob/v1.0.1/README.md#interpreting-output>`_.
 
 **Troubleshooting**: if a run fails, the job's standard output and ``nextflow.log`` name the failing process. ``run.trace.txt`` lists every process with its status and resource use.
 
 Submitting annotation to NCBI
 =============================
 
-The *annotated_genome* ASN.1 output can be prepared for GenBank submission with the ``prepare_submission`` program included in the EGAPx container (it is not run by this tool).
-You will need a submission template, BioProject/BioSample identifiers and a locus_tag prefix (set *Locus tag prefix* to your registered prefix before annotating).
-See `Submitting EGAPx annotation to NCBI <https://github.com/ncbi/egapx#submitting-egapx-annotation-to-ncbi>`_.
-
+The *annotated_genome* ASN.1 output can be prepared for GenBank submission with the ``prepare_submission`` program from the EGAPx container (it is not run by this tool).
+You will need a submission template and BioProject/BioSample identifiers, and for a new assembly a registered locus_tag prefix.
+The prefix can be set when annotating (the *Locus tag prefix* form field or the ``locus_tag_prefix:`` YAML key) or passed to ``prepare_submission``.
+See `Submitting EGAPx annotation to NCBI <https://github.com/ncbi/egapx/blob/v1.0.1/README.md#submitting-egapx-annotation-to-ncbi>`_.
+]]></token>
+    <token name="@HELP_MORE@"><![CDATA[
 More information
 ================
 
-See the `EGAPx repository <https://github.com/ncbi/egapx>`_ for full documentation and FAQ. Report EGAPx problems at the `EGAPx issue tracker <https://github.com/ncbi/egapx/issues>`_.
+See the `EGAPx repository <https://github.com/ncbi/egapx>`_ for full documentation and FAQ. Report problems with EGAPx itself at the `EGAPx issue tracker <https://github.com/ncbi/egapx/issues>`_,
+and problems with this Galaxy wrapper at the `wrapper repository <https://github.com/richard-burhans/galaxytools/issues>`_.
 ]]></token>
     <xml name="edam_ontology">
         <edam_operations>

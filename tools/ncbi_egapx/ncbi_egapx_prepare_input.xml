@@ -350,15 +350,29 @@ NCBI EGAPx prepare input
 What it does
 ============
 
-Downloads the data that an `EGAPx <https://github.com/ncbi/egapx>`_ run needs (EGAPx ``--download-needed``) into an **EGAPx local cache** dataset:
-the EGAPx support data and BUSCO lineage files for the taxid, plus SRA reads when they are listed in the configuration. It does not run the annotation.
+Downloads the data that an `EGAPx <https://github.com/ncbi/egapx>`_ run needs (EGAPx ``--download-needed``) into an **EGAPx local cache** dataset. It does not run the annotation.
+The cache holds the EGAPx support data and taxonomy database, the BUSCO lineage for the taxid (from busco-data.ezlab.org),
+every remote URL input (genome, reads, proteins), and the SRA reads for runs or queries in the configuration.
+The compute node running this job needs Internet access.
 
-Configure the run with the tool form (the generated **EGAPx configuration** YAML is also output), or supply an EGAPx YAML configuration from your history.
+Then run **NCBI EGAPx execute** with the same YAML configuration and this local cache.
 
-Then run **NCBI EGAPx execute** with the same YAML configuration and the local cache. This splits the download from the long annotation
-run and makes the annotation reproducible. To download and annotate in one step, use **NCBI EGAPx**.
+.. class:: warningmark
 
-@HELP_COMMON@
+For the prepare/execute pair, use a YAML configuration from your history whose genome, reads and proteins are all URLs or SRA accessions/queries.
+History datasets selected in the tool form are not copied into the cache, so they are not available to **NCBI EGAPx execute**.
+
+To download and annotate in one step, use **NCBI EGAPx**.
+
+@HELP_OVERVIEW@
+
+@HELP_GENOME@
+
+@HELP_FORM@
+
+@HELP_YAML@
+
+@HELP_MORE@
     ]]></help>
     <expand macro="citations"/>
     <expand macro="creators"/>
