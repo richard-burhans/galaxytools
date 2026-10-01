@@ -318,6 +318,7 @@ $row
         </conditional>
         <section name="developer" title="Developer options" expanded="false">
             <param name="collect_star_bams" type="boolean" checked="false" label="Collect BAM output from STAR"/>
+            <param name="collect_protein_alignments" type="boolean" checked="false" label="Collect filtered protein alignments" help="Protein alignments (ASN.1) passed to Gnomon; can be large"/>
             <conditional name="query_limit">
                 <param name="query_limit_selector" type="select" label="Enforce SRA query limit">
                     <option value="true" selected="True">Yes</option>
@@ -342,7 +343,6 @@ $row
             <data name="complete_proteins" format="fasta" label="Annotated protein products" from_work_dir="egapx_out/complete.proteins.faa"/>
             <data name="annotation_data" format="tabular" label="Annotation structured comment" from_work_dir="egapx_out/annotation_data.cmt"/>
             <data name="sra_metadata" format="tabular" label="SRA run metadata" from_work_dir="egapx_out/sra_metadata.dat"/>
-            <data name="gnomon_accept_ftable_annot" format="txt" label="Gnomon accepted annotation models" from_work_dir="egapx_out/annot_builder_output/accept.ftable_annot"/>
             <data name="gnomon_contam_rpt" format="tabular" label="Gnomon contamination report" from_work_dir="egapx_out/GNOMON/contam_rpt.tsv"/>
             <data name="gnomon_report" format="txt" label="Gnomon report" from_work_dir="egapx_out/GNOMON/new.gnomon_report.txt"/>
             <data name="gnomon_quality_report" format="tabular" label="Gnomon quality report" from_work_dir="egapx_out/GNOMON/new.gnomon_quality_report.txt"/>
@@ -350,6 +350,8 @@ $row
             <data name="busco_report_json" format="json" label="BUSCO report (json)" from_work_dir="egapx_out/busco/short_summary*.json"/>
             <data name="stats_feature_counts" format="xml" label="Feature counts" from_work_dir="egapx_out/stats/feature_counts.xml"/>
             <data name="stats_feature_stats" format="xml" label="Feature stats" from_work_dir="egapx_out/stats/feature_stats.xml"/>
+            <data name="stats_mask_assm_stats" format="xml" label="Genome masking stats" from_work_dir="egapx_out/stats/mask_assm_stats.xml"/>
+            <data name="stats_prot_align_stats" format="xml" label="Protein alignment stats" from_work_dir="egapx_out/stats/target_proteins/prot_align_stats.xml"/>
             <data name="validated_all_unannotated" format="xml" label="validation all_unannotated" from_work_dir="egapx_out/validated/all_unannotated.val"/>
             <data name="validated_genome" format="xml" label="valudation genome" from_work_dir="egapx_out/validated/genome.val"/>
         </collection>
@@ -363,6 +365,12 @@ $row
         <collection name="multiqc_report" type="list" label="EGAPx MultiQC report for ${on_string}">
             <discover_datasets pattern="(?P&lt;designation&gt;.+)\.(?P&lt;ext&gt;html|json|txt|tsv|csv|yaml|png|pdf)" directory="egapx_out/multiqc_report" recurse="true" match_relative_path="true"/>
         </collection>
+        <collection name="rnaseq_stats" type="list" label="EGAPx RNA-seq alignment stats for ${on_string}">
+            <discover_datasets pattern="(?P&lt;designation&gt;rnaseq_(?:short|long)/.+)\.(?P&lt;ext&gt;xml|tsv|txt)" directory="egapx_out/stats" recurse="true" match_relative_path="true"/>
+        </collection>
+        <data name="filtered_protein_alignments" format="asn1" label="EGAPx filtered protein alignments for ${on_string}" from_work_dir="egapx_out/filtered_protein_alignments/align.asn">
+            <filter>developer['collect_protein_alignments']</filter>
+        </data>
         <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
             <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
             <filter>developer['collect_star_bams']</filter>
@@ -372,14 +380,16 @@ $row
         <!--
             expect_num_outputs = datasets + top-level collections known at job
             submission, so discovered collection elements (multiqc_report,
-            star_alignments) are NOT counted and the total is fixed:
-              1 complete_genomic_gff + 18 output_files + 5 nextflow_stats
-            + 4 collections (output_files, nextflow_stats, multiqc_report,
-              star_alignments) = 28
-            Verified exact on a full-resource local run (EGAPx 1.0.1). These tests
+            rnaseq_stats, star_alignments) are NOT counted and the total is fixed:
+              1 complete_genomic_gff + 19 output_files + 5 nextflow_stats
+            + 5 collections (output_files, nextflow_stats, multiqc_report,
+              rnaseq_stats, star_alignments) = 30
+            + 1 filtered_protein_alignments when collect_protein_alignments=true
+            28 was verified exact on a full-resource run before the outputs were
+            extended to 30; re-verify on the next full run. These tests
             only complete on such hardware, hence expect_test_failure="true" for CI.
         -->
-        <test expect_num_outputs="28" expect_test_failure="true">
+        <test expect_num_outputs="30" expect_test_failure="true">
             <conditional name="cond_input_style">
                 <param name="input_style" value="fillform"/>
                 <conditional name="cond_genome_style">
@@ -401,20 +411,26 @@ $row
             </section>
             <expand macro="test_outputs"/>
         </test>
-        <!-- expect_num_outputs: see note above. -->
-        <test expect_num_outputs="28" expect_test_failure="true">
+        <!-- expect_num_outputs: see note above (31 = 30 + filtered_protein_alignments). -->
+        <test expect_num_outputs="31" expect_test_failure="true">
             <conditional name="cond_input_style">
                 <param name="input_style" value="history"/>
                 <param name="yamlin" value="input.yaml"/>
             </conditional>
             <section name="developer">
                 <param name="collect_star_bams" value="true"/>
+                <param name="collect_protein_alignments" value="true"/>
                 <conditional name="query_limit">
                     <param name="query_limit_selector" value="true"/>
                     <param name="rnaseq_query_limit" value="20"/>
                 </conditional>
             </section>
             <expand macro="test_outputs"/>
+            <output name="filtered_protein_alignments" ftype="asn1">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </output>
         </test>
     </tests>
     <help><![CDATA[

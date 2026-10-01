@@ -153,7 +153,6 @@ Output
   complete_proteins              Annotated protein products in FASTA format
   annotation_data                Annotation structured comment, used for GenBank submission
   sra_metadata                   Metadata for the SRA runs used
-  gnomon_accept_ftable_annot     Empty with EGAPx 1.0.1 (this file is no longer exported)
   gnomon_contam_rpt              Gnomon contamination report
   gnomon_report                  Evidence supporting each Gnomon transcript model
   gnomon_quality_report          Per-model summary of supporting evidence
@@ -161,12 +160,16 @@ Output
   busco_report_json              BUSCO short summary (JSON); empty if BUSCO failed
   stats_feature_counts           Feature counts by model prediction category
   stats_feature_stats            Transcript, exon and feature length statistics
+  stats_mask_assm_stats          Genome masking statistics
+  stats_prot_align_stats         Protein alignment statistics
   validated_all_unannotated      Validation warnings and errors (unannotated sequences)
   validated_genome               Validation warnings and errors for annotated features
   ============================== ===========================================================================
 
 - **EGAPx nextflow stats** collection: ``nextflow.log``, the Nextflow HTML execution report and timeline, the trace file (runtime and CPU use per process), and ``run_params.yaml`` (all parameters used).
 - **EGAPx MultiQC report** collection: the MultiQC HTML report and its data files.
+- **EGAPx RNA-seq alignment stats** collection: short-read (``rnaseq_short/``) and long-read (``rnaseq_long/``) alignment reports and statistics; empty when no reads of that type were used.
+- **EGAPx filtered protein alignments**: the protein alignments (ASN.1) passed to Gnomon, only when *Collect filtered protein alignments* is set in *Developer options*.
 - **EGAPx STAR alignments** collection: the STAR BAM files, only when *Collect BAM output from STAR* is set in *Developer options*.
 
 Interpreting the output
@@ -282,11 +285,6 @@ and problems with this Galaxy wrapper at the `wrapper repository <https://github
                     <has_size min="1"/>
                 </assert_contents>
             </element>
-            <element name="gnomon_accept_ftable_annot" ftype="txt">
-                <assert_contents>
-                    <has_size min="0"/>
-                </assert_contents>
-            </element>
             <element name="gnomon_contam_rpt" ftype="tabular">
                 <assert_contents>
                     <has_size min="1"/>
@@ -320,6 +318,16 @@ and problems with this Galaxy wrapper at the `wrapper repository <https://github
             <element name="stats_feature_stats" ftype="xml">
                 <assert_contents>
                     <is_valid_xml/>
+                </assert_contents>
+            </element>
+            <element name="stats_mask_assm_stats" ftype="xml">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </element>
+            <element name="stats_prot_align_stats" ftype="xml">
+                <assert_contents>
+                    <has_size min="1"/>
                 </assert_contents>
             </element>
             <element name="validated_all_unannotated" ftype="xml">
