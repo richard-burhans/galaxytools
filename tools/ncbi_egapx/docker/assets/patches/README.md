@@ -18,6 +18,14 @@ paths use the usual `a/`,`b/` prefixes).
   flaky FTP transfers. Rebased onto EGAPx `v1.0.1` (the surrounding code moved
   and `FTP(...)` is now `ftplib.FTP(...)`); still not upstream.
 
+- **0002-export-argument-order.patch** — fixes the `export(...)` call in
+  `nf/ui.nf`. Nextflow binds process inputs by position, and in `v1.0.1` the
+  call passes five channels out of order relative to the `export` process
+  declaration. As a result the filtered protein alignments (`align.asn`) were
+  published under `stats/rnaseq_long/` instead of `filtered_protein_alignments/`,
+  and with long reads the minimap2 stats landed in `filtered_protein_alignments/`.
+  The patch reorders the arguments to match the declaration. Not upstream.
+
 ## Retired patches
 
 - **0002-relocatable-sra-read-cache.patch** — *retired for EGAPx `v1.0.1`*.
