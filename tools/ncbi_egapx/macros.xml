@@ -4,9 +4,215 @@
             <container type="docker">quay.io/galaxy/egapx:@TOOL_VERSION@</container>
         </requirements>
     </xml>
-    <token name="@TOOL_VERSION@">0.5.2</token>
+    <token name="@TOOL_VERSION@">1.0.1</token>
     <token name="@VERSION_SUFFIX@">0</token>
     <token name="@PROFILE@">25.0</token>
+    <token name="@HELP_OVERVIEW@"><![CDATA[
+EGAPx overview
+==============
+
+EGAPx is the publicly accessible version of the NCBI `Eukaryotic Genome Annotation Pipeline <https://www.ncbi.nlm.nih.gov/refseq/annotation_euk/process/>`_.
+
+EGAPx takes an assembly FASTA file, the taxonomy ID (taxid) of the organism, and RNA sequencing data. It automatically chooses protein sets and HMM models based on the taxid.
+The pipeline runs ``miniprot`` or ``ProSplign`` to align protein sequences, ``STAR`` to align short RNA-seq reads, and ``minimap2`` to align long RNA-seq reads to the assembly.
+Protein and RNA-seq alignments are passed to ``Gnomon`` for gene prediction: short alignments are chained into putative gene models, which are then supplemented by *ab initio* predictions based on HMM models.
+Functional annotation is added based on the type and quality of each model and orthology information. Optionally, noncoding RNAs (tRNAs, rRNAs, snoRNAs and snRNAs) can be predicted with ``tRNAscan`` and ``cmsearch``.
+EGAPx produces the annotation in ASN.1 format (for GenBank submission) and GFF3/GTF formats.
+
+.. image:: $PATH_TO_IMAGES/EGAPx.diagram.png
+
+**Supported taxa**
+
+- Chordata: Mammalia, Sauropsida, Actinopterygii (ray-finned fishes), other Vertebrates, Tunicates
+- Arthropoda: Hymenoptera, Diptera, Lepidoptera, Coleoptera, Hemiptera, Arachnida, other Arthropoda
+- Echinodermata, Mollusca, Cnidaria
+- Monocots (Liliopsida); Eudicots (Asterids, Rosids, Fabids, Caryophyllales)
+
+.. class:: warningmark
+
+Fungi, protists and nematodes are out of scope for EGAPx. Runs with an unsupported taxid will fail.
+
+**Security notice**
+
+EGAPx has dependencies that include several thousand files from the `NCBI C++ toolkit <https://www.ncbi.nlm.nih.gov/toolkit>`_ and more than a million lines of code.
+Static Application Security Testing has shown a small number of verified buffer overrun vulnerabilities. Consult your organizational security team regarding risks.
+]]></token>
+    <token name="@HELP_RESOURCES@"><![CDATA[
+Resource requirements
+=====================
+
+.. class:: warningmark
+
+This tool runs the entire EGAPx Nextflow pipeline inside a single Galaxy job, so the job needs all of the resources the pipeline uses.
+The EGAPx README lists a machine with 32 CPUs and 256 GB RAM (or a cluster / AWS Batch) as a prerequisite.
+The job's Galaxy allocation (``GALAXY_SLOTS`` / ``GALAXY_MEMORY_MB``) is used to size the pipeline's processes, with a minimum of 4 CPUs and 6 GB;
+some steps (for example BUSCO) may still use all CPU cores visible to the job.
+A run can take many hours: NCBI reports that a 144 Mb fly genome with one short-read run took 71 CPU hours (3 hours wall clock on AWS Batch).
+This tool is not recommended for public servers.
+]]></token>
+    <token name="@HELP_GENOME@"><![CDATA[
+Input
+=====
+
+The required inputs are a genome assembly and an NCBI taxid (look it up on the `NCBI Taxonomy page <https://www.ncbi.nlm.nih.gov/taxonomy>`_). RNA-seq evidence is **highly recommended**.
+
+**Genome**
+
+- The genome does not need to be repeat-masked; EGAPx masks it as part of the pipeline.
+- Screen the assembly for contamination before annotating, for example with the NCBI `Foreign Contamination Screen <https://github.com/ncbi/fcs>`_. EGAPx fails with ``Too many protein hits to proks`` when too many gene models hit prokaryotes or viruses.
+- Keep organelle sequences in the FASTA to prevent inaccurate read mapping, but note that EGAPx does not annotate organelles.
+- Short, simple sequence names are less likely to cause problems.
+]]></token>
+    <token name="@HELP_FORM@"><![CDATA[
+**RNA-seq reads**
+
+In the tool form, short and/or long reads can be selected from the history (FASTQ or FASTA, optionally gzipped), or typed in as a list of remote URLs and/or SRA run accessions.
+Reads from individual sequencing runs should be provided as separate files, never combined. Long reads must be FASTA or FASTQ, not BAM.
+An SRA Entrez query cannot be typed into the read list (it is split into separate words); supply it in a YAML configuration or the *Additional yaml* field instead.
+
+.. class:: warningmark
+
+An SRA Entrez query can match a very large number of runs, and the compute cost of a mistyped query or accession is potentially enormous.
+Run the query at the `NCBI SRA page <https://www.ncbi.nlm.nih.gov/sra>`_ first and list a few runs explicitly if it returns too many.
+EGAPx refuses queries that return more runs than the **SRA query limit** (default 20, in *Developer options*).
+
+**Proteins and noncoding RNAs**
+
+- ``miniprot`` is the default protein aligner. ``ProSplign`` is slightly more accurate but more expensive, and may help when little RNA-seq evidence is available.
+- The protein evidence set is chosen from the taxid. You can change the number of organisms used, add extra proteins, or exclude taxids. NCBI recommends keeping the default set.
+- No noncoding RNAs are predicted by default. Enable ``cmsearch`` to predict rRNAs, snoRNAs and snRNAs from `Rfam <https://rfam.org/>`_, and ``tRNAscan`` to predict tRNAs.
+]]></token>
+    <token name="@HELP_YAML@"><![CDATA[
+YAML configuration
+==================
+
+An EGAPx run can be described by a YAML configuration from your history. Sample files are in the `EGAPx examples directory <https://github.com/ncbi/egapx/tree/v1.0.1/examples>`_.
+In a YAML configuration, the genome, reads and protein files must be given as URLs or SRA accessions/queries: history datasets and files on your own computer cannot be referenced.
+An excerpt of the small test example ``input_D_farinae_small.yaml``::
+
+  genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/020/809/275/GCA_020809275.1_ASM2080927v1/GCA_020809275.1_ASM2080927v1_genomic.fna.gz
+  taxid: 6954
+  short_reads:
+   - - SRR8506572
+     - - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.1
+       - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.2
+   - - SRR9005248
+     - - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.1
+       - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.2
+  locus_tag_prefix: egapxtmp
+
+Reads can also be a list of SRA runs::
+
+  short_reads:
+    - SRR8506572
+    - SRR9005248
+
+or an SRA Entrez query (``long_reads`` takes the same forms)::
+
+  short_reads: txid43150[Organism] AND 50:350[ReadLength] AND (illumina[Platform] OR bgiseq[Platform]) AND biomol_rna[Properties]
+  long_reads: txid43150[Organism] AND (oxford_nanopore[Platform] OR pacbio_smrt[Platform]) AND biomol_rna[Properties]
+
+Protein and noncoding RNA options::
+
+  protein_aligner_name: prosplign
+  proteins_best_n_orgs: 5
+  proteins_deny_taxids:
+    - 7227
+  trnascan:
+    enabled: true
+  cmsearch:
+    enabled: true
+
+Default task parameters can be overridden with a ``tasks:`` section (see ``ui/assets/default_task_params.yaml`` in the EGAPx repository).
+For example, to relax alignment criteria when using RNA-seq from a different species::
+
+  tasks:
+    rnaseq_collapse:
+      rnaseq_collapse: -high-identity 0.8
+    convert_from_bam:
+      sam2asn: -filter 'pct_identity_gap >= 85'
+    star_wnode:
+      star_wnode: -pct-identity 85
+  max_intron: 700000        # otherwise calculated automatically
+]]></token>
+    <token name="@HELP_OUTPUT@"><![CDATA[
+Output
+======
+
+- **Final annotation** (``complete.genomic.gff``): the final annotation set in GFF3 format.
+- **EGAPx output** collection:
+
+  ============================== ===========================================================================
+  Element                        Description
+  ============================== ===========================================================================
+  annotated_genome               Final annotation set in ASN.1 format (input for GenBank submission)
+  complete_genomic_gtf           Final annotation set in GTF format
+  complete_genomic_fna           Full genome sequences in FASTA format
+  complete_cds                   Annotated coding sequences (CDS) in FASTA format
+  complete_transcripts           Annotated transcripts, including UTRs, in FASTA format
+  complete_proteins              Annotated protein products in FASTA format
+  annotation_data                Annotation structured comment, used for GenBank submission
+  sra_metadata                   Metadata for the SRA runs used
+  gnomon_contam_rpt              Gnomon contamination report
+  gnomon_report                  Evidence supporting each Gnomon transcript model
+  gnomon_quality_report          Per-model summary of supporting evidence
+  busco_report                   BUSCO short summary (text); empty if BUSCO failed
+  busco_report_json              BUSCO short summary (JSON); empty if BUSCO failed
+  stats_feature_counts           Feature counts by model prediction category
+  stats_feature_stats            Transcript, exon and feature length statistics
+  stats_mask_assm_stats          Genome masking statistics
+  stats_prot_align_stats         Protein alignment statistics
+  validated_all_unannotated      Validation warnings and errors (unannotated sequences)
+  validated_genome               Validation warnings and errors for annotated features
+  ============================== ===========================================================================
+
+- **EGAPx nextflow stats** collection: ``nextflow.log``, the Nextflow HTML execution report and timeline, the trace file (runtime and CPU use per process), and ``run_params.yaml`` (all parameters used).
+- **EGAPx MultiQC report** collection: the MultiQC HTML report and its data files.
+- **EGAPx RNA-seq alignment stats** collection: short-read (``rnaseq_short/``) and long-read (``rnaseq_long/``) alignment reports and statistics; empty when no reads of that type were used.
+- **EGAPx filtered protein alignments**: the protein alignments (ASN.1) passed to Gnomon, only when *Collect filtered protein alignments* is set in *Developer options*.
+- **EGAPx STAR alignments** collection: the STAR BAM files, only when *Collect BAM output from STAR* is set in *Developer options*.
+
+Interpreting the output
+=======================
+
+**MultiQC report**: one HTML report with feature counts and length statistics, BUSCO scores, genome masking statistics, and RNA-seq and protein alignment statistics.
+Alignment information for RNA-seq or proteins supplied as local data may currently be inaccurate or missing (see the `EGAPx release notes <https://github.com/ncbi/egapx/releases>`_).
+
+**Feature counts**: summary counts are printed near the end of the job's standard output and are also in *stats_feature_counts*.
+Counts of protein-coding genes should be compared with similar species. Low counts may mean insufficient evidence; high counts may mean genome fragmentation, uncollapsed haplotypes, or genes annotated on transposons.
+
+.. class:: warningmark
+
+Genes with a ``major correction`` are likely protein-coding genes with frameshifts and/or internal stops. They have "LOW QUALITY PROTEIN" in the protein FASTA title and are adjusted to meet GenBank criteria.
+RefSeq releases an annotation only if no more than 10% of protein-coding genes have major corrections; polish the assembly if the rate is higher.
+
+**BUSCO**: run in proteins mode on the longest isoform per gene, using the lineage chosen from the taxid. A BUSCO failure does not fail the job; the BUSCO reports are then empty.
+Low scores can indicate assembly problems, or an organism divergent from those used to build the BUSCO models.
+Expected BUSCO content for related organisms can be found on `NCBI Datasets <https://www.ncbi.nlm.nih.gov/datasets/genome/>`_.
+
+**Contamination report** (*gnomon_contam_rpt*): per-sequence counts of gene models, single-exon models, and models whose best hit is to prokaryotes or viruses.
+Look for longer contigs with a high fraction of prokaryote hits, especially single-exon models; for example, sequences with at least 10 models where at least 50% hit prokaryotes or viruses.
+
+**Gnomon reports**: *gnomon_report* lists each line of evidence (protein, long-read, short-read, *ab initio*) supporting each transcript model, and *gnomon_quality_report* summarizes the evidence per model.
+The best models have no *ab initio* contribution, high RNA-seq coverage, and few alignments needed for the minimal intron set. Column descriptions are in the `EGAPx README <https://github.com/ncbi/egapx/blob/v1.0.1/README.md#interpreting-output>`_.
+
+**Troubleshooting**: if a run fails, the job's standard output and ``nextflow.log`` name the failing process. ``run.trace.txt`` lists every process with its status and resource use.
+
+Submitting annotation to NCBI
+=============================
+
+The *annotated_genome* ASN.1 output can be prepared for GenBank submission with the ``prepare_submission`` program from the EGAPx container (it is not run by this tool).
+You will need a submission template and BioProject/BioSample identifiers, and for a new assembly a registered locus_tag prefix.
+The prefix can be set when annotating (the *Locus tag prefix* form field or the ``locus_tag_prefix:`` YAML key) or passed to ``prepare_submission``.
+See `Submitting EGAPx annotation to NCBI <https://github.com/ncbi/egapx/blob/v1.0.1/README.md#submitting-egapx-annotation-to-ncbi>`_.
+]]></token>
+    <token name="@HELP_MORE@"><![CDATA[
+More information
+================
+
+See the `EGAPx repository <https://github.com/ncbi/egapx>`_ for full documentation and FAQ. Report problems with EGAPx itself at the `EGAPx issue tracker <https://github.com/ncbi/egapx/issues>`_,
+and problems with this Galaxy wrapper at the `wrapper repository <https://github.com/richard-burhans/galaxytools/issues>`_.
+]]></token>
     <xml name="edam_ontology">
         <edam_operations>
             <edam_operation>operation_0362</edam_operation>
@@ -18,7 +224,7 @@
                 @misc{githubegapx,
                     author = {NCBI},
                     year = 2024,
-                    title = {Eukaryotic Genome Annotation Pipeline - External (EGAPx)},
+                    title = {Eukaryotic Genome Annotation Pipeline (EGAPx)},
                     publisher = {GitHub},
                     journal = {GitHub repository},
                     url = {https://github.com/ncbi/egapx}
@@ -32,93 +238,125 @@
             <person givenName="Richard" familyName="Burhans" url="https://science.psu.edu/bmb/people/rcb112"/>
         </creator>
     </xml>
+    <!--
+        Content checks for a full run, written from a real EGAPx 1.0.1 run on the
+        D. farinae test data. They check structure (headers, record markers, XML
+        elements) plus loose floors (e.g. >= 5000 genes vs ~9700 observed), not
+        exact values, so they survive EGAPx/support-data updates.
+    -->
     <xml name="test_outputs">
         <output name="complete_genomic_gff" ftype="gff">
             <assert_contents>
-                <has_size min="1"/>
+                <has_line line="##gff-version 3"/>
+                <has_text_matching expression="\tGnomon\tgene\t" min="5000"/>
+                <has_text_matching expression="\tGnomon\tmRNA\t" min="5000"/>
+                <has_text_matching expression="\tGnomon\tCDS\t" min="5000"/>
             </assert_contents>
         </output>
-        <output_collection name="output_files" type="list">
+        <output_collection name="output_files" type="list" count="19">
             <element name="annotated_genome" ftype="asn1">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line line="Seq-entry ::= set {"/>
                 </assert_contents>
             </element>
             <element name="complete_genomic_gtf" ftype="gtf">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line line="#gtf-version 2.2"/>
+                    <has_text_matching expression="\tGnomon\ttranscript\t" min="5000"/>
+                    <has_text text="gene_id &quot;"/>
+                    <has_text text="transcript_id &quot;"/>
                 </assert_contents>
             </element>
             <element name="complete_genomic_fna" ftype="fasta">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="&gt;.+"/>
                 </assert_contents>
             </element>
             <element name="complete_cds" ftype="fasta">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="&gt;.+" min="5000"/>
                 </assert_contents>
             </element>
             <element name="complete_transcripts" ftype="fasta">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="&gt;.+" min="5000"/>
                 </assert_contents>
             </element>
             <element name="complete_proteins" ftype="fasta">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="&gt;.+" min="5000"/>
                 </assert_contents>
             </element>
             <element name="annotation_data" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="##Genome-Annotation-Data-START##"/>
+                    <has_text_matching expression="Annotation Pipeline\s+NCBI EGAPx"/>
+                    <has_text_matching expression="Annotation Software Version\s+@TOOL_VERSION@"/>
+                    <has_text text="##Genome-Annotation-Data-END##"/>
                 </assert_contents>
             </element>
             <element name="sra_metadata" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
-                </assert_contents>
-            </element>
-            <element name="gnomon_accept_ftable_annot" ftype="txt">
-                <assert_contents>
-                    <has_size min="0"/>
+                    <has_line_matching expression="#SRA run accession\t.*"/>
+                    <has_n_lines min="2"/>
                 </assert_contents>
             </element>
             <element name="gnomon_contam_rpt" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="#seq_id\tgb_syn_seq_id\tlength\tnum_genes\t.*"/>
+                    <has_n_lines min="2"/>
                 </assert_contents>
             </element>
             <element name="gnomon_report" ftype="txt">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="#transcript_id"/>
+                    <has_text text="Evidence id"/>
+                    <has_n_lines min="5000"/>
                 </assert_contents>
             </element>
             <element name="gnomon_quality_report" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="#transcript_id"/>
+                    <has_text text="Ab Initio Percentage"/>
+                    <has_n_lines min="5000"/>
                 </assert_contents>
             </element>
             <element name="busco_report" ftype="txt">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="# BUSCO was run in mode: proteins"/>
+                    <has_text_matching expression="C:[\d.]+%\[S:[\d.]+%,D:[\d.]+%\],F:[\d.]+%,M:[\d.]+%,n:\d+"/>
                 </assert_contents>
             </element>
             <element name="busco_report_json" ftype="json">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="&quot;parameters&quot;"/>
                 </assert_contents>
             </element>
             <element name="stats_feature_counts" ftype="xml">
                 <assert_contents>
                     <is_valid_xml/>
+                    <element_text_matches path="./OverallCounts/Counts[@feature_type='genes']/Total" expression="[1-9]\d{3,}"/>
                 </assert_contents>
             </element>
             <element name="stats_feature_stats" ftype="xml">
                 <assert_contents>
                     <is_valid_xml/>
+                    <has_element_with_path path="./OverallStats/TranscriptsPerGene"/>
                 </assert_contents>
             </element>
+            <element name="stats_mask_assm_stats" ftype="xml">
+                <assert_contents>
+                    <is_valid_xml/>
+                    <has_element_with_path path="./MaskingPercentages/WindowMasker"/>
+                </assert_contents>
+            </element>
+            <element name="stats_prot_align_stats" ftype="xml">
+                <assert_contents>
+                    <is_valid_xml/>
+                    <has_element_with_path path="./AssemblyStats/CategoryStats/TotalSequences"/>
+                </assert_contents>
+            </element>
+            <!-- all_unannotated.val is only written by some runs; an empty dataset is fine -->
             <element name="validated_all_unannotated" ftype="xml">
                 <assert_contents>
                     <has_size min="0"/>
@@ -127,13 +365,14 @@
             <element name="validated_genome" ftype="xml">
                 <assert_contents>
                     <is_valid_xml/>
+                    <has_text text="&lt;asnvalidate"/>
                 </assert_contents>
             </element>
         </output_collection>
-        <output_collection name="nextflow_stats" type="list">
+        <output_collection name="nextflow_stats" type="list" count="5">
             <element name="nextflow_log" ftype="txt">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="Execution complete -- Goodbye"/>
                 </assert_contents>
             </element>
             <element name="run_report" ftype="html">
@@ -148,12 +387,35 @@
             </element>
             <element name="run_trace" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="task_id\thash\tnative_id\tname\tstatus\t.*"/>
+                    <has_text_matching expression="\texport\tCOMPLETED\t"/>
                 </assert_contents>
             </element>
             <element name="run_params" ftype="yaml">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line line="input:"/>
+                    <has_text text="busco_lineage:"/>
+                </assert_contents>
+            </element>
+        </output_collection>
+        <output_collection name="multiqc_report" type="list">
+            <element name="multiqc_report" ftype="html">
+                <assert_contents>
+                    <has_text text="MultiQC"/>
+                </assert_contents>
+            </element>
+        </output_collection>
+        <output_collection name="rnaseq_stats" type="list">
+            <!-- element tests must follow the collection's (sorted) element order -->
+            <element name="rnaseq_short/rnaseq_align_report">
+                <assert_contents>
+                    <is_valid_xml/>
+                    <has_element_with_path path="./AssemblyUnit/SampleStats"/>
+                </assert_contents>
+            </element>
+            <element name="rnaseq_short/run_stats">
+                <assert_contents>
+                    <has_text text="collapsed count"/>
                 </assert_contents>
             </element>
         </output_collection>

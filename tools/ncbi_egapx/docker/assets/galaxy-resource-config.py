@@ -75,9 +75,13 @@ def get_allocated_memory(value: str | None) -> int:
     except Exception:
         pass
 
+    # ``value`` is GALAXY_MEMORY_MB (megabytes); everything else in this function
+    # works in gigabytes (available_memory, DEFAULT_MEMORY, the returned value),
+    # so convert MB -> GB. Previously the MB figure was used as GB, so e.g.
+    # GALAXY_MEMORY_MB=65536 (64 GB) was treated as 65536 GB.
     if value is not None:
         try:
-            requested_memory = int(value)
+            requested_memory = int(value) // 1024
         except Exception:
             pass
 
@@ -124,8 +128,13 @@ if galaxy_slots_env_var is None and galaxy_memory_mb_env_var is None:
 galaxy_slots = max(get_allocated_cpus(galaxy_slots_env_var), MINIMUM_CPUS)
 galaxy_memory_gb = max(get_allocated_memory(galaxy_memory_mb_env_var), MINIMUM_MEMORY)
 
-galaxy_threads = 16
-galaxy_nodes = 16
+# Cap the per-process thread/node counts to the Galaxy allocation. The upstream
+# 'multi_cpu' / 'multi_node' tiers set ``cpus = params.threads`` (and the default
+# is 16), so on a small allocation a single process would request more CPUs than
+# the job was granted and Nextflow aborts with "Process requirement exceeds
+# available CPUs". Clamp to galaxy_slots (never above the upstream default of 16).
+galaxy_threads = min(16, galaxy_slots)
+galaxy_nodes = min(16, galaxy_slots)
 
 # Environment-dependent numbers. Floors keep the values valid (Nextflow rejects
 # cpus = 0 / memory = 0.GB) on small allocations.
@@ -154,6 +163,14 @@ params.nodes = {galaxy_nodes}
 params.num_cpus_per_node = {num_cpus_per_node}
 params.gigabase_pairs = {gigabase_pairs}
 
+// Pin the local executor's resource pool to the Galaxy allocation. Without this
+// Nextflow derives "available CPUs" from the cgroup/JVM view (which can be 1 in
+// a slot-limited container) and rejects any process whose cpus exceed it.
+executor {{
+    cpus = {galaxy_slots}
+    memory = {galaxy_memory_gb}.GB
+}}
+
 process {{
     cpus = {std_cpu_job}
     memory = {std_memory_job}.GB
@@ -168,13 +185,19 @@ process {{
         memory = {large_memory_job}.GB
     }}
 
-    // Cap concurrent multi-cpu/multi-node jobs to how many params.threads-sized
-    // jobs fit on the node (= num_cpus_per_node). The old script divided
-    // num_cpus_per_node by params.threads again, yielding a fractional maxForks.
+    // Override the per-label cpus directly. process_resources.config sets
+    // `cpus = params.threads` for these labels, but that is evaluated when the
+    // includeConfig above is parsed (params.threads is still 16 at that point),
+    // so reassigning params.threads afterwards does NOT lower the baked cpus.
+    // Setting cpus here (after the include) is what actually clamps a process
+    // like star_index:build_index to the Galaxy allocation.
+    // maxForks caps how many such jobs run concurrently (= num_cpus_per_node).
     withLabel: 'multi_cpu' {{
+        cpus = {galaxy_threads}
         maxForks = params.num_cpus_per_node
     }}
     withLabel: 'multi_node' {{
+        cpus = {galaxy_threads}
         maxForks = params.num_cpus_per_node
     }}
 }}

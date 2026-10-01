@@ -99,20 +99,20 @@
             #import re
             #for $idx, $read in enumerate($cond_input_style.cond_short_reads_style.short_reads)
                 #if $read
-                    #set $read_pathname = "reads/" + str($idx) + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
+                    #set $read_pathname = "reads/" + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
 ${idx}_${read.name} $read_pathname
                 #end if
             #end for
             #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_short_reads_style.reads_lists)
                 #for $idx, $collection in enumerate($repeat_entry.short_reads_single)
-                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
 ${repeat_idx}${idx}_${collection.name} $read_pathname
                 #end for
             #end for
             #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_short_reads_style.reads_paired_lists)
                 #for $idx, $collection in enumerate($repeat_entry.short_reads_paired)
-                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
-                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
+                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
+                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
 ${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_pathname
                 #end for
             #end for
@@ -123,20 +123,20 @@ ${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_path
             #import re
             #for $idx, $read in enumerate($cond_input_style.cond_long_reads_style.long_reads)
                 #if $read
-                    #set $read_pathname = "reads/" + str($idx) + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
+                    #set $read_pathname = "reads/" + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($read.element_identifier)) + "." + $read.ext
 ${idx}_${read.name} $read_pathname
                 #end if
             #end for
             #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_long_reads_style.reads_lists)
                 #for $idx, $collection in enumerate($repeat_entry.long_reads_single)
-                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.element_identifier)) + "." + $collection.ext
 ${repeat_idx}${idx}_${collection.name} $read_pathname
                 #end for
             #end for
             #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_long_reads_style.reads_paired_lists)
                 #for $idx, $collection in enumerate($repeat_entry.long_reads_paired)
-                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
-                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
+                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.forward.element_identifier)) + "." + $collection.forward.ext
+                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub('[^\w\-\s]', '_', str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
 ${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_pathname
                 #end for
             #end for
@@ -241,16 +241,16 @@ $row
                 <param name="locus_tag_prefix" type="text" value="egapxtmp" label="Locus tag prefix" help="One to 9-letter prefix to use for naming genes on this genome assembly."/>
                 <conditional name="cond_short_reads_style">
                     <param name="short_reads_style" type="select" label="short RNA-seq sequence data source" help="Select short RNA-seq input data from history or input a list of SRA identifiers or remote URI">
-                        <option value="history" selected="True">Select one or more short RNA-seq fastq datasets from the current history</option>
+                        <option value="history" selected="True">Select one or more short RNA-seq FASTQ/FASTA datasets from the current history</option>
                         <option value="list">Type in a list of SRA identifiers and/or remote short RNA-seq FASTA URI</option>
                     </param>
                     <when value="history">
-                        <param name="short_reads" type="data" format="fastqsanger,fastqsanger.gz" optional="true" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration" multiple="true"/>
+                        <param name="short_reads" type="data" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" optional="true" label="Select multiple short RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the yaml for egapx configuration" multiple="true"/>
                         <repeat name="reads_lists" title="Single-end reads" min="0">
-                            <param name="short_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration" collection_type="list"/>
+                            <param name="short_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" label="Select multiple short RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the yaml for egapx configuration" collection_type="list"/>
                         </repeat>
                         <repeat name="reads_paired_lists" title="Paired-end reads" min="0">
-                            <param name="short_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration" collection_type="list:paired"/>
+                            <param name="short_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" label="Select multiple short RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the yaml for egapx configuration" collection_type="list:paired"/>
                         </repeat>
                     </when>
                     <when value="list">
@@ -261,16 +261,16 @@ $row
                 </conditional>
                 <conditional name="cond_long_reads_style">
                     <param name="long_reads_style" type="select" label="long RNA-seq sequence data source" help="Select long RNA-seq input data from history or input a list of SRA identifiers or remote URI">
-                        <option value="history" selected="True">Select one or more long RNA-seq fastq datasets from the current history</option>
+                        <option value="history" selected="True">Select one or more long RNA-seq FASTQ/FASTA datasets from the current history</option>
                         <option value="list">Type in a list of SRA identifiers and/or remote long RNA-seq FASTA URI</option>
                     </param>
                     <when value="history">
-                        <param name="long_reads" type="data" format="fastqsanger,fastqsanger.gz" optional="true" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration" multiple="true"/>
+                        <param name="long_reads" type="data" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" optional="true" label="Select multiple long RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the yaml for egapx configuration" multiple="true"/>
                         <repeat name="reads_lists" title="Single-end reads" min="0">
-                            <param name="long_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration" collection_type="list"/>
+                            <param name="long_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" label="Select multiple long RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the yaml for egapx configuration" collection_type="list"/>
                         </repeat>
                         <repeat name="reads_paired_lists" title="Paired-end reads" min="0">
-                            <param name="long_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected rna-seq fastqsanger will be added to the yaml for egapx configuration" collection_type="list:paired"/>
+                            <param name="long_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" label="Select multiple long RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the yaml for egapx configuration" collection_type="list:paired"/>
                         </repeat>
                     </when>
                     <when value="list">
@@ -318,6 +318,7 @@ $row
         </conditional>
         <section name="developer" title="Developer options" expanded="false">
             <param name="collect_star_bams" type="boolean" checked="false" label="Collect BAM output from STAR"/>
+            <param name="collect_protein_alignments" type="boolean" checked="false" label="Collect filtered protein alignments" help="Protein alignments (ASN.1) passed to Gnomon; can be large"/>
             <conditional name="query_limit">
                 <param name="query_limit_selector" type="select" label="Enforce SRA query limit">
                     <option value="true" selected="True">Yes</option>
@@ -342,7 +343,6 @@ $row
             <data name="complete_proteins" format="fasta" label="Annotated protein products" from_work_dir="egapx_out/complete.proteins.faa"/>
             <data name="annotation_data" format="tabular" label="Annotation structured comment" from_work_dir="egapx_out/annotation_data.cmt"/>
             <data name="sra_metadata" format="tabular" label="SRA run metadata" from_work_dir="egapx_out/sra_metadata.dat"/>
-            <data name="gnomon_accept_ftable_annot" format="txt" label="Gnomon accepted annotation models" from_work_dir="egapx_out/annot_builder_output/accept.ftable_annot"/>
             <data name="gnomon_contam_rpt" format="tabular" label="Gnomon contamination report" from_work_dir="egapx_out/GNOMON/contam_rpt.tsv"/>
             <data name="gnomon_report" format="txt" label="Gnomon report" from_work_dir="egapx_out/GNOMON/new.gnomon_report.txt"/>
             <data name="gnomon_quality_report" format="tabular" label="Gnomon quality report" from_work_dir="egapx_out/GNOMON/new.gnomon_quality_report.txt"/>
@@ -350,6 +350,8 @@ $row
             <data name="busco_report_json" format="json" label="BUSCO report (json)" from_work_dir="egapx_out/busco/short_summary*.json"/>
             <data name="stats_feature_counts" format="xml" label="Feature counts" from_work_dir="egapx_out/stats/feature_counts.xml"/>
             <data name="stats_feature_stats" format="xml" label="Feature stats" from_work_dir="egapx_out/stats/feature_stats.xml"/>
+            <data name="stats_mask_assm_stats" format="xml" label="Genome masking stats" from_work_dir="egapx_out/stats/mask_assm_stats.xml"/>
+            <data name="stats_prot_align_stats" format="xml" label="Protein alignment stats" from_work_dir="egapx_out/stats/target_proteins/prot_align_stats.xml"/>
             <data name="validated_all_unannotated" format="xml" label="validation all_unannotated" from_work_dir="egapx_out/validated/all_unannotated.val"/>
             <data name="validated_genome" format="xml" label="valudation genome" from_work_dir="egapx_out/validated/genome.val"/>
         </collection>
@@ -360,13 +362,34 @@ $row
             <data name="run_trace" format="tabular" label="Nextflow trace file" from_work_dir="egapx_out/nextflow/run.trace.txt"/>
             <data name="run_params" format="yaml" label="Nextflow run parameters" from_work_dir="egapx_out/nextflow/run_params.yaml"/>
         </collection>
+        <collection name="multiqc_report" type="list" label="EGAPx MultiQC report for ${on_string}">
+            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.(?P&lt;ext&gt;html|json|txt|tsv|csv|yaml|png|pdf)" directory="egapx_out/multiqc_report" recurse="true" match_relative_path="true"/>
+        </collection>
+        <collection name="rnaseq_stats" type="list" label="EGAPx RNA-seq alignment stats for ${on_string}">
+            <discover_datasets pattern="(?P&lt;designation&gt;rnaseq_(?:short|long)/.+)\.(?P&lt;ext&gt;xml|tsv|txt)" directory="egapx_out/stats" recurse="true" match_relative_path="true"/>
+        </collection>
+        <data name="filtered_protein_alignments" format="asn1" label="EGAPx filtered protein alignments for ${on_string}" from_work_dir="egapx_out/filtered_protein_alignments/align.asn">
+            <filter>developer['collect_protein_alignments']</filter>
+        </data>
         <collection name="star_alignments" type="list" label="EGAPx STAR alignments for ${on_string}">
             <discover_datasets pattern="(?:.+/)?bam\.[0-9A-Za-z]{10}/(?P&lt;designation&gt;.+)\.bam" format="bam" directory="egapx_out" recurse="true" match_relative_path="true"/>
             <filter>developer['collect_star_bams']</filter>
         </collection>
     </outputs>
     <tests>
-        <test expect_num_outputs="27" expect_test_failure="true">
+        <!--
+            expect_num_outputs = datasets + top-level collections known at job
+            submission, so discovered collection elements (multiqc_report,
+            rnaseq_stats, star_alignments) are NOT counted and the total is fixed:
+              1 complete_genomic_gff + 19 output_files + 5 nextflow_stats
+            + 5 collections (output_files, nextflow_stats, multiqc_report,
+              rnaseq_stats, star_alignments) = 30
+            + 1 filtered_protein_alignments when collect_protein_alignments=true
+            28 was verified exact on a full-resource run before the outputs were
+            extended to 30; re-verify on the next full run. These tests
+            only complete on such hardware, hence expect_test_failure="true" for CI.
+        -->
+        <test expect_num_outputs="30" expect_test_failure="true">
             <conditional name="cond_input_style">
                 <param name="input_style" value="fillform"/>
                 <conditional name="cond_genome_style">
@@ -388,178 +411,57 @@ $row
             </section>
             <expand macro="test_outputs"/>
         </test>
-        <test expect_num_outputs="27" expect_test_failure="true">
+        <!-- expect_num_outputs: see note above (31 = 30 + filtered_protein_alignments). -->
+        <test expect_num_outputs="31" expect_test_failure="true">
             <conditional name="cond_input_style">
                 <param name="input_style" value="history"/>
                 <param name="yamlin" value="input.yaml"/>
             </conditional>
             <section name="developer">
                 <param name="collect_star_bams" value="true"/>
+                <param name="collect_protein_alignments" value="true"/>
                 <conditional name="query_limit">
                     <param name="query_limit_selector" value="true"/>
                     <param name="rnaseq_query_limit" value="20"/>
                 </conditional>
             </section>
             <expand macro="test_outputs"/>
+            <output name="filtered_protein_alignments" ftype="asn1">
+                <assert_contents>
+                    <has_size min="1"/>
+                </assert_contents>
+            </output>
         </test>
     </tests>
     <help><![CDATA[
-Galaxy tool wrapping the Eukaryotic Genome Annotation Pipeline (EGAPx)
-=================================================================================================
+NCBI EGAPx: Eukaryotic Genome Annotation Pipeline
+=================================================
 
-.. class:: warningmark
+What it does
+============
 
-**Proof of concept: a hack to run a NF workflow inside a specialised Galaxy tool wrapper**
+Annotates a eukaryotic genome assembly with `EGAPx <https://github.com/ncbi/egapx>`_ in a single step (EGAPx *online mode*).
+EGAPx support data and any remote inputs are downloaded from NCBI, BUSCO lineage data from busco-data.ezlab.org, and SRA reads from NCBI SRA during the run,
+so the compute node running the job needs Internet access.
 
-EGAPx is a big, complicated Nextflow workflow, challenging and costly to re-implement **properly**, requiring dozens of new tools and replicating a lot of
-complicated *groovy* workflow logic.
+Configure the run with the tool form, or supply an EGAPx YAML configuration from your history.
 
-It is also very new and in rapid development. Investing developer effort and keeping updated as EGAPx changes rapidly may be *inefficient of developer resources*.
+To separate the downloads from the long annotation run, or to make the annotation reproducible, use **NCBI EGAPx prepare input**
+to download a local cache, then **NCBI EGAPx execute** to run the annotation against it.
 
-This wrapper is designed to allow measuring how *inefficient* it is in terms of computing resource utilisation, in comparison to the developer effort
-required to convert Nextflow DDL into tools and WF logic. Balancing these competing requirements is a fundamental Galaxy challenge.
+@HELP_OVERVIEW@
 
+@HELP_RESOURCES@
 
-EGAPx requires very substantial resources to run with real data. *132GB and 32 cores* are the minimum requirement; *256GB and 64 cores* are recommended.
+@HELP_GENOME@
 
-A special minimal example that can be run in 6GB with 4 cores is provided as a yaml configuration and is used for the tool test.
+@HELP_FORM@
 
-In this implementation, the user must supply a yaml configuration file as initial proof of concept.
-History inputs and even a yaml editor might be provided in future.
+@HELP_YAML@
 
-The NF workflow to tool model tested here may be applicable to other NF workflows that take a single configuration yaml.
+@HELP_OUTPUT@
 
-.. class:: warningmark
-
-The computational resource cost of typing the wrong SRA identifiers into a tool form is potentially enormous with this tool!
-
-
-Sample yaml configurations
-===========================
-
-YAML sample configurations can be uploaded into your Galaxy history from the `EGAPx github repository <https://github.com/ncbi/egapx/tree/main/examples/>`_.
-The simplest possible example is shown below - can be cut/paste into a history dataset in the upload tool.
-
-
-*./examples/input_D_farinae_small.yaml* is shown below and can be cut and pasted into the upload form to create a yaml file.
-RNA-seq data is provided as URI to the reads FASTA files.
-
-input_D_farinae_small.yaml
-
-::
-
-  genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/020/809/275/GCF_020809275.1_ASM2080927v1/GCF_020809275.1_ASM2080927v1_genomic.fna.gz
-  taxid: 6954
-  short_reads:
-    - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.1
-    - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR8506572.2
-    - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.1
-    - https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/EGAP/sample_data/Dermatophagoides_farinae_small/SRR9005248.2
-
-
-input_Gavia_stellata.yaml
-
-::
-
-  genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/030/936/135/GCF_030936135.1_bGavSte3.hap2/GCF_030936135.1_bGavSte3.hap2_genomic.fna.gz
-  short_reads: txid37040[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession]
-  taxid: 37040
-
-input_C_longicornis.yaml
-
-::
-
-  genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/029//603/195/GCF_029603195.1_ASM2960319v2/GCF_029603195.1_ASM2960319v2_genomic.fna.gz
-  short_reads: txid2530218[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession]
-  taxid: 2530218
-
-Purpose
-========
-
-**This is not intended for production**
-
-Just a proof of concept.
-It is possibly too inefficient to be useful although it may turn out not to be a problem if run on a dedicated workstation.
-At least the efficiency can now be more easily estimated.
-
-This tool is not recommended for public deployment because of the resource demands.
-
-EGAPx Overview
-===============
-
-.. image:: $PATH_TO_IMAGES/Pipeline_sm_ncRNA_CAGE_80pct.png
-
-**Warning:**
-The current version is an alpha release with limited features and organism scope to collect initial feedback on execution. Outputs are not yet complete and not intended for production use. Please open a GitHub [Issue](https://github.com/ncbi/egapx/issues)  if you encounter any problems with EGAPx. You can also write to cgr@nlm.nih.gov to give us your feedback or if you have any questions.
-
-EGAPx is the publicly accessible version of the updated NCBI [Eukaryotic Genome Annotation Pipeline](https://www.ncbi.nlm.nih.gov/genome/annotation_euk/process/).
-
-EGAPx takes an assembly FASTA file, a taxid of the organism, and RNA-seq data. Based on the taxid, EGAPx will pick protein sets and HMM models. The pipeline runs `miniprot` to align protein sequences, and `STAR` to align RNA-seq to the assembly. Protein alignments and RNA-seq read alignments are then passed to `Gnomon` for gene prediction. In the first step of `Gnomon`, the short alignments are chained together into putative gene models.
-In the second step, these predictions are further supplemented by *ab-initio* predictions based on HMM models. The final annotation for the input assembly is produced as a `gff` file.
-
-**Security Notice:**
-
-EGAPx has dependencies in and outside of its execution path that include several thousand files from the [NCBI C++ toolkit](https://www.ncbi.nlm.nih.gov/toolkit), and more than a million total lines of code. Static Application Security Testing has shown a small number of verified buffer overrun security vulnerabilities. Users should consult with their organizational security team on risk and if there is concern, consider mitigating options like running via VM or cloud instance.
-
-
-*To specify an array of NCBI SRA datasets in yaml*
-
-::
-
-   short_reads:
-     - SRR8506572
-     - SRR9005248
-
-
-*To specify an SRA entrez query*
-
-::
-
-  short_reads: 'txid6954[Organism] AND biomol_transcript[properties] NOT SRS024887[Accession] AND (SRR8506572[Accession] OR SRR9005248[Accession] )'
-
-
-**Note:** Both the above examples will have more RNA-seq data than the `input_D_farinae_small.yaml` example. To make sure the entrez query does not produce a large number of SRA runs, please run it first at the [NCBI SRA page](https://www.ncbi.nlm.nih.gov/sra). If there are too many SRA runs, then select a few of them and list it in the input yaml.
-
-Output
-=======
-
-EGAPx output will appear as a collection in the user history. The main annotation file is called *complete.genomic.gff*.
-
-::
-
- complete.genomic.gff
- annot_builder_output
- nextflow.log
- run.report.html
- run.timeline.html
- run.trace.txt
- run_params.yaml
-
-
-The *nextflow.log* is the log file that captures all the process information and their work directories. ``run_params.yaml`` has all the parameters that were used in the EGAPx run. More information about the process time and resources can be found in the other run* files.
-
-## Intermediate files
-
-In the log, each line denotes the process that completed in the workflow. The first column (_e.g._ `[96/621c4b]`) is the subdirectory where the intermediate output files and logs are found for the process in the same line, _i.e._, `egapx:miniprot:run_miniprot`. To see the intermediate files for that process, you can go to the work directory path that you had supplied and traverse to the subdirectory `96/621c4b`:
-
-::
-
- $ aws s3 ls s3://temp_datapath/D_farinae/96/
-                           PRE 06834b76c8d7ceb8c97d2ccf75cda4/
-                           PRE 621c4ba4e6e87a4d869c696fe50034/
- $ aws s3 ls s3://temp_datapath/D_farinae/96/621c4ba4e6e87a4d869c696fe50034/
-                           PRE output/
- 2024-03-27 11:19:18          0
- 2024-03-27 11:19:28          6 .command.begin
- 2024-03-27 11:20:24        762 .command.err
- 2024-03-27 11:20:26        762 .command.log
- 2024-03-27 11:20:23          0 .command.out
- 2024-03-27 11:19:18      13103 .command.run
- 2024-03-27 11:19:18        129 .command.sh
- 2024-03-27 11:20:24        276 .command.trace
- 2024-03-27 11:20:25          1 .exitcode
- $ aws s3 ls s3://temp_datapath/D_farinae/96/621c4ba4e6e87a4d869c696fe50034/output/
- 2024-03-27 11:20:24   17127134 aligns.paf
+@HELP_MORE@
     ]]></help>
     <expand macro="citations"/>
     <expand macro="creators"/>

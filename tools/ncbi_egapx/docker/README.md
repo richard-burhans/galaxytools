@@ -13,6 +13,10 @@ robot token comes from the environment (never commit it):
 QUAY_ROBOT_PASSWORD=… ./doit.bash
 ```
 
+Only EGAPx **`1.0.1`** is built here. The loop skips the 0.x line (the
+`assets/patches/` set now targets the 1.0 source layout) and also skips `1.0`
+(not needed). Already-pushed older tags on quay.io are left in place.
+
 `bootstrap.bash` (run inside the image build) clones EGAPx from GitHub at the
 release tag, then applies every patch in `assets/patches/` to the checkout — see
 `assets/patches/README.md`. A stale patch fails the build instead of silently
@@ -41,7 +45,7 @@ the tools can pull it.
 
 ## Re-pushing the same tag: bust caches before testing
 
-Tags here are rebuilt in place (e.g. `0.5.2` gets a new digest on each rebuild).
+Tags here are rebuilt in place (e.g. `1.0.1` gets a new digest on each rebuild).
 Any host that already pulled that tag has the **old** image cached by name:tag,
 so a re-test will silently run the previous build. Force a refresh first:
 

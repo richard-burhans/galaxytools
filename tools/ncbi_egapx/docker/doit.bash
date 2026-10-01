@@ -55,6 +55,23 @@ for egapx_version in $egapx_versions; do
         continue
     fi
 
+    # no longer create augmented container for the 0.5.x line.
+    # The source patch set under assets/patches now targets EGAPx >= 1.0:
+    #   - 0001-ftpdownloader-resilient-download.patch is rebased onto the 1.0
+    #     source layout and no longer applies to 0.5.x, and
+    #   - the relocatable SRA read cache fix (formerly 0002-*) is upstream as of
+    #     1.0, so that patch was retired.
+    # Building 0.5.x here would fail at patch apply time. Already-pushed 0.5.x
+    # images on quay.io are untouched.
+    if [[ "$egapx_version" =~ ^0\.5\. ]]; then
+        continue
+    fi
+
+    # only build the 1.0.1 augmented container; 1.0 is not needed
+    if [[ "$egapx_version" == "1.0" ]]; then
+        continue
+    fi
+
     echo "$egapx_version"
 
     docker buildx build --progress=plain --build-arg "EGAPx_TAG=$egapx_version" --tag "quay.io/galaxy/egapx:$egapx_version" .

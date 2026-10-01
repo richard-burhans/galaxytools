@@ -1,17 +1,17 @@
 diff --git a/ui/egapx.py b/ui/egapx.py
-index 62effde..158240b 100755
+index 1f1cbb0..55c43ba 100755
 --- a/ui/egapx.py
 +++ b/ui/egapx.py
-@@ -174,7 +174,7 @@ class FtpDownloader:
+@@ -180,7 +180,7 @@ class FtpDownloader:
          self.reconnect() 
  
      def reconnect(self):
--        self.ftp = FTP(self.host)
-+        self.ftp = FTP(self.host, timeout=2)
+-        self.ftp = ftplib.FTP(self.host)
++        self.ftp = ftplib.FTP(self.host, timeout=2)
          self.ftp.login()
          self.ftp.set_debuglevel(0)
         
-@@ -183,34 +183,81 @@ class FtpDownloader:
+@@ -189,34 +189,81 @@ class FtpDownloader:
          # print(f"file: {ftp_name}")
          # print(f"f: { os.path.dirname(local_path)}")
  

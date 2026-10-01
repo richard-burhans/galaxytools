@@ -1,3 +1,5 @@
+# Output checks are generated from the test_outputs macro in ../macros.xml
+# (keep them in sync when that macro changes).
 - doc: |
     Prepare the EGAPx local cache from a history YAML configuration, then run
     the annotation pipeline against that cache. Requires network access and the
@@ -9,7 +11,179 @@
       path: ../test-data/input.yaml
       filetype: yaml
   outputs:
+    output_files:
+      element_count: 19
+      element_tests:
+        annotated_genome:
+          asserts:
+          - that: has_line
+            line: Seq-entry ::= set {
+        complete_genomic_gtf:
+          asserts:
+          - that: has_line
+            line: '#gtf-version 2.2'
+          - that: has_text_matching
+            expression: \tGnomon\ttranscript\t
+            min: 5000
+          - that: has_text
+            text: gene_id "
+          - that: has_text
+            text: transcript_id "
+        complete_genomic_fna:
+          asserts:
+          - that: has_line_matching
+            expression: '>.+'
+        complete_cds:
+          asserts:
+          - that: has_line_matching
+            expression: '>.+'
+            min: 5000
+        complete_transcripts:
+          asserts:
+          - that: has_line_matching
+            expression: '>.+'
+            min: 5000
+        complete_proteins:
+          asserts:
+          - that: has_line_matching
+            expression: '>.+'
+            min: 5000
+        annotation_data:
+          asserts:
+          - that: has_text
+            text: '##Genome-Annotation-Data-START##'
+          - that: has_text_matching
+            expression: Annotation Pipeline\s+NCBI EGAPx
+          - that: has_text_matching
+            expression: Annotation Software Version\s+1.0.1
+          - that: has_text
+            text: '##Genome-Annotation-Data-END##'
+        sra_metadata:
+          asserts:
+          - that: has_line_matching
+            expression: '#SRA run accession\t.*'
+          - that: has_n_lines
+            min: 2
+        gnomon_contam_rpt:
+          asserts:
+          - that: has_line_matching
+            expression: '#seq_id\tgb_syn_seq_id\tlength\tnum_genes\t.*'
+          - that: has_n_lines
+            min: 2
+        gnomon_report:
+          asserts:
+          - that: has_text
+            text: '#transcript_id'
+          - that: has_text
+            text: Evidence id
+          - that: has_n_lines
+            min: 5000
+        gnomon_quality_report:
+          asserts:
+          - that: has_text
+            text: '#transcript_id'
+          - that: has_text
+            text: Ab Initio Percentage
+          - that: has_n_lines
+            min: 5000
+        busco_report:
+          asserts:
+          - that: has_text
+            text: '# BUSCO was run in mode: proteins'
+          - that: has_text_matching
+            expression: C:[\d.]+%\[S:[\d.]+%,D:[\d.]+%\],F:[\d.]+%,M:[\d.]+%,n:\d+
+        busco_report_json:
+          asserts:
+          - that: has_text
+            text: '"parameters"'
+        stats_feature_counts:
+          asserts:
+          - that: is_valid_xml
+          - that: element_text_matches
+            path: ./OverallCounts/Counts[@feature_type='genes']/Total
+            expression: '[1-9]\d{3,}'
+        stats_feature_stats:
+          asserts:
+          - that: is_valid_xml
+          - that: has_element_with_path
+            path: ./OverallStats/TranscriptsPerGene
+        stats_mask_assm_stats:
+          asserts:
+          - that: is_valid_xml
+          - that: has_element_with_path
+            path: ./MaskingPercentages/WindowMasker
+        stats_prot_align_stats:
+          asserts:
+          - that: is_valid_xml
+          - that: has_element_with_path
+            path: ./AssemblyStats/CategoryStats/TotalSequences
+        validated_all_unannotated:
+          asserts:
+          - that: has_size
+            min: 0
+        validated_genome:
+          asserts:
+          - that: is_valid_xml
+          - that: has_text
+            text: <asnvalidate
+    nextflow_stats:
+      element_count: 5
+      element_tests:
+        nextflow_log:
+          asserts:
+          - that: has_text
+            text: Execution complete -- Goodbye
+        run_report:
+          asserts:
+          - that: has_size
+            min: 1
+        run_timeline:
+          asserts:
+          - that: has_size
+            min: 1
+        run_trace:
+          asserts:
+          - that: has_line_matching
+            expression: task_id\thash\tnative_id\tname\tstatus\t.*
+          - that: has_text_matching
+            expression: \texport\tCOMPLETED\t
+        run_params:
+          asserts:
+          - that: has_line
+            line: 'input:'
+          - that: has_text
+            text: 'busco_lineage:'
+    multiqc_report:
+      element_tests:
+        multiqc_report:
+          asserts:
+          - that: has_text
+            text: MultiQC
+    rnaseq_stats:
+      element_tests:
+        rnaseq_short/rnaseq_align_report:
+          asserts:
+          - that: is_valid_xml
+          - that: has_element_with_path
+            path: ./AssemblyUnit/SampleStats
+        rnaseq_short/run_stats:
+          asserts:
+          - that: has_text
+            text: collapsed count
     annotation_gff:
       asserts:
-        has_size:
-          min: 1
+      - that: has_line
+        line: '##gff-version 3'
+      - that: has_text_matching
+        expression: \tGnomon\tgene\t
+        min: 5000
+      - that: has_text_matching
+        expression: \tGnomon\tmRNA\t
+        min: 5000
+      - that: has_text_matching
+        expression: \tGnomon\tCDS\t
+        min: 5000
+    filtered_protein_alignments:
+      asserts:
+      - that: has_size
+        min: 1
