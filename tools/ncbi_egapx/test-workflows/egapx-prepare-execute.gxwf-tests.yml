@@ -13,3 +13,104 @@
       asserts:
         has_size:
           min: 1
+    output_files:
+      element_count: 19
+      element_tests:
+        annotated_genome:
+          asserts:
+            has_size:
+              min: 1
+        complete_genomic_gtf:
+          asserts:
+            has_size:
+              min: 1
+        complete_genomic_fna:
+          asserts:
+            has_size:
+              min: 1
+        complete_cds:
+          asserts:
+            has_size:
+              min: 1
+        complete_transcripts:
+          asserts:
+            has_size:
+              min: 1
+        complete_proteins:
+          asserts:
+            has_size:
+              min: 1
+        annotation_data:
+          asserts:
+            has_size:
+              min: 1
+        sra_metadata:
+          asserts:
+            has_size:
+              min: 1
+        gnomon_contam_rpt:
+          asserts:
+            has_size:
+              min: 1
+        gnomon_report:
+          asserts:
+            has_size:
+              min: 1
+        gnomon_quality_report:
+          asserts:
+            has_size:
+              min: 1
+        busco_report:
+          asserts:
+            has_size:
+              min: 1
+        busco_report_json:
+          asserts:
+            has_size:
+              min: 1
+        stats_feature_counts:
+          asserts:
+            has_size:
+              min: 1
+        stats_feature_stats:
+          asserts:
+            has_size:
+              min: 1
+        stats_mask_assm_stats:
+          asserts:
+            has_size:
+              min: 1
+        stats_prot_align_stats:
+          asserts:
+            has_size:
+              min: 1
+        validated_all_unannotated:
+          asserts:
+            has_size:
+              min: 1
+        validated_genome:
+          asserts:
+            has_size:
+              min: 1
+    nextflow_stats:
+      element_count: 5
+    multiqc_report:
+      element_tests:
+        multiqc_report:
+          asserts:
+            has_text:
+              text: MultiQC
+    rnaseq_stats:
+      element_tests:
+        rnaseq_short/run_stats:
+          asserts:
+            has_size:
+              min: 1
+        rnaseq_short/rnaseq_align_report:
+          asserts:
+            has_size:
+              min: 1
+    filtered_protein_alignments:
+      asserts:
+        has_size:
+          min: 1

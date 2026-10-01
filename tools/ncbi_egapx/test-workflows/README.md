@@ -9,6 +9,13 @@ config_yaml ─► prepare_input (input_style=history) ─► output (directory 
       └─► execute.input_config         execute.input_cache ◄─┘ ─► complete.genomic.gff
 ```
 
+The `execute` step enables the optional *Collect filtered protein alignments*
+developer option. The workflow exposes the cache and the main `execute` outputs
+(`annotation_gff`, `output_files`, `nextflow_stats`, `multiqc_report`,
+`rnaseq_stats`, `filtered_protein_alignments`), and the tests check the
+19-element `output_files` collection, the 5 Nextflow stats, the MultiQC HTML
+report, the short-read RNA-seq stats and the protein alignments.
+
 A standalone tool test cannot feed one tool's output into another, so this is
 the only way to give `execute` a populated `directory` cache (its content lives
 in `extra_files_path`, which is only staged when the dataset is produced by an
