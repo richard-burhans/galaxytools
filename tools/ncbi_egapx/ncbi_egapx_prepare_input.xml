@@ -93,21 +93,21 @@
             #import re
             #for $idx, $read in enumerate($cond_input_style.cond_short_reads_style.short_reads)
                 #if $read
-                    #set $read_pathname = "reads/" + str($idx) + re.sub(r"[^\w\-\s]", "_", str($read.element_identifier)) + "." + $read.ext
+                    #set $read_pathname = "reads/" + str($idx) + "_" + re.sub(r"[^\w\-\s]", "_", str($read.element_identifier)) + "." + $read.ext
 ${idx}_${read.name} $read_pathname
                 #end if
             #end for
             #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_short_reads_style.reads_lists)
                 #for $idx, $collection in enumerate($repeat_entry.short_reads_single)
-                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub(r"[^\w\-\s]", "_", str($collection.element_identifier)) + "." + $collection.ext
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub(r"[^\w\-\s]", "_", str($collection.element_identifier)) + "." + $collection.ext
 ${repeat_idx}${idx}_${collection.name} $read_pathname
                 #end for
             #end for
             #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_short_reads_style.reads_paired_lists)
                 #for $idx, $collection in enumerate($repeat_entry.short_reads_paired)
 
-                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub(r"[^\w\-\s]", "_", str($collection.forward.element_identifier)) + "." + $collection.forward.ext
-                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub(r"[^\w\-\s]", "_", str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
+                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub(r"[^\w\-\s]", "_", str($collection.forward.element_identifier)) + "." + $collection.forward.ext
+                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub(r"[^\w\-\s]", "_", str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
 ${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_pathname
                 #end for
             #end for
@@ -118,20 +118,20 @@ ${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_path
             #import re
             #for $idx, $read in enumerate($cond_input_style.cond_long_reads_style.long_reads)
                 #if $read
-                    #set $read_pathname = "reads/" + str($idx) + re.sub(r"[^\w\-\s]", "_", str($read.element_identifier)) + "." + $read.ext
+                    #set $read_pathname = "reads/" + str($idx) + "_" + re.sub(r"[^\w\-\s]", "_", str($read.element_identifier)) + "." + $read.ext
 ${idx}_${read.name} $read_pathname
                 #end if
             #end for
             #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_long_reads_style.reads_lists)
                 #for $idx, $collection in enumerate($repeat_entry.long_reads_single)
-                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub(r"[^\w\-\s]", "_", str($collection.element_identifier)) + "." + $collection.ext
+                    #set $read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub(r"[^\w\-\s]", "_", str($collection.element_identifier)) + "." + $collection.ext
 ${repeat_idx}${idx}_${collection.name} $read_pathname
                 #end for
             #end for
             #for $repeat_idx, $repeat_entry in enumerate($cond_input_style.cond_long_reads_style.reads_paired_lists)
                 #for $idx, $collection in enumerate($repeat_entry.long_reads_paired)
-                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub(r"[^\w\-\s]", "_", str($collection.forward.element_identifier)) + "." + $collection.forward.ext
-                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + re.sub(r"[^\w\-\s]", "_", str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
+                    #set $forward_read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub(r"[^\w\-\s]", "_", str($collection.forward.element_identifier)) + "." + $collection.forward.ext
+                    #set $reverse_read_pathname = "reads/" + str($repeat_idx) + str($idx) + "_" + re.sub(r"[^\w\-\s]", "_", str($collection.reverse.element_identifier)) + "." + $collection.reverse.ext
 ${repeat_idx}${idx}_${collection.name} $forward_read_pathname $reverse_read_pathname
                 #end for
             #end for
@@ -236,16 +236,16 @@ $row
                 <param name="locus_tag_prefix" type="text" value="egapxtmp" label="Locus tag prefix" help="One to 9-letter prefix to use for naming genes on this genome assembly."/>
                 <conditional name="cond_short_reads_style">
                     <param name="short_reads_style" type="select" label="Short RNA-seq sequence data source" help="Select short RNA-seq input data from history or input a list of SRA identifiers or remote URIs">
-                        <option value="history" selected="true">Select one or more short RNA-seq fastq datasets from the current history</option>
+                        <option value="history" selected="true">Select one or more short RNA-seq FASTQ/FASTA datasets from the current history</option>
                         <option value="list">Type in a list of SRA identifiers and/or remote short RNA-seq FASTA URIs</option>
                     </param>
                     <when value="history">
-                        <param name="short_reads" type="data" format="fastqsanger,fastqsanger.gz" optional="true" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected RNA-seq fastqsanger inputs will be added to the YAML for EGAPx configuration" multiple="true"/>
+                        <param name="short_reads" type="data" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" optional="true" label="Select multiple short RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the YAML for EGAPx configuration" multiple="true"/>
                         <repeat name="reads_lists" title="Single-end reads" min="0">
-                            <param name="short_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected RNA-seq fastqsanger inputs will be added to the YAML for EGAPx configuration" collection_type="list"/>
+                            <param name="short_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" label="Select multiple short RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the YAML for EGAPx configuration" collection_type="list"/>
                         </repeat>
                         <repeat name="reads_paired_lists" title="Paired-end reads" min="0">
-                            <param name="short_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz" label="Select multiple short RNA-seq fastqsanger inputs from the current history" help="All selected RNA-seq fastqsanger inputs will be added to the YAML for EGAPx configuration" collection_type="list:paired"/>
+                            <param name="short_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" label="Select multiple short RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the YAML for EGAPx configuration" collection_type="list:paired"/>
                         </repeat>
                     </when>
                     <when value="list">
@@ -254,16 +254,16 @@ $row
                 </conditional>
                 <conditional name="cond_long_reads_style">
                     <param name="long_reads_style" type="select" label="Long RNA-seq sequence data source" help="Select long RNA-seq input data from history or input a list of SRA identifiers or remote URIs">
-                        <option value="history" selected="true">Select one or more long RNA-seq fastq datasets from the current history</option>
+                        <option value="history" selected="true">Select one or more long RNA-seq FASTQ/FASTA datasets from the current history</option>
                         <option value="list">Type in a list of SRA identifiers and/or remote long RNA-seq FASTA URIs</option>
                     </param>
                     <when value="history">
-                        <param name="long_reads" type="data" format="fastqsanger,fastqsanger.gz" optional="true" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected RNA-seq fastqsanger inputs will be added to the YAML for EGAPx configuration" multiple="true"/>
+                        <param name="long_reads" type="data" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" optional="true" label="Select multiple long RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the YAML for EGAPx configuration" multiple="true"/>
                         <repeat name="reads_lists" title="Single-end reads" min="0">
-                            <param name="long_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected RNA-seq fastqsanger inputs will be added to the YAML for EGAPx configuration" collection_type="list"/>
+                            <param name="long_reads_single" type="data_collection" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" label="Select multiple long RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the YAML for EGAPx configuration" collection_type="list"/>
                         </repeat>
                         <repeat name="reads_paired_lists" title="Paired-end reads" min="0">
-                            <param name="long_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz" label="Select multiple long RNA-seq fastqsanger inputs from the current history" help="All selected RNA-seq fastqsanger inputs will be added to the YAML for EGAPx configuration" collection_type="list:paired"/>
+                            <param name="long_reads_paired" type="data_collection" format="fastqsanger,fastqsanger.gz,fasta,fasta.gz" label="Select multiple long RNA-seq FASTQ/FASTA inputs from the current history" help="All selected RNA-seq inputs will be added to the YAML for EGAPx configuration" collection_type="list:paired"/>
                         </repeat>
                     </when>
                     <when value="list">

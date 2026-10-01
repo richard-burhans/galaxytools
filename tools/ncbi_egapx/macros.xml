@@ -66,7 +66,7 @@ The required inputs are a genome assembly and an NCBI taxid (look it up on the `
     <token name="@HELP_FORM@"><![CDATA[
 **RNA-seq reads**
 
-In the tool form, short and/or long reads can be selected from the history (fastqsanger, optionally gzipped), or typed in as a list of remote URLs and/or SRA run accessions.
+In the tool form, short and/or long reads can be selected from the history (FASTQ or FASTA, optionally gzipped), or typed in as a list of remote URLs and/or SRA run accessions.
 Reads from individual sequencing runs should be provided as separate files, never combined. Long reads must be FASTA or FASTQ, not BAM.
 An SRA Entrez query cannot be typed into the read list (it is split into separate words); supply it in a YAML configuration or the *Additional yaml* field instead.
 
