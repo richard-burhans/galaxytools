@@ -406,15 +406,16 @@ and problems with this Galaxy wrapper at the `wrapper repository <https://github
             </element>
         </output_collection>
         <output_collection name="rnaseq_stats" type="list">
-            <element name="rnaseq_short/run_stats">
-                <assert_contents>
-                    <has_text text="collapsed count"/>
-                </assert_contents>
-            </element>
+            <!-- element tests must follow the collection's (sorted) element order -->
             <element name="rnaseq_short/rnaseq_align_report">
                 <assert_contents>
                     <is_valid_xml/>
                     <has_element_with_path path="./AssemblyUnit/SampleStats"/>
+                </assert_contents>
+            </element>
+            <element name="rnaseq_short/run_stats">
+                <assert_contents>
+                    <has_text text="collapsed count"/>
                 </assert_contents>
             </element>
         </output_collection>

@@ -161,15 +161,15 @@
             text: MultiQC
     rnaseq_stats:
       element_tests:
-        rnaseq_short/run_stats:
-          asserts:
-          - that: has_text
-            text: collapsed count
         rnaseq_short/rnaseq_align_report:
           asserts:
           - that: is_valid_xml
           - that: has_element_with_path
             path: ./AssemblyUnit/SampleStats
+        rnaseq_short/run_stats:
+          asserts:
+          - that: has_text
+            text: collapsed count
     annotation_gff:
       asserts:
       - that: has_line
