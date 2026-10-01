@@ -370,17 +370,14 @@ $row
     </outputs>
     <tests>
         <!--
-            expect_num_outputs counts leaf datasets + collections:
-              1 complete_genomic_gff
-            + 18 output_files
-            +  5 nextflow_stats
-            +  N STAR bam files (collect_star_bams=true)
-            +  M multiqc_report files (multiqc_report.html + multiqc_report_data/*)
-            These tests only complete on full-resource hardware; run them there,
-            read the actual "found <n>" from the report, set expect_num_outputs to
-            that value, then set expect_test_failure="true" for CI. The 28 below is
-            the deterministic floor (27 prior + the guaranteed multiqc_report.html);
-            reconcile M for the multiqc_report_data files on the local run.
+            expect_num_outputs = datasets + top-level collections known at job
+            submission, so discovered collection elements (multiqc_report,
+            star_alignments) are NOT counted and the total is fixed:
+              1 complete_genomic_gff + 18 output_files + 5 nextflow_stats
+            + 4 collections (output_files, nextflow_stats, multiqc_report,
+              star_alignments) = 28
+            Verified exact on a full-resource local run (EGAPx 1.0.1). These tests
+            only complete on such hardware, hence expect_test_failure="true" for CI.
         -->
         <test expect_num_outputs="28" expect_test_failure="true">
             <conditional name="cond_input_style">
@@ -404,7 +401,7 @@ $row
             </section>
             <expand macro="test_outputs"/>
         </test>
-        <!-- expect_num_outputs: see note above; reconcile on a full-resource local run. -->
+        <!-- expect_num_outputs: see note above. -->
         <test expect_num_outputs="28" expect_test_failure="true">
             <conditional name="cond_input_style">
                 <param name="input_style" value="history"/>

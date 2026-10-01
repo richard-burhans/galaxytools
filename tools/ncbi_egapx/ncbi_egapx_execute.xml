@@ -86,13 +86,15 @@
     </outputs>
     <tests>
         <!--
-            expect_num_outputs counts leaf datasets + collections:
+            expect_num_outputs = datasets + top-level collections known at job
+            submission, so discovered collection elements (multiqc_report,
+            star_alignments) are NOT counted and the total is fixed:
               1 complete_genomic_gff + 18 output_files + 5 nextflow_stats
-            + N STAR bam files + M multiqc_report files (html + multiqc_report_data/*).
-            Run on full-resource hardware, read the actual "found <n>", set
-            expect_num_outputs to it, then set expect_test_failure="true" for CI.
-            28 = deterministic floor (27 prior + guaranteed multiqc_report.html);
-            reconcile M for the multiqc_report_data files on the local run.
+            + 4 collections (output_files, nextflow_stats, multiqc_report,
+              star_alignments) = 28
+            Same outputs as ncbi_egapx.xml, where 28 was verified exact on a
+            full-resource run (EGAPx 1.0.1). This test also needs a real local
+            cache (the bundled tgz is a placeholder), hence expect_test_failure="true".
         -->
         <test expect_num_outputs="28" expect_test_failure="true">
             <param name="input_config" value="input.yaml"/>
