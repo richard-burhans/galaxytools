@@ -20,11 +20,12 @@ paths use the usual `a/`,`b/` prefixes).
 
 - **0002-export-argument-order.patch** — fixes the `export(...)` call in
   `nf/ui.nf`. Nextflow binds process inputs by position, and in `v1.0.1` the
-  call passes five channels out of order relative to the `export` process
+  call passes four channels out of order relative to the `export` process
   declaration. As a result the filtered protein alignments (`align.asn`) were
   published under `stats/rnaseq_long/` instead of `filtered_protein_alignments/`,
   and with long reads the minimap2 stats landed in `filtered_protein_alignments/`.
-  The patch reorders the arguments to match the declaration. Not upstream.
+  The patch reorders the arguments to match the declaration. Reported upstream as
+  ncbi/egapx#274 (fix: ncbi/egapx#275); delete this patch once a release includes it.
 
 ## Retired patches
 
