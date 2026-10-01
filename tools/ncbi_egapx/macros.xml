@@ -238,98 +238,125 @@ and problems with this Galaxy wrapper at the `wrapper repository <https://github
             <person givenName="Richard" familyName="Burhans" url="https://science.psu.edu/bmb/people/rcb112"/>
         </creator>
     </xml>
+    <!--
+        Content checks for a full run, written from a real EGAPx 1.0.1 run on the
+        D. farinae test data. They check structure (headers, record markers, XML
+        elements) plus loose floors (e.g. >= 5000 genes vs ~9700 observed), not
+        exact values, so they survive EGAPx/support-data updates.
+    -->
     <xml name="test_outputs">
         <output name="complete_genomic_gff" ftype="gff">
             <assert_contents>
-                <has_size min="1"/>
+                <has_line line="##gff-version 3"/>
+                <has_text_matching expression="\tGnomon\tgene\t" min="5000"/>
+                <has_text_matching expression="\tGnomon\tmRNA\t" min="5000"/>
+                <has_text_matching expression="\tGnomon\tCDS\t" min="5000"/>
             </assert_contents>
         </output>
-        <output_collection name="output_files" type="list">
+        <output_collection name="output_files" type="list" count="19">
             <element name="annotated_genome" ftype="asn1">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line line="Seq-entry ::= set {"/>
                 </assert_contents>
             </element>
             <element name="complete_genomic_gtf" ftype="gtf">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line line="#gtf-version 2.2"/>
+                    <has_text_matching expression="\tGnomon\ttranscript\t" min="5000"/>
+                    <has_text text="gene_id &quot;"/>
+                    <has_text text="transcript_id &quot;"/>
                 </assert_contents>
             </element>
             <element name="complete_genomic_fna" ftype="fasta">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="&gt;.+"/>
                 </assert_contents>
             </element>
             <element name="complete_cds" ftype="fasta">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="&gt;.+" min="5000"/>
                 </assert_contents>
             </element>
             <element name="complete_transcripts" ftype="fasta">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="&gt;.+" min="5000"/>
                 </assert_contents>
             </element>
             <element name="complete_proteins" ftype="fasta">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="&gt;.+" min="5000"/>
                 </assert_contents>
             </element>
             <element name="annotation_data" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="##Genome-Annotation-Data-START##"/>
+                    <has_text_matching expression="Annotation Pipeline\s+NCBI EGAPx"/>
+                    <has_text_matching expression="Annotation Software Version\s+@TOOL_VERSION@"/>
+                    <has_text text="##Genome-Annotation-Data-END##"/>
                 </assert_contents>
             </element>
             <element name="sra_metadata" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="#SRA run accession\t.*"/>
+                    <has_n_lines min="2"/>
                 </assert_contents>
             </element>
             <element name="gnomon_contam_rpt" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="#seq_id\tgb_syn_seq_id\tlength\tnum_genes\t.*"/>
+                    <has_n_lines min="2"/>
                 </assert_contents>
             </element>
             <element name="gnomon_report" ftype="txt">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="#transcript_id"/>
+                    <has_text text="Evidence id"/>
+                    <has_n_lines min="5000"/>
                 </assert_contents>
             </element>
             <element name="gnomon_quality_report" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="#transcript_id"/>
+                    <has_text text="Ab Initio Percentage"/>
+                    <has_n_lines min="5000"/>
                 </assert_contents>
             </element>
             <element name="busco_report" ftype="txt">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="# BUSCO was run in mode: proteins"/>
+                    <has_text_matching expression="C:[\d.]+%\[S:[\d.]+%,D:[\d.]+%\],F:[\d.]+%,M:[\d.]+%,n:\d+"/>
                 </assert_contents>
             </element>
             <element name="busco_report_json" ftype="json">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="&quot;parameters&quot;"/>
                 </assert_contents>
             </element>
             <element name="stats_feature_counts" ftype="xml">
                 <assert_contents>
                     <is_valid_xml/>
+                    <element_text_matches path="./OverallCounts/Counts[@feature_type='genes']/Total" expression="[1-9]\d{3,}"/>
                 </assert_contents>
             </element>
             <element name="stats_feature_stats" ftype="xml">
                 <assert_contents>
                     <is_valid_xml/>
+                    <has_element_with_path path="./OverallStats/TranscriptsPerGene"/>
                 </assert_contents>
             </element>
             <element name="stats_mask_assm_stats" ftype="xml">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <is_valid_xml/>
+                    <has_element_with_path path="./MaskingPercentages/WindowMasker"/>
                 </assert_contents>
             </element>
             <element name="stats_prot_align_stats" ftype="xml">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <is_valid_xml/>
+                    <has_element_with_path path="./AssemblyStats/CategoryStats/TotalSequences"/>
                 </assert_contents>
             </element>
+            <!-- all_unannotated.val is only written by some runs; an empty dataset is fine -->
             <element name="validated_all_unannotated" ftype="xml">
                 <assert_contents>
                     <has_size min="0"/>
@@ -338,13 +365,14 @@ and problems with this Galaxy wrapper at the `wrapper repository <https://github
             <element name="validated_genome" ftype="xml">
                 <assert_contents>
                     <is_valid_xml/>
+                    <has_text text="&lt;asnvalidate"/>
                 </assert_contents>
             </element>
         </output_collection>
-        <output_collection name="nextflow_stats" type="list">
+        <output_collection name="nextflow_stats" type="list" count="5">
             <element name="nextflow_log" ftype="txt">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_text text="Execution complete -- Goodbye"/>
                 </assert_contents>
             </element>
             <element name="run_report" ftype="html">
@@ -359,23 +387,34 @@ and problems with this Galaxy wrapper at the `wrapper repository <https://github
             </element>
             <element name="run_trace" ftype="tabular">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line_matching expression="task_id\thash\tnative_id\tname\tstatus\t.*"/>
+                    <has_text_matching expression="\texport\tCOMPLETED\t"/>
                 </assert_contents>
             </element>
             <element name="run_params" ftype="yaml">
                 <assert_contents>
-                    <has_size min="1"/>
+                    <has_line line="input:"/>
+                    <has_text text="busco_lineage:"/>
                 </assert_contents>
             </element>
         </output_collection>
-        <!-- MultiQC report (EGAPx >= 1.0): egapx_out/multiqc_report/ contains
-             multiqc_report.html plus a multiqc_report_data/ directory. Only the
-             stable HTML element is asserted here; the number of contributing
-             data files varies per run, so extra elements are allowed. -->
         <output_collection name="multiqc_report" type="list">
             <element name="multiqc_report" ftype="html">
                 <assert_contents>
-                    <has_size min="0"/>
+                    <has_text text="MultiQC"/>
+                </assert_contents>
+            </element>
+        </output_collection>
+        <output_collection name="rnaseq_stats" type="list">
+            <element name="rnaseq_short/run_stats">
+                <assert_contents>
+                    <has_text text="collapsed count"/>
+                </assert_contents>
+            </element>
+            <element name="rnaseq_short/rnaseq_align_report">
+                <assert_contents>
+                    <is_valid_xml/>
+                    <has_element_with_path path="./AssemblyUnit/SampleStats"/>
                 </assert_contents>
             </element>
         </output_collection>
