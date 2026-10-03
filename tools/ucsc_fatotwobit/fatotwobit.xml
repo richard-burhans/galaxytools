@@ -1,0 +1,117 @@
+<tool id="ucsc_fatotwobit" name="faToTwoBit" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: convert FASTA to the 2bit format a UCSC assembly hub serves</description>
+    <macros>
+        <token name="@TOOL_VERSION@">482</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">ucsc-fatotwobit</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## ⛔ SOFT-MASKING IS CARRIED IN THE CASE, AND THE DEFAULT KEEPS IT. 2bit stores an explicit mask
+## block list, so a lower-cased FASTA converts to a MASKED 2bit and `-noMask` silently discards
+## that. For this stack the difference is not cosmetic: lastz seeds only on uppercase, so a hub
+## built from a `-noMask` 2bit shows masked repeats the aligner never looked at.
+faToTwoBit
+#if $options.noMask
+    -noMask
+#end if
+#if $options.long
+    -long
+#end if
+#if $options.stripVersion
+    -stripVersion
+#end if
+#if $options.ignoreDups
+    -ignoreDups
+#end if
+#if str($options.namePrefix).strip()
+    -namePrefix='$options.namePrefix'
+#end if
+#for $f in $input
+    '$f'
+#end for
+'$output'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="fasta,fasta.gz" multiple="true"
+               label="FASTA sequence(s)"
+               help="More than one file is concatenated into a single 2bit, in the order given."/>
+        <section name="options" title="Options" expanded="false">
+            <param name="noMask" type="boolean" checked="false" label="Discard soft-masking"
+                   help="⛔ Lower-case is the mask. Leave this off unless you specifically want an unmasked 2bit."/>
+            <param name="long" type="boolean" checked="false" label="64-bit offsets"
+                   help="Required only for a genome over 4 Gb. Produces a 2bit older tools cannot read."/>
+            <param name="stripVersion" type="boolean" checked="false"
+                   label="Strip the version suffix from GenBank accessions"
+                   help="CM123456.1 becomes CM123456. ⚠ The hub's chrom.sizes and every track must agree with this choice."/>
+            <param name="ignoreDups" type="boolean" checked="false"
+                   label="Keep only the first of a duplicated sequence name"
+                   help="Without it, a duplicate name is a fatal error — which is usually what you want."/>
+            <param name="namePrefix" type="text" value="" optional="true" label="Prefix every sequence name"
+                   help="Prepended verbatim, e.g. an assembly tag for a multi-genome hub.">
+                <sanitizer invalid_char="">
+                    <valid initial="string.ascii_letters,string.digits"><add value="_"/><add value="-"/><add value="."/></valid>
+                </sanitizer>
+            </param>
+        </section>
+    </inputs>
+    <outputs>
+        <data name="output" format="twobit"/>
+    </outputs>
+    <tests>
+        <!-- ▶ A mixed-case FASTA, run both ways. ⛔ THE TWO RANGES MUST NOT OVERLAP, or the pair
+             proves nothing: the first draft asserted 200±150 and 190±150, which both accept
+             anything from 50 to 350 bytes and would pass on identical files. Measured with
+             faToTwoBit 482: 122 bytes with the mask, 98 without — the 24-byte mask block list
+             is the whole difference, and it is what `-noMask` throws away. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="masked.fa" ftype="fasta"/>
+            <output name="output" ftype="twobit">
+                <assert_contents>
+                    <has_size value="122" delta="8"/>
+                </assert_contents>
+            </output>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="input" value="masked.fa" ftype="fasta"/>
+            <section name="options">
+                <param name="noMask" value="true"/>
+            </section>
+            <output name="output" ftype="twobit">
+                <assert_contents>
+                    <has_size value="98" delta="8"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Converts FASTA to UCSC's `2bit`_ format: two bits per base, with runs of ``N`` and the soft-mask
+stored as separate block lists rather than in the sequence. An assembly hub names one per genome in
+its ``genomes.txt`` ``twoBitPath`` stanza, and the Genome Browser reads ranges out of it directly.
+
+**Masking**
+
+Lower-case characters in the input become the 2bit's mask block list. ``-noMask`` throws that away.
+
+.. warning:: Alignment tools in this stack seed only on uppercase, so a hub built from an unmasked
+   2bit displays repeats that the aligner never examined. Keep the default unless you know otherwise.
+
+**Sequence names**
+
+``-stripVersion`` and ``-namePrefix`` both rewrite names. Whatever you choose, the hub's
+``chrom.sizes``, every BED fed to ``bedToBigBed``, and the ``defaultPos`` in ``genomes.txt`` must use
+the same names, or tracks silently fail to display.
+
+.. _2bit: https://genome.ucsc.edu/FAQ/FAQformat.html#format7
+]]></help>
+    <citations>
+        <citation type="doi">10.1093/bib/bbs038</citation>
+    </citations>
+</tool>
