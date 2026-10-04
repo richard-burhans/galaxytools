@@ -84,7 +84,7 @@
     '$yamlconfig' -e galaxy -o 'egapx_out' &&
     ## hack to support 0.2-alpha
     if [ -e egapx_out/accept.gff ]; then ln -s accept.gff egapx_out/complete.genomic.gff; fi
-    #if $developer.collect_star_bams
+    #if str($developer.collect_star_bams) == "true"
     && bash '$__tool_directory__/get-bams.bash'
     #end if
     ]]></command>
