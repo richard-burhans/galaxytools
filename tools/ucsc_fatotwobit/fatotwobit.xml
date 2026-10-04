@@ -1,4 +1,4 @@
-<tool id="ucsc_fatotwobit" name="faToTwoBit" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+<tool id="ucsc_fatotwobit" name="faToTwoBit" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="25.0" license="MIT">
     <description>: convert FASTA to the 2bit format a UCSC assembly hub serves</description>
     <macros>
         <token name="@TOOL_VERSION@">482</token>
@@ -11,24 +11,20 @@
         <requirement type="package" version="@TOOL_VERSION@">ucsc-fatotwobit</requirement>
     </requirements>
     <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
-    <command detect_errors="exit_code"><![CDATA[
+    <command detect_errors="aggressive"><![CDATA[
 ## ⛔ SOFT-MASKING IS CARRIED IN THE CASE, AND THE DEFAULT KEEPS IT. 2bit stores an explicit mask
 ## block list, so a lower-cased FASTA converts to a MASKED 2bit and `-noMask` silently discards
 ## that. For this stack the difference is not cosmetic: lastz seeds only on uppercase, so a hub
 ## built from a `-noMask` 2bit shows masked repeats the aligner never looked at.
+## ⛔ EVERY FLAG LIVES IN truevalue, AND THAT IS NOT STYLE. Galaxy renders a boolean as the
+## STRING "true" or "false", and "false" is truthy in Python -- so `#if $options.noMask` was
+## ALWAYS true and this tool would have passed -noMask on every run, silently discarding the
+## soft-mask from every genome it converted. The flag as the value cannot fail that way.
 faToTwoBit
-#if $options.noMask
-    -noMask
-#end if
-#if $options.long
-    -long
-#end if
-#if $options.stripVersion
-    -stripVersion
-#end if
-#if $options.ignoreDups
-    -ignoreDups
-#end if
+$options.noMask
+$options.long
+$options.stripVersion
+$options.ignoreDups
 #if str($options.namePrefix).strip()
     -namePrefix='$options.namePrefix'
 #end if
@@ -42,14 +38,14 @@ faToTwoBit
                label="FASTA sequence(s)"
                help="More than one file is concatenated into a single 2bit, in the order given."/>
         <section name="options" title="Options" expanded="false">
-            <param name="noMask" type="boolean" checked="false" label="Discard soft-masking"
+            <param argument="-noMask" type="boolean" truevalue="-noMask" falsevalue="" checked="false" label="Discard soft-masking"
                    help="⛔ Lower-case is the mask. Leave this off unless you specifically want an unmasked 2bit."/>
-            <param name="long" type="boolean" checked="false" label="64-bit offsets"
+            <param argument="-long" type="boolean" truevalue="-long" falsevalue="" checked="false" label="64-bit offsets"
                    help="Required only for a genome over 4 Gb. Produces a 2bit older tools cannot read."/>
-            <param name="stripVersion" type="boolean" checked="false"
+            <param argument="-stripVersion" type="boolean" truevalue="-stripVersion" falsevalue="" checked="false"
                    label="Strip the version suffix from GenBank accessions"
                    help="CM123456.1 becomes CM123456. ⚠ The hub's chrom.sizes and every track must agree with this choice."/>
-            <param name="ignoreDups" type="boolean" checked="false"
+            <param argument="-ignoreDups" type="boolean" truevalue="-ignoreDups" falsevalue="" checked="false"
                    label="Keep only the first of a duplicated sequence name"
                    help="Without it, a duplicate name is a fatal error — which is usually what you want."/>
             <param name="namePrefix" type="text" value="" optional="true" label="Prefix every sequence name"
