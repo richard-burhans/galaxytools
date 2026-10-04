@@ -28,7 +28,7 @@
 #end for
 #set $r_vector = "c(" + ",".join($input_file_list) + ")"
 #set $interactive_value = "FALSE"
-#if $interactive
+#if str($interactive) == "true"
     #set $interactive_value = "TRUE"
 #end if
 rmarkdown::render(

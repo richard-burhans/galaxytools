@@ -192,11 +192,11 @@ proteins_deny_taxids: $cond_input_style.cond_protein_set.proteins_deny_taxids
 proteins: $cond_input_style.proteins
                 #end if
             #end if
-            #if $cond_input_style.trnascan_enabled
+            #if str($cond_input_style.trnascan_enabled) == "true"
 trnascan:
   enabled: true
             #end if
-            #if $cond_input_style.cmsearch_enabled
+            #if str($cond_input_style.cmsearch_enabled) == "true"
 cmsearch:
   enabled: true
             #end if
