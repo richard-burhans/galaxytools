@@ -6,14 +6,14 @@
 #   source: tools/growler_lastz_lav/growler_lastz_lav.xml
 #   tool_id: growler_lastz_lav
 #   command_sha256: c11e992b9f27794062617349f26cf6bccc36268a519a37d979c6713d555a38fa
-#   configfile_driver_sha256: 2016774d64ff0a116008346d6d5d048ad8ad569fbebd55eae67e68141d6df250
+#   configfile_driver_sha256: 1fc6db5d29593181e33494520c83facc5c9179d2041948e2d8f612c048bcb700
 #   requirements: kegalign-full=0.3.4
 #   macros_sha256: (no macros.xml)
 #   container: quay.io/biocontainers/kegalign-full:0.3.4--hdfd78af_0
 #   converter: scripts/udt_convert.py 0.2.0
 class: GalaxyUserTool
 id: gt-growler-lastz-lav
-version: "1.04.52+galaxy2"
+version: "1.04.52+galaxy3"
 name: growler_lastz_lav (UDT)
 description: "gapped extension of one KegAlign pair file, one target per lastz call, LAV out"
 container: quay.io/biocontainers/kegalign-full:0.3.4--hdfd78af_0
@@ -31,6 +31,27 @@ shell_command: |
   masking = '0' if masking in ('null', '') else masking
   CHUNK = 50000
   FLUSH = 20000
+  LAV_TRAILER = b'#:eof'
+  #: the window repair_killed_jobs.py already proved against real panel LAV files.
+  TRAILER_WINDOW = 80
+
+
+  def require_trailer(path, what):
+      # lastz closes every LAV it finishes with '#:eof'. Its absence means the write stopped
+      # early -- which is the one failure Galaxy cannot see: a truncated LAV is still megabytes,
+      # still parses as a datatype, and the job still reports ok. It surfaces much later as
+      # lavToPsl 'End before start' or 'Expecting 6 words', by which point the pair looks
+      # computed. The exit code does not cover it: a full disk can stop the write with lastz
+      # still exiting 0. Checked by absolute offset from the end, never a negative-range read.
+      size = os.path.getsize(path)
+      with open(path, 'rb') as fh:
+          fh.seek(max(0, size - TRAILER_WINDOW))
+          tail = fh.read()
+      if LAV_TRAILER not in tail:
+          sys.exit('%s: no %s trailer in the last %d of %d bytes -- lastz did not finish '
+                   'writing it. The output is truncated (a full disk is the usual cause); '
+                   'it is NOT safe to build chains on.'
+                   % (what, LAV_TRAILER.decode(), TRAILER_WINDOW, size))
 
   with open(pair, 'rb') as fh:
       gz = fh.read(2) == b'\x1f\x8b'
@@ -91,6 +112,7 @@ shell_command: |
                   rc = subprocess.run(cmd).returncode
                   if rc != 0:
                       sys.exit('lastz exited %d on target %s' % (rc, t.decode()))
+                  require_trailer('chunk.lav', 'chunk %d of target %s' % (calls + 1, t.decode()))
                   with open('chunk.lav', 'rb') as lav:
                       while True:
                           block = lav.read(1 << 22)
@@ -98,6 +120,12 @@ shell_command: |
                               break
                           out.write(block)
                   calls += 1
+
+  # ⚠ AFTER THE `with` CLOSES, so the buffer is flushed and a write error has been raised.
+  # Guarded on `calls` because an empty pair file legitimately produces no lastz call and so
+  # no trailer -- asserting unconditionally would fail the one case that is genuinely empty.
+  if calls:
+      require_trailer(output, 'the assembled LAV output')
   print('%d target(s), %d lastz call(s)' % (len(order), calls))
   CONFIGFILE_DRIVER
   ln -s '$(inputs.target.path)' target.2bit
