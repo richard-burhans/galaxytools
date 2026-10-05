@@ -58,9 +58,7 @@
 	#end if
     #set $stats_type = $output_options.stats_flavor.flavor_selector
     #if $stats_type == "stats"
-        #if $output_options.stats_flavor.sequence_report
-            --sequence-report
-        #end if
+        $output_options.stats_flavor.sequence_report
     #else if $stats_type == "quality"
 		--quality '$output_options.stats_flavor.quality'
     #else if $stats_type == "size"
@@ -68,16 +66,12 @@
     #end if
     #set $output_type = $output_options.output_type.type_selector
     #if $output_type == "rd_file"
-        #if $output_options.output_type.md5
-            --md5
-        #end if
+        $output_options.output_type.md5
         -o output.rd
     #else if $output_type == "combined_reads"
         -o 'output.${output_options.output_type.format_selector}'
     #end if
-	#if $output_options.verbose
-		--verbose
-	#end if
+	$output_options.verbose
 		--tabular
 		--threads \${GALAXY_SLOTS:-2}
 		> '$stats_outfile'
@@ -161,7 +155,7 @@
             </when>
         </conditional>
         <section name="output_options" title="Output options">
-            <param argument="--verbose" type="boolean" checked="false" label="Verbose output" help="Enable verbose logging"/>
+            <param argument="--verbose" type="boolean" truevalue="--verbose" falsevalue="" checked="false" label="Verbose output" help="Enable verbose logging"/>
             <conditional name="stats_flavor">
                 <param name="flavor_selector" type="select" label="Stats output">
                     <option value="stats" selected="true">Stats</option>
@@ -169,7 +163,7 @@
                     <option value="size">Size</option>
                 </param>
                 <when value="stats">
-                    <param argument="--sequence-report" type="boolean" checked="false" label="Per read sequence report"/>
+                    <param argument="--sequence-report" type="boolean" truevalue="--sequence-report" falsevalue="" checked="false" label="Per read sequence report"/>
                 </when>
                 <when value="quality">
                     <param argument="--quality" type="select" optional="true" label="quality type">
@@ -200,7 +194,7 @@
                     </param>
                 </when>
                 <when value="rd_file">
-                    <param argument="--md5" type="boolean" checked="false" label="Print md5 of .rd files"/>
+                    <param argument="--md5" type="boolean" truevalue="--md5" falsevalue="" checked="false" label="Print md5 of .rd files"/>
                 </when>
             </conditional>
         </section>

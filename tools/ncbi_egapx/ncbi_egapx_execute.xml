@@ -20,7 +20,7 @@
         --force
     #end if
     '$input_config' --executor galaxy --output 'egapx_out' --local-cache '$input_cache.extra_files_path'
-    #if $developer.collect_star_bams
+    #if str($developer.collect_star_bams) == "true"
     && bash '$__tool_directory__/get-bams.bash'
     #end if
     ]]></command>
