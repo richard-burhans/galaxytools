@@ -68,6 +68,12 @@ def lint(path: pathlib.Path) -> list[str]:
     if "@TOOL_VERSION@" not in ver:
         out.append(f"{name}: version `{ver}` is hardcoded; use @TOOL_VERSION@+galaxy@VERSION_SUFFIX@")
 
+    # ⛔ A PARAM CAN BE USED OUTSIDE <command>. ncbi_egapx builds a YAML in a <configfile> and
+    # references 13 params only from there; reading <command> alone reported every one as
+    # orphaned -- 13 false findings out of 84, which is how a linter stops being believed.
+    # Everywhere Cheetah can reference a param counts as a use.
+    used_text = "".join(text_of(el) for el in root.iter()
+                        if el.tag in ("command", "configfile", "environment_variables"))
     cmd = root.find("command")
     if cmd is None:
         out.append(f"{name}: no <command>")
@@ -110,7 +116,11 @@ def lint(path: pathlib.Path) -> list[str]:
             if re.search(rf"#if\s+\$?[\w.]*\b{re.escape(pname)}\b", cmd_text):
                 out.append(f"{name}: boolean `{pname}` drives an #if; put the flag in "
                            f"truevalue/falsevalue instead")
-        if pname and cmd_text and not re.search(rf"\${{?[\w.]*\b{re.escape(pname)}\b", cmd_text):
+        # ⚠ A reference need not start with `$`. ncbi_egapx reaches a param through
+        # `$getVar('developer.query_limit.rnaseq_query_limit', '20')`, where the name sits inside a
+        # QUOTED STRING -- so a `\$...name` pattern misses it and calls a used param orphaned.
+        # Matching the bare name costs some sensitivity and buys the absence of a false alarm.
+        if pname and used_text and not re.search(rf"\b{re.escape(pname)}\b", used_text):
             out.append(f"{name}: param `{pname}` never appears in <command> (orphaned)")
 
     # Cheetah truthiness traps, both of which pass tests and fail on real values
@@ -188,6 +198,18 @@ def self_test() -> int:
                       '<macros><token name="@TOOL_VERSION@">1</token>'
                       '<xml name="m">#if $x\n--a\n#end if</xml></macros>'),
          "MUST be a <token>"),
+        # ⛔ the false-positive class: a param used ONLY from a configfile is NOT orphaned
+        ("a param used only in a <configfile> is not orphaned",
+         GOOD.replace("<outputs>",
+                      '<configfiles><configfile name="c">x: $num</configfile></configfiles>'
+                      "<outputs>").replace("--n $num", ""),
+         None),
+        ("a param reached via getVar() is not orphaned",
+         GOOD.replace("<outputs>",
+                      '<environment_variables><environment_variable name="E">'
+                      "$getVar('num', '1')</environment_variable></environment_variables>"
+                      "<outputs>").replace("--n $num", ""),
+         None),
         ("a numeric tested for truthiness is caught",
          GOOD.replace("--n $num", "\n#if $num\n--n $num\n#end if\n"), "drops a valid 0"),
     ]
