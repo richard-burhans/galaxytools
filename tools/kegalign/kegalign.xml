@@ -5,7 +5,7 @@
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
-        <token name="@KEGALIGN_SUFFIX@">1</token>
+        <token name="@KEGALIGN_SUFFIX@">2</token>
         <import>macros.xml</import>
         <import>sequence_options.xml</import>
         <import>scoring_options.xml</import>
@@ -235,8 +235,7 @@ python "\$KEGALIGN_BIN/package_output.py"
         <expand macro="interpolation_options"/>
         <expand macro="output_options"/>
         <expand macro="system_options"/>
-        <param name="bundle_selector" type="select" label="Output shape"
-               help="Tarball is the original two-step form, consumed by Batched LASTZ. Chromosome pairs emit one element per pair for Growler, which maps LASTZ over them without ever packing or unpacking an archive.">
+        <param name="bundle_selector" type="select" label="Output shape" help="Tarball is the original two-step form, consumed by Batched LASTZ. Chromosome pairs emit one element per pair for Growler, which maps LASTZ over them without ever packing or unpacking an archive.">
             <option value="tarball" selected="true">A single tarball (data_package.tgz)</option>
             <option value="collection">A collection of pair files, one per chromosome pair</option>
         </param>
@@ -244,12 +243,7 @@ python "\$KEGALIGN_BIN/package_output.py"
              and would change the stored state shape of every saved workflow and history that
              names `bundle_selector`, for a parameter that is simply ignored on the other path.
              It is documented as collection-only instead. -->
-        <param name="batch_lines" type="integer" value="0" min="0" label="Segment lines per element"
-               help="Chromosome pairs only, and 0 turns it off. One element per chromosome pair makes the
-                     element count scale with the QUERY'S SEQUENCE COUNT -- fine for ten chromosomes, ruinous
-                     for a contig-level assembly, where a 300,000-contig query emits an element per contig per
-                     target. Above 0, whole query sequences are packed into elements of about this many segment
-                     lines, so the count is chosen rather than inherited. A single query is never split."/>
+        <param name="batch_lines" type="integer" value="0" min="0" label="Segment lines per element" help="Chromosome pairs only, and 0 turns it off. One element per chromosome pair makes the                      element count scale with the QUERY'S SEQUENCE COUNT -- fine for ten chromosomes, ruinous                      for a contig-level assembly, where a 300,000-contig query emits an element per contig per                      target. Above 0, whole query sequences are packed into elements of about this many segment                      lines, so the count is chosen rather than inherited. A single query is never split."/>
         <section name="developer" title="Developer Options" expanded="false">
             <expand macro="alignment_type_option"/>
         </section>

@@ -4,7 +4,7 @@
         <!-- ▶ THIS TOOL'S SUFFIX LIVES HERE, NOT IN macros.xml. Shared files are what
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
-        <token name="@GROWLER_LASTZ_SUFFIX@">8</token>
+        <token name="@GROWLER_LASTZ_SUFFIX@">9</token>
         <import>macros.xml</import>
     </macros>
     <expand macro="lastz_requirements"/>
@@ -91,20 +91,17 @@ for piece in piece.*; do
 done
     ]]></command>
     <inputs>
-        <param name="pair" type="data" format="tabular.gz" label="Chromosome pair"
-               help="One element of a KegAlign pair file collection: the anchor segments for a single chromosome pair, both strands, gzipped."/>
+        <param name="pair" type="data" format="tabular.gz" label="Chromosome pair" help="One element of a KegAlign pair file collection: the anchor segments for a single chromosome pair, both strands, gzipped."/>
         <param name="target" type="data" format="twobit" label="Target sequence (2bit)"/>
         <param name="query" type="data" format="twobit" label="Query sequence (2bit)"/>
-        <param name="scores" type="data" format="txt" optional="true" label="Scoring file in LASTZ format"
-               help="Leave unset to use LASTZ's built-in matrix. Must match the scoring KegAlign used for seeding, or the two stages disagree about what a good alignment is."/>
+        <param name="scores" type="data" format="txt" optional="true" label="Scoring file in LASTZ format" help="Leave unset to use LASTZ's built-in matrix. Must match the scoring KegAlign used for seeding, or the two stages disagree about what a good alignment is."/>
         <param name="format_selector" type="select" label="Output format">
             <option value="maf-" selected="true">MAF, without the header (maf-)</option>
             <option value="maf">MAF</option>
             <option value="axt">AXT</option>
             <option value="axt+">AXT, with statistics (axt+)</option>
         </param>
-        <param argument="--gappedthresh" type="integer" value="3000" label="Gapped extension threshold"
-               help="Must match the value KegAlign generated its commands with."/>
+        <param argument="--gappedthresh" type="integer" value="3000" label="Gapped extension threshold" help="Must match the value KegAlign generated its commands with."/>
         <param argument="--ydrop" type="integer" value="9430" label="Y-drop"/>
         <conditional name="interpolation">
             <param name="inner_selector" type="select" label="Interpolation between anchors">
