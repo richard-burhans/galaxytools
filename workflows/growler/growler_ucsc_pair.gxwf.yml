@@ -145,7 +145,7 @@ outputs:
     doc: 'per-element LAV, kept: the raw alignment record'
 steps:
   kegalign:
-    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.4+galaxy1
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.4+galaxy2
     label: kegalign
     doc: 'Seed, filter and gap-free extension on the GPU. `bundle_selector: collection` makes it emit
       pair files instead of data_package.tgz; the tarball path is untouched and still available.
@@ -356,7 +356,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 380
-      top: 1442
+      top: 1325
   net:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainnet/ucsc_chainnet/482+galaxy0
     label: net
@@ -382,7 +382,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 680
-      top: 1442
+      top: 1325
   netsyntenic:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netsyntenic/ucsc_netsyntenic/482+galaxy0
     label: netsyntenic
@@ -393,7 +393,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 980
-      top: 1442
+      top: 1325
   over_subset:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netchainsubset/ucsc_netchainsubset/482+galaxy0
     label: over_subset
@@ -410,7 +410,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1280
-      top: 1442
+      top: 1325
   over_chain:
     tool_id: brc-chain-stitch-id
     label: over_chain
@@ -421,7 +421,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1580
-      top: 1442
+      top: 1325
   syn_net:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netfilter/ucsc_netfilter/482+galaxy0
     label: syn_net
@@ -439,7 +439,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1280
-      top: 1939
+      top: 1822
   synnet_axt:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_nettoaxt/ucsc_nettoaxt/482+galaxy0
     label: synnet_axt
@@ -462,7 +462,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1880
-      top: 1939
+      top: 1822
   synnet_sorted:
     tool_id: gt-ucsc-axtsort
     label: synnet_sorted
@@ -473,7 +473,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 2180
-      top: 1939
+      top: 1822
   synnet_maf:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_axttomaf/ucsc_axtomaf/482+galaxy1
     label: synnet_maf
@@ -498,7 +498,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 2480
-      top: 1939
+      top: 1822
   rb_stitch1:
     tool_id: brc-chain-stitch-id
     label: rb_stitch1
@@ -509,7 +509,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 380
-      top: 2454
+      top: 2337
   rb_swap1:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainswap/ucsc_chainswap/482+galaxy0
     label: rb_swap1
@@ -520,7 +520,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 680
-      top: 2454
+      top: 2337
   rb_sort1:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainsort/ucsc_chainsort/482+galaxy0
     label: rb_sort1
@@ -532,7 +532,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 980
-      top: 2454
+      top: 2337
   rb_prenet_q:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0
     label: rb_prenet_q
@@ -555,7 +555,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1280
-      top: 2454
+      top: 2337
   rb_net_q:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainnet/ucsc_chainnet/482+galaxy0
     label: rb_net_q
@@ -581,7 +581,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1580
-      top: 2454
+      top: 2337
   rb_syn_q:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netsyntenic/ucsc_netsyntenic/482+galaxy0
     label: rb_syn_q
@@ -592,7 +592,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1880
-      top: 2454
+      top: 2337
   rb_subset:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netchainsubset/ucsc_netchainsubset/482+galaxy0
     label: rb_subset
@@ -609,7 +609,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 2180
-      top: 2454
+      top: 2337
   rb_stitch2:
     tool_id: brc-chain-stitch-id
     label: rb_stitch2
@@ -620,7 +620,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 380
-      top: 3085
+      top: 2968
   rb_swap2:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainswap/ucsc_chainswap/482+galaxy0
     label: rb_swap2
@@ -631,7 +631,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 680
-      top: 3085
+      top: 2968
   rb_chain:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainsort/ucsc_chainsort/482+galaxy0
     label: rb_chain
@@ -643,7 +643,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 980
-      top: 3085
+      top: 2968
   rb_prenet_t:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainprenet/ucsc_chainprenet/482+galaxy0
     label: rb_prenet_t
@@ -666,7 +666,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1280
-      top: 3085
+      top: 2968
   rb_net_t:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_chainnet/ucsc_chainnet/482+galaxy0
     label: rb_net_t
@@ -692,7 +692,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1580
-      top: 3085
+      top: 2968
   rb_net:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_netsyntenic/ucsc_netsyntenic/482+galaxy0
     label: rb_net
@@ -703,7 +703,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 1880
-      top: 3085
+      top: 2968
   rbest_axt:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_nettoaxt/ucsc_nettoaxt/482+galaxy0
     label: rbest_axt
@@ -726,7 +726,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 2180
-      top: 3582
+      top: 3465
   rbest_sorted:
     tool_id: gt-ucsc-axtsort
     label: rbest_sorted
@@ -737,7 +737,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 2480
-      top: 3582
+      top: 3465
   rbest_maf:
     tool_id: toolshed.g2.bx.psu.edu/repos/iuc/ucsc_axttomaf/ucsc_axtomaf/482+galaxy1
     label: rbest_maf
@@ -762,7 +762,7 @@ steps:
         __class__: ConnectedValue
     position:
       left: 2780
-      top: 3582
+      top: 3465
 comments:
 - type: markdown
   position:
@@ -797,13 +797,13 @@ comments:
   - 230
   size:
   - 1810
-  - 999
+  - 882
   color: black
   title: 'doBlastzChainNet.pl: align, chain, net, liftOver chain, synNet MAF  (kent @d4e9b27)'
 - type: frame
   position:
   - 335
-  - 1309
+  - 1192
   size:
   - 2410
   - 932
@@ -812,7 +812,7 @@ comments:
 - type: frame
   position:
   - 335
-  - 2321
+  - 2204
   size:
   - 2110
   - 551
@@ -821,7 +821,7 @@ comments:
 - type: frame
   position:
   - 335
-  - 2952
+  - 2835
   size:
   - 2710
   - 932
@@ -833,14 +833,14 @@ comments:
   - 289
   size:
   - 1780
-  - 925
+  - 808
   color: blue
   title: '1  Align and chain: KegAlign seeds on the GPU; lastz, one target per call; lavToPsl; axtChain
     -psl | chainAntiRepeat | chainMergeSort -> all.chain  (lines 809-889)'
 - type: frame
   position:
   - 350
-  - 1368
+  - 1251
   size:
   - 1480
   - 477
@@ -850,7 +850,7 @@ comments:
 - type: frame
   position:
   - 1250
-  - 1865
+  - 1748
   size:
   - 1480
   - 361
@@ -860,7 +860,7 @@ comments:
 - type: frame
   position:
   - 350
-  - 2380
+  - 2263
   size:
   - 2080
   - 477
@@ -870,7 +870,7 @@ comments:
 - type: frame
   position:
   - 350
-  - 3011
+  - 2894
   size:
   - 1780
   - 477
@@ -879,7 +879,7 @@ comments:
 - type: frame
   position:
   - 2150
-  - 3508
+  - 3391
   size:
   - 880
   - 361
