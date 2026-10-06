@@ -209,7 +209,17 @@ def build(growler: dict) -> dict:
         "rbest_chain": {"outputSource": "rb_chain/out"},
         "rbest_net": {"outputSource": "rb_net/out"},
         "rbest_maf": {"outputSource": "rbest_maf/out", "doc": "multiz input for other genomes"},
-        "lav": {"outputSource": "lastz_lav/output", "doc": "per-element LAV, kept: the raw alignment record"},
+        # ⚠ NOT KEPT, AND THE DOC USED TO SAY IT WAS. The cs10 panel treats this as an
+        # intermediate: INTERMEDIATE in schedule_growler_ucsc_cs10.py names the lastz_lav step, so
+        # purge_intermediates discards it once a pair is done -- ~45 of each pair's 78 GiB. It is
+        # also unreachable by the transfer, which reads only the invocation's dataset outputs while
+        # this arrives as a COLLECTION from a mapped step. Deliberate; the doc was the defect.
+        "lav": {"outputSource": "lastz_lav/output",
+                "doc": "per-element LAV, the raw alignment record. NOT retained by the cs10 "
+                       "panel: ~45 of each pair's 78 GiB, purged as an intermediate once the pair "
+                       "is done, before the eight chain/net/MAF outputs are moved off the compute "
+                       "host. Deliberate, and it is the only copy -- a consumer that needs LAV "
+                       "must take it while the pair is still live."},
     }
     return with_connected_values(
         {"class": "GalaxyWorkflow", "label": "Growler UCSC pair (KegAlign + UCSC chain/net, flat)",
