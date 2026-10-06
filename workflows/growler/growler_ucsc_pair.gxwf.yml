@@ -142,11 +142,10 @@ outputs:
     doc: multiz input for other genomes
   lav:
     outputSource: lastz_lav/output
-    doc: 'per-element LAV, the raw alignment record. NOT retained by the cs10 panel: it is
-      roughly 45 of each pair''s 78 GiB, and schedule_growler_ucsc_cs10.py purges it as an
-      intermediate once the pair is done, before the eight chain/net/MAF outputs above are moved
-      off the compute host. Deliberate, and it is the only copy -- a consumer that needs LAV must
-      take it while the pair is still live.'
+    doc: 'per-element LAV, the raw alignment record. NOT retained by the cs10 panel: ~45 of each pair''s
+      78 GiB, purged as an intermediate once the pair is done, before the eight chain/net/MAF outputs
+      are moved off the compute host. Deliberate, and it is the only copy -- a consumer that needs LAV
+      must take it while the pair is still live.'
 steps:
   kegalign:
     tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/kegalign/kegalign/0.3.4+galaxy2
