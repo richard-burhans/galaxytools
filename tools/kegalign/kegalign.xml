@@ -5,7 +5,7 @@
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
-        <token name="@KEGALIGN_SUFFIX@">2</token>
+        <token name="@KEGALIGN_SUFFIX@">3</token>
         <import>macros.xml</import>
         <import>sequence_options.xml</import>
         <import>scoring_options.xml</import>
@@ -52,10 +52,32 @@
 ## target_2bit / query_2bit already prevents those. The files themselves are load-bearing on both
 ## paths.
 mkdir -p "\$(pwd)/work" &&
+## ⛔ `test -s` AFTER EACH CONVERSION, BECAUSE AN EMPTY 2bit IS A GREEN JOB. Measured on
+## 2026-10-06: kegalign 0.3.4+galaxy1 finished `ok` with exit 0 on the cs10 x CST53 pair, 93
+## segment-pair files of 17-19 MB each, and BOTH target_2bit and query_2bit at ZERO BYTES.
+## Galaxy has no job-time output validation -- `<assert_contents>` is declared only inside
+## `complexType TestOutput`, so it never runs on a production job -- and nothing downstream
+## checks a size, so the pair was handed on. Every one of its 93 `gt-growler-lastz-lav` jobs
+## then died reading the empty 2bit with `internal error in find_next_fasta_coi ... looking
+## for "NC_044371.1"`, 305 jobs paused behind them, and the scheduler parked the whole host:
+## it refuses to launch while a pair is FAILED, so 121 queued pairs went nowhere until the
+## pair was retired by hand. ⚠ The message names a CHROMOSOME, which sends you to debug the
+## assembly; it is the FILE.
+##
+## ⚠ THIS IS THE CHEAP HALF, DELIBERATELY. `test -s` is POSIX, needs no new package, and
+## decides the failure that actually happened. It does NOT catch a 2bit truncated partway
+## through its packed bases -- and neither would `twoBitInfo`, which was the obvious
+## candidate: measured on a 99-byte 2bit with kent v482, truncating 1, 4 or 16 bytes leaves
+## `twoBitInfo` exiting ZERO and printing every sequence size, because it resolves the index
+## and the record headers and never reads the bases. Only `twoBitToFa` catches those, and it
+## needs `ucsc-twobittofa` added to `kegalign-full` first. Ship this now; add that with the
+## recipe.
 gzip -cdfq '$target' > "\$(pwd)/work/ref.fa" &&
 faToTwoBit "\$(pwd)/work/ref.fa" "\$(pwd)/work/ref.2bit" &&
+test -s "\$(pwd)/work/ref.2bit" &&
 gzip -cdfq '$query' > "\$(pwd)/work/query.fa" &&
 faToTwoBit "\$(pwd)/work/query.fa" "\$(pwd)/work/query.2bit" &&
+test -s "\$(pwd)/work/query.2bit" &&
 rm -f "\$(pwd)/work/ref.fa" "\$(pwd)/work/query.fa" &&
 
 ## The scripts come from the kegalign package, which installs them to its bin
