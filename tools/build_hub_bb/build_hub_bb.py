@@ -33,7 +33,6 @@ import math
 import os
 import sys
 import tarfile
-from collections import defaultdict
 
 
 # ---------------------------------------------------------------------------

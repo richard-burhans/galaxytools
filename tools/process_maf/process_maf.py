@@ -67,8 +67,8 @@ def find_ref_idx(block, ref_acc):
 
 def reorder_block(block, ref_idx):
     """Move the s-line at index `ref_idx` to the first s-line position."""
-    s_lines = [l for l in block if l.startswith('s ')]
-    other = [l for l in block if not l.startswith('s ')]
+    s_lines = [line for line in block if line.startswith('s ')]
+    other = [line for line in block if not line.startswith('s ')]
     ref_line = s_lines.pop(ref_idx)
     new_s = [ref_line] + s_lines
     return other + new_s
@@ -114,8 +114,8 @@ with open(dst, 'w') as out:
     for h in header_lines:
         out.write(h)
     for _, _, _, block in kept:
-        for l in block:
-            out.write(l)
+        for line in block:
+            out.write(line)
         out.write('\n')
 
 print(f"  Wrote {len(kept)} blocks to {dst}", flush=True)

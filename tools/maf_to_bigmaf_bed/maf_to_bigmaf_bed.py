@@ -64,7 +64,7 @@ def emit_block(out, block):
     # kent re-serialises score as %f ("score=0.000000") while this passed the input text
     # through ("score=0.0"). The browser parses either, but a bigMaf built here then differs
     # byte-for-byte from one built by kent, which is exactly what an oracle is for.
-    text_lines = [_normalise_a_line(l.rstrip('\n')) for l in block]
+    text_lines = [_normalise_a_line(line.rstrip('\n')) for line in block]
     # ⛔ A TRAILING ';' TOO, which kent emits and ';'.join does not. Measured: that one
     # character was the last difference between this and mafToBigMaf v482. The separator and
     # the TERMINATOR are not the same thing, and bigMaf's block text uses the terminator form.
