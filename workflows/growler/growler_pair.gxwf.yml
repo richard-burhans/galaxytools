@@ -454,7 +454,7 @@ steps:
       top: 0
       left: 600
   chainmergesort:
-    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy1
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy2
     label: chainmergesort
     doc: '⛔ THE COLLAPSE. The chromosome-pair collection meets a multiple="true" data input, so Galaxy
       consumes every element in ONE job rather than mapping over them. VERIFIED IN GALAXY''S SOURCE, not

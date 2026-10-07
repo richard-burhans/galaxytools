@@ -327,7 +327,7 @@ steps:
       left: 1580
       top: 363
   chainmergesort:
-    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy1
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/ucsc_chainmergesort/ucsc_chainmergesort/482+galaxy2
     label: chainmergesort
     in:
       in_chains: chainantirepeat/out
