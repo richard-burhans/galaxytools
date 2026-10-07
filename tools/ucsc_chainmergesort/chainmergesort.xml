@@ -2,7 +2,7 @@
     <description>: combine sorted chain files into one sorted chain file</description>
     <macros>
         <token name="@TOOL_VERSION@">482</token>
-        <token name="@VERSION_SUFFIX@">1</token>
+        <token name="@VERSION_SUFFIX@">2</token>
     </macros>
     <xrefs>
         <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
@@ -29,7 +29,27 @@
 #for $chain in $in_chains:
 echo '$chain' >> input_list.txt &&
 #end for
-chainMergeSort -inputList=input_list.txt -tempDir=./ > '$out'
+chainMergeSort -inputList=input_list.txt -tempDir=./ > '$out' &&
+##
+## ⛔ A CHAIN FILE ALWAYS ENDS WITH A NEWLINE, AND A TRUNCATED ONE DOES NOT. Measured on laila
+## 2026-10-07: this tool wrote 2,004,365,312 bytes -- PAGE-ALIGNED on 4096, the signature of a
+## write stopped by ENOSPC -- ending mid-header at `chain 71887 NC_044370.1 `, and EXITED 0.
+## Galaxy marked the dataset ok, 46 downstream jobs ran against it, and chainPreNet was the first
+## thing to notice, TWO DAYS later, with `q end mismatch 18638619 vs 18657537`. That message names
+## coordinates and sends you to debug the alignment; the file had simply been cut off.
+##
+## ⚠ `test -z` ON THE LAST BYTE, because command substitution strips a trailing newline: the
+## expansion is EMPTY exactly when the final byte is one, and is the offending character otherwise.
+## `test -s` comes first because an empty file also expands to nothing and would otherwise pass.
+## Only `test` and `tail` are used -- both report a failed write inside a biocontainer, where awk
+## and sed exit 0 on one.
+##
+## ⚠ THIS PROVES THE FILE ARRIVED WHOLE, NOT THAT THE CHAINS ARE VALID. Whether each chain's blocks
+## sum to its declared span needs a parse, which is what chainPreNet does. A sweep of 1227
+## chain/maf/psl files across 49 pairs found exactly ONE failing this test, so it is a narrow check
+## against a real and otherwise silent fault.
+test -s '$out' &&
+test -z "\$(tail -c 1 '$out')"
     ]]></command>
     <inputs>
         <param name="in_chains" format="chain" type="data" multiple="true" label="Chain datasets to merge"
