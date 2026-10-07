@@ -8,7 +8,7 @@ long_description: |
   bigChain.bed (bed6+6) with one row per chain and bigLink.bed (bed4+1) with one
   row per aligned block. Plain and gzipped chain inputs are accepted; chains with
   a non-'+' target strand are skipped with a warning.
-name: chain_to_bigChain
+name: chain_to_bigchain
 owner: richard-burhans
 homepage_url: https://github.com/nekrut/brc-tools
 remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/chain_to_bigChain

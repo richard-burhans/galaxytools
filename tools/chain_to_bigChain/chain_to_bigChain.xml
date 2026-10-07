@@ -102,7 +102,7 @@ python '$__tool_directory__/chain_to_bigChain.py'
 
 Converts a [UCSC chain](https://genome.ucsc.edu/goldenPath/help/chain.html)
 pairwise alignment file into the two BED tables required to build a
-[bigChain](https://genomearchive.ucsc.edu/goldenPath/help/bigChain.html) track
+[bigChain](https://genome.ucsc.edu/goldenPath/help/bigChain.html) track
 for an assembly hub, mirroring the structure produced by `hgLoadChain -noBin`:
 
 - **bigChain.bed** (bed6+6, 12 columns): one row per chain -

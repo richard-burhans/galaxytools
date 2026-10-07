@@ -1,6 +1,6 @@
 categories:
 - Sequence Analysis
-- Comparative Genomics
+- Convert Formats
 description: process_maf - reference-first MAF normalization for mafToBigMaf
 long_description: |
   Normalizes a Multiple Alignment Format (MAF) file for downstream

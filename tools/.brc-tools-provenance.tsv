@@ -3,7 +3,7 @@
 # These tools are COPIES. nekrut/brc-tools is the source of truth; a change belongs
 # there first and is re-copied here. This file records the upstream commit and each
 # file's sha256, so divergence is a failing check rather than a later discovery.
-# upstream: https://github.com/nekrut/brc-tools @ bb6c03d87
+# upstream: https://github.com/nekrut/brc-tools @ 18fd35227
 path	sha256
 tools/build_genomes_txt/build_genomes_txt.py	1787e2b4edc843912d0e69b49606c1663890a8126c0c4c32c14a0b3c193de9a1
 tools/build_genomes_txt/build_genomes_txt.xml	c37fd53f03ed73129ad50052baaab50012e97af5cdba89f0358a0b34aa67eead
@@ -18,7 +18,7 @@ tools/build_hub_bb/test-data/ortholog_table.tsv	46b517c52f291365a3e1136724afea89
 tools/build_hub_bb/test-data/ref.bed12	499cc153f4b08c18e717f5ff99d043b2ce26f430784819bff558db1300e598d7
 tools/build_hub_bb/test-data/ref.sizes	6a48e22ea74b1040d4f160f6d3e487699f309e85fb9dad782620adbd7a0de21b
 tools/chain_to_bigChain/chain_to_bigChain.py	c93893f5c62b77b2e7aff0165fa5a5c35113bcced4aac77ecb31cb81e0d5cf69
-tools/chain_to_bigChain/chain_to_bigChain.xml	b000670ea39d0f41bcda6ba16bf3026044b1efddc6847075114961faee6dc135
+tools/chain_to_bigChain/chain_to_bigChain.xml	57d10c048f4c47701d626ef0df711f581e8140fe5b57948ef3920f0651c1ff93
 tools/chain_to_bigChain/macros.xml	6e082e727dbf8ecee27308852b7f81b1eebbc8362234530cf058afa2880bc0a9
 tools/chain_to_bigChain/test-data/multi.bigChain.expected	9a8497f53634087373193957617f211102956de0fe4496607379eeeff2507109
 tools/chain_to_bigChain/test-data/multi.bigLink.expected	7d0702f019dca1293bf2346c804cfd5cdd096c9dc1b892889df83ac63b567b0c
@@ -37,7 +37,7 @@ tools/ucsc_kent/bedToBigBed.xml	516bd76c9edf8f11b35fb5489b98a94c80f4031ce92eae08
 tools/ucsc_kent/faToTwoBit.xml	ea3c34c69d387830e2447c9fc6c6262414551e5e0ef14c20c730b67b2e0f36fb
 tools/ucsc_kent/genePredToBed.xml	d156adde53c3901377db5d3edd6d0226fdce08ea6a9dd765b425868bff721c1b
 tools/ucsc_kent/gff3ToGenePred.xml	4adf28e269653888229bcc61818cfe23b172c10515b2d9a2220e2864e2f02d2a
-tools/ucsc_kent/hubCheck.xml	b028f306e0a7f83d2ac5c502daa8f4af127613d316dc4841796d15c6733114aa
+tools/ucsc_kent/hubCheck.xml	c7ad3ea9e98074329542bd3d1a3a83a8c537c6d9358ffd990f8689cf7db7c5ae
 tools/ucsc_kent/macros.xml	b01e2518a83ef8636af351d8e3929c0df90f30e80d01e49a1096575a21d006ac
 tools/ucsc_kent/test-data/bigMaf.as	0454d3753b57455944960fd7ba52165132520d91edefa5c0f31150bd383cfa21
 tools/ucsc_kent/test-data/chrom.sizes	aa3642088196fc01e4b12eefb504235a0ef5355d03746ffba071e449d5c0ebf0
