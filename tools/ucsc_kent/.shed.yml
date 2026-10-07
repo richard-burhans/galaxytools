@@ -1,0 +1,22 @@
+categories:
+- Sequence Analysis
+- Convert Formats
+description: UCSC kentUtils - track-hub building utilities
+long_description: |
+  Galaxy wrappers for the UCSC kent command-line utilities used when building
+  genome browser track hubs: bedToBigBed (BED to bigBed), faToTwoBit (FASTA to
+  2bit), gff3ToGenePred and genePredToBed (GFF3 to BED12 gene models), and
+  hubCheck (validate a track hub). Each subcommand is its own bioconda package /
+  biocontainer.
+name: ucsc_kent
+owner: richard-burhans
+homepage_url: https://github.com/ucscGenomeBrowser/kent
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ucsc_kent
+type: unrestricted
+auto_tool_repositories:
+  name_template: "{{ tool_id }}"
+  description_template: "Wrapper for UCSC kentUtils: {{ tool_name }}."
+suite:
+  name: "suite_ucsc_kent"
+  description: "UCSC kentUtils track-hub utilities suite."
+  type: repository_suite_definition

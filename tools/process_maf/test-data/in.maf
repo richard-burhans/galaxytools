@@ -1,0 +1,9 @@
+##maf version=1 scoring=multiz
+a score=100
+s GCA_111111111.1.contigA 10 6 + 1000 ACGTAC
+s GCA_222222222.1.contigB 20 6 + 2000 ACGTGC
+
+a score=200
+s GCA_222222222.1.contigB 30 5 + 2000 TTGGA
+s GCA_900093555.2.LT635612 50 5 + 3000 TTGCA
+s GCA_111111111.1.contigA 40 5 + 1000 TTGAA

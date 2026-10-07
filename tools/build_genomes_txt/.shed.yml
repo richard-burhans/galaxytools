@@ -1,0 +1,16 @@
+categories:
+- Sequence Analysis
+- Genome annotation
+description: Build genomes.txt - assemble a UCSC assembly-hub genomes.txt from a per-assembly metadata table
+long_description: |
+  Reads a per-assembly metadata table (TSV with accession, defaultPos,
+  organism, scientificName, description, and optional path overrides) and emits
+  the global genomes.txt for a UCSC assembly hub. Each assembly becomes a stanza
+  of genome / trackDb / groups / description / twoBitPath / organism /
+  defaultPos / scientificName / htmlPath lines in the exact layout committed in
+  the Pv4-pangenome assembly hub.
+name: build_genomes_txt
+owner: richard-burhans
+homepage_url: https://github.com/nekrut/brc-tools
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/build_genomes_txt
+type: unrestricted

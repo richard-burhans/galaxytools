@@ -1,0 +1,21 @@
+table bigSelectionPlus5
+"BUSTED selection results, one entry per orthogroup"
+(
+string  chrom;          "Reference sequence chromosome or scaffold"
+uint    chromStart;     "Start position (0-based)"
+uint    chromEnd;       "End position"
+string  name;           "Orthogroup ID"
+uint    score;          "Score 0-1000 (scaled from -log10(q))"
+char[1] strand;         "+ or -"
+uint    thickStart;     "Start of CDS"
+uint    thickEnd;       "End of CDS"
+uint    reserved;       "RGB color for itemRgb (use on)"
+int     blockCount;     "Number of exons"
+int[blockCount] blockSizes;  "Exon sizes"
+int[blockCount] chromStarts; "Exon starts relative to chromStart"
+string  orthogroup_id;       "Same as name; for queries"
+uint    n_strains;           "Number of strains in this orthogroup"
+float   busted_pvalue;       "BUSTED p-value"
+float   busted_qvalue_fdr;   "BH-FDR q-value across all OGs"
+string  gene_family;         "Variant-antigen family tag, or other"
+)
