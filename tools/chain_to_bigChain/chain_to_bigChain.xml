@@ -1,0 +1,124 @@
+<tool id="chain_to_bigChain" name="chain to bigChain" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>convert UCSC chain alignments to bigChain + bigLink BED for assembly hubs</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <required_files>
+        <include path="chain_to_bigChain.py"/>
+    </required_files>
+    <version_command>python -c "import sys; sys.stdout.write('@TOOL_VERSION@')"</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+## Galaxy stores datasets as .dat and serves chain data uncompressed; the script
+## switches on the file suffix, so symlink to a real .chain name.
+ln -s '$chain' in.chain &&
+python '$__tool_directory__/chain_to_bigChain.py'
+    in.chain
+    '$bigchain_bed'
+    '$biglink_bed'
+      '$target_sizes'
+  ## ⛔ SORTED, BECAUSE KENT SORTS. Measured against the real chainToBigChain v482: on a
+  ## single chain our output is byte-identical, but on several chains it differed — the same
+  ## SET of lines in a different ORDER, because this script streams in chain-file order while
+  ## kent's usage says "Output will be sorted". bedToBigBed REQUIRES sorted input, so without
+  ## this the tool is not a drop-in and the downstream sort step is load-bearing without
+  ## saying so. With the two sorts below the output is byte-identical to kent on both cases.
+  ## ⚠ Sorted by `sort`, NOT in Python. A cs10 pair's all_chain is ~8 GB of chain text, so its
+  ## links do not fit in memory; GNU sort spills to disk. LC_ALL=C pins collation to byte
+  ## order so it cannot drift with the locale.
+  && LC_ALL=C sort -k1,1 -k2,2n -o '$bigchain_bed' '$bigchain_bed'
+  && LC_ALL=C sort -k1,1 -k2,2n -o '$biglink_bed' '$biglink_bed'
+    ]]></command>
+    <inputs>
+        <param argument="chain" type="data" format="chain" label="Chain alignment" help="UCSC pairwise alignment chain file. Chains with a non-'+' target strand are skipped with a warning."/>
+    </inputs>
+    <outputs>
+        <!-- ⛔ DERIVED, NOT SUPPLIED, AND THAT IS THE POINT. bedToBigBed needs the TARGET
+             assembly's chrom sizes, and WF-K was handing one `ref_sizes` dataset to every
+             element of a FULL N(N-1) directed chain collection — correct only for the pairs
+             whose target happens to be that assembly. Cannabis assemblies share chr1-style
+             names, and bedToBigBed does NOT cross-check: measured with kent v482, a sizes
+             file declaring chr1 at 900 AND one declaring it at 5000 were both accepted,
+             exit 0, against a BED whose chain header says 1000. It rejects only
+             coordinates that exceed the declared length, so in the normal case nothing
+             catches a wrong sizes file and the browser draws the track against wrong
+             lengths. Every chain header
+             carries tName AND tSize, and the chroms appearing as tName are exactly the
+             chroms these BEDs reference, so sizes derived here are correct BY CONSTRUCTION
+             for whichever assembly this chain targets. No new input, no collection to zip. -->
+        <data name="bigchain_bed" format="bed" label="${tool.name} on ${on_string}: bigChain.bed (bed6+6)"/>
+        <data name="biglink_bed" format="bed" label="${tool.name} on ${on_string}: bigLink.bed (bed4+1)"/>
+        <data name="target_sizes" format="tabular" label="${tool.name} on ${on_string}: target chrom.sizes"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="3">
+            <param name="chain" value="tiny.chain" ftype="chain"/>
+            <output name="bigchain_bed">
+                <assert_contents>
+                    <has_n_columns n="12"/>
+                    <has_line_matching expression="^chr1\t0\t200\t1\t1000\t\+\t1000\tchrQ\t800\t100\t300\t5000$"/>
+                    <has_n_lines n="1"/>
+                </assert_contents>
+            </output>
+            <output name="biglink_bed">
+                <assert_contents>
+                    <has_n_columns n="5"/>
+                    <has_line_matching expression="^chr1\t0\t100\t1\t100$"/>
+                    <has_n_lines n="3"/>
+                </assert_contents>
+            </output>
+        </test>
+        <!-- ▶ ALSO VERIFIED AGAINST UCSC'S OWN PUBLISHED EXPECTED OUTPUT, which is a stronger
+             claim than either test here can make. kent ships a test for this tool at
+             src/hg/utils/chainToBigChain/tests/ in userApps.v482.src.tgz: input
+             hg38.mm10.test.chain (4 real hg38/mm10 chains, unsorted in file order, one on the
+             minus strand) with committed expected/simpleTest.bigChain and
+             expected/simpleTest.bigChainLink. On 2026-10-06 this implementation plus the
+             command's sort reproduced BOTH byte for byte, 4 bigChain rows and 11 link rows.
+             ⚠ Those fixtures are NOT copied here: they are UCSC's data under UCSC's licence
+             and this repository is public. To re-run it, fetch the tarball and diff against
+             expected/ in that directory.
+             ⛔ AN ORACLE, NOT A REGRESSION LOCK. The expected files below are the output of the REAL
+             kent chainToBigChain v482, generated from this same multi.chain, not values this
+             implementation produced. The other test asserts values derived from this script, which
+             can only catch drift from itself; this one can catch being wrong from the start.
+             Three chains, deliberately NOT in sorted order, which is where the two diverged:
+             identical content, different line order, until the command gained its sort. -->
+        <test expect_num_outputs="3">
+            <param name="chain" value="multi.chain" ftype="chain"/>
+            <output name="bigchain_bed" file="multi.bigChain.expected"/>
+            <output name="biglink_bed" file="multi.bigLink.expected"/>
+            <output name="target_sizes">
+                <assert_contents>
+                    <has_n_lines n="2"/>
+                    <has_line_matching expression="^chr1\t1000$"/>
+                    <has_line_matching expression="^chr2\t2000$"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**chain to bigChain**
+
+Converts a [UCSC chain](https://genome.ucsc.edu/goldenPath/help/chain.html)
+pairwise alignment file into the two BED tables required to build a
+[bigChain](https://genome.ucsc.edu/goldenPath/help/bigChain.html) track
+for an assembly hub, mirroring the structure produced by `hgLoadChain -noBin`:
+
+- **bigChain.bed** (bed6+6, 12 columns): one row per chain -
+  `chrom, chromStart, chromEnd, name, score(1000), strand, tSize, qName, qSize, qStart, qEnd, chainScore`.
+- **bigLink.bed** (bed4+1, 5 columns): one row per aligned block -
+  `chrom, chromStart, chromEnd, name(chainId), qStart`.
+
+Block link rows are emitted by walking each chain in target coordinates.
+Chains whose target strand is not `+` are skipped and reported on stderr.
+
+-----
+
+Feed the resulting BED files (after sorting and `bedToBigBed` with `bigChain.as`
+/ `bigLink.as`) into the hub-building steps of the pangenome pipeline.
+
+Ported from `Pv4-pangenome/v3/tools/chain_to_bigChain.py`.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

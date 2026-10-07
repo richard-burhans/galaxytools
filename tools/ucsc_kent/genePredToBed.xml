@@ -1,0 +1,87 @@
+<tool id="ucsc_genepredtobed" name="genePredToBed" version="@GENEPREDTOBED_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>convert a genePred gene model to BED12</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <requirements>
+        <requirement type="package" version="@GENEPREDTOBED_VERSION@">ucsc-genepredtobed</requirement>
+    </requirements>
+    <version_command><![CDATA[genePredToBed 2>&1 | head -1]]></version_command>
+    <command detect_errors="aggressive"><![CDATA[
+ln -sf '$input' 'input.genePred' &&
+genePredToBed
+    -tab
+    $fill_space
+    -score=$score
+    'input.genePred'
+    '$output'
+
+## ⛔ PROVE THE OUTPUT ARRIVED WHOLE. Galaxy has no job-time output validation, so a
+## truncated write is a GREEN job: the file is still tabular, still sniffs as its datatype,
+## and only breaks whatever reads it next. An empty result and a ragged final line are the
+## two shapes a short write takes here, and both are decidable from the file alone.
+## ⚠ Not a row-count comparison against the input: this conversion is not 1:1 and a
+## legitimate drop would then look like a truncation.
+&& awk -F'\t' 'NF != 12 { printf("%s: line %d has %d columns, want %d\n", "genePredToBed", NR, NF, 12) > "/dev/stderr"; bad = 1 } END { if (NR == 0) { printf("%s: no rows written\n", "genePredToBed") > "/dev/stderr"; bad = 1 } exit bad }' '$output'
+    ]]></command>
+    <inputs>
+        <param argument="input" type="data" format="tabular" label="Input genePred" help="Tab-separated genePred table, e.g. from gff3ToGenePred."/>
+        <param name="fill_space" argument="-fillSpace" type="boolean" truevalue="-fillSpace" falsevalue="" checked="false" label="Fill spaces in name with underscore" help="Replace space characters in the 'name' field with underscores."/>
+        <param argument="-score" type="integer" min="0" max="1000" value="0" label="BED score" help="Value written to the BED score column (default 0)."/>
+    </inputs>
+    <outputs>
+        <data name="output" format="bed12" label="${tool.name} on ${on_string}: BED12"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1">
+            <param name="input" value="tiny.genepred" ftype="tabular"/>
+            <param name="fill_space" value="false"/>
+            <output name="output">
+                <assert_contents>
+                    <has_n_columns n="12"/>
+                    <has_text text="mrna1"/>
+                    <has_line_matching expression="^chr1\t\d+\t\d+\tmrna1\t.*"/>
+                </assert_contents>
+            </output>
+        </test>
+        <!-- ⛔ BOTH SIDES OF EVERY BOOLEAN, SET EXPLICITLY. check_tool_defects' rule reads the
+             booleans a <test> SETS, so leaving one at its default is not the false side: it is
+             no side at all, and the rule used to stay silent for exactly that case. Asserted on
+             the COMMAND, which needs no new fixture and is what the flag affects. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="tiny.genepred" ftype="tabular"/>
+            <param name="fill_space" value="true"/>
+            <assert_command>
+                <has_text text="-fillSpace"/>
+            </assert_command>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**genePredToBed** — convert a UCSC **genePred** gene model into 12-column **BED**.
+
+This is the second half of the GFF3 -> browsable track path: after
+`gff3ToGenePred` produces a genePred, `genePredToBed` yields BED12 (with block
+structure) that can be sorted and passed to `bedToBigBed`.
+
+-----
+
+**Input**
+
+- `Input genePred` — tab-separated genePred table.
+
+**Output**
+
+- A 12-column BED (`bed12`): chrom, start, end, name, score, strand,
+  thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts.
+
+-----
+
+**Key options**
+
+- `-fillSpace` — replace spaces in the name with underscores.
+- `-score` — value for the BED score column (default 0).
+
+Input is always parsed as tab-separated (`-tab`).
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

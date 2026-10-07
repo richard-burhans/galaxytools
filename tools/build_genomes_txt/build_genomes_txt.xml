@@ -1,0 +1,87 @@
+<tool id="build_genomes_txt" name="Build genomes.txt" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>assemble a UCSC assembly-hub genomes.txt from a per-assembly metadata table</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <required_files>
+        <include path="build_genomes_txt.py"/>
+    </required_files>
+    <version_command>python '$__tool_directory__/build_genomes_txt.py' --help | head -1</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+python '$__tool_directory__/build_genomes_txt.py'
+    --metadata '$metadata'
+    --output '$output'
+    ]]></command>
+    <inputs>
+        <param argument="--metadata" type="data" format="tabular" label="Per-assembly metadata table" help="TSV with a header row. Required columns: accession, defaultPos (chrom:start-end), organism, scientificName, description. Optional columns override the derived paths: twoBitPath, trackDb, groups, htmlPath."/>
+    </inputs>
+    <outputs>
+        <data name="output" format="txt" label="${tool.name} on ${on_string}: genomes.txt"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1">
+            <param name="metadata" value="metadata.tsv"/>
+            <output name="output">
+                <assert_contents>
+                    <has_line line="genome GCA_900093555.2"/>
+                    <has_line line="twoBitPath GCA_900093555.2/GCA_900093555.2.2bit"/>
+                    <has_line_matching expression="^defaultPos [^\s:]+:\d+-\d+$"/>
+                    <has_line line="genome GCA_000002415.2"/>
+                    <has_line line="twoBitPath GCA_000002415.2/GCA_000002415.2.2bit"/>
+                    <has_text text="scientificName Plasmodium vivax"/>
+                    <has_text text="htmlPath GCA_900093555.2/description.html"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**Build genomes.txt**
+
+Assembles the global ``genomes.txt`` for a
+[UCSC assembly hub](https://genome.ucsc.edu/goldenPath/help/hgTrackHubHelp.html#Assembly)
+from a per-assembly metadata table. ``genomes.txt`` lists every assembly in the
+hub; each assembly is one stanza of ``key value`` lines, stanzas separated by a
+blank line.
+
+-----
+
+**Input**
+
+A TSV metadata table with a header row, one row per assembly.
+
+*Required columns*
+
+- ``accession`` — assembly accession, used as the genome id and the per-assembly
+  directory name.
+- ``defaultPos`` — default browser position, formatted ``chrom:start-end``
+  (e.g. ``LT635625.2:1264700-1277700``).
+- ``organism`` — organism token (underscored, e.g. ``Plasmodium_vivax``).
+- ``scientificName`` — scientific name (e.g. ``Plasmodium vivax``).
+- ``description`` — human-readable assembly description.
+
+*Optional columns* (each defaults to a path derived from the accession)
+
+- ``twoBitPath`` (default ``<accession>/<accession>.2bit``)
+- ``trackDb`` (default ``<accession>/trackDb.txt``)
+- ``groups`` (default ``<accession>/groups.txt``)
+- ``htmlPath`` (default ``<accession>/description.html``)
+
+**Output**
+
+A ``genomes.txt`` file. Each assembly stanza is emitted as:
+
+```
+genome <accession>
+trackDb <accession>/trackDb.txt
+groups <accession>/groups.txt
+description <description>
+twoBitPath <accession>/<accession>.2bit
+organism <organism>
+defaultPos <chrom>:<start>-<end>
+scientificName <scientific name>
+htmlPath <accession>/description.html
+```
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

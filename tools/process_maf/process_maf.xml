@@ -1,0 +1,78 @@
+<tool id="process_maf" name="process_maf" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>reference-first MAF normalization for mafToBigMaf</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <required_files>
+        <include path="process_maf.py"/>
+    </required_files>
+    <version_command>python --version</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+## Galaxy stores datasets as .dat; symlink to a real .maf for clarity.
+ln -s '$input_maf' in.maf &&
+python '$__tool_directory__/process_maf.py'
+    '$ref_acc'
+    in.maf
+    '$output_maf'
+    ]]></command>
+    <inputs>
+        <param argument="ref_acc" type="text" label="Reference accession" help="Accession prefix used in the s-line names, e.g. GCA_900093555.2. Blocks lacking this reference are dropped; the matching s-line is moved first in every kept block.">
+            <validator type="regex" message="Letters, digits, underscore, hyphen, dot only">[A-Za-z0-9_.\-]+</validator>
+        </param>
+        <param name="input_maf" argument="in.maf" type="data" format="maf" label="Input MAF" help="Multiple Alignment Format file. s-lines must already be accession-named (species.chrom)."/>
+    </inputs>
+    <outputs>
+        <data name="output_maf" format="maf" label="${tool.name} on ${on_string}: reference-first MAF"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1">
+            <param name="ref_acc" value="GCA_900093555.2"/>
+            <param name="input_maf" value="in.maf"/>
+            <output name="output_maf">
+                <assert_contents>
+                    <has_text text="##maf version=1"/>
+                    <!-- ref-less block (contigA/contigB only) is dropped -->
+                    <not_has_text text="ACGTAC"/>
+                    <!-- kept block: reference s-line reordered to first -->
+                    <has_line_matching expression="a score=200"/>
+                    <has_line_matching expression="s GCA_900093555\.2\.LT635612 50 5 \+ 3000 TTGCA"/>
+                    <!-- exactly one a-line survives -->
+                    <has_n_lines n="6"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**process_maf**
+
+Normalizes a [MAF](https://genome.ucsc.edu/FAQ/FAQformat.html#format5) file so it
+is suitable for `mafToBigMaf` / a reference-first big MAF track. For every
+alignment block it:
+
+1. **Drops** blocks where the reference accession is absent.
+2. **Reorders** the s-lines so the reference row is first.
+3. **Sorts** the kept blocks by reference `(chrom, start)`.
+
+Overlapping blocks are preserved on purpose: multiz blocks legitimately overlap.
+
+-----
+
+**Inputs**
+
+- *Reference accession* - the accession prefix carried by the reference s-lines
+  (e.g. `GCA_900093555.2`). For `GCA_`/`GCF_` names the first two dot-separated
+  fields are treated as the species; otherwise everything before the first dot.
+- *Input MAF* - s-lines must already be accession-named (`species.chrom ...`).
+
+**Output**
+
+- A MAF with reference-first, coordinate-sorted blocks and all reference-less
+  blocks removed.
+
+-----
+
+Ported from `Pv4-pangenome/v3/ucsc_hub/process_maf.py`.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

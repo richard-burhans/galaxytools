@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<macros>
+    <!-- The kent release this tool's converters come from; it is also the tool's own version.
+         ⚠ Keep it equal to tools/ucsc_kent/macros.xml's @BEDTOBIGBED_VERSION@ / @BIGBEDINFO_VERSION@:
+         these are the SAME two binaries, and at 469 here against 482 there the identical
+         converter ran at two kent releases inside one hub build. -->
+    <token name="@TOOL_VERSION@">482</token>
+    <!-- reset on an upstream version bump -->
+    <token name="@VERSION_SUFFIX@">0</token>
+    <token name="@PROFILE@">26.0</token>
+    <xml name="requirements">
+        <requirements>
+            <requirement type="package" version="3.12">python</requirement>
+            <requirement type="package" version="@TOOL_VERSION@">ucsc-bedtobigbed</requirement>
+            <!-- Reads the bigBed back after each conversion. ucsc-bedtobigbed ships
+                 only bedToBigBed, so the reader is a separate package: the same call
+                 PR #104 made for tools/ucsc_kent/bedToBigBed.xml. It changes the
+                 resolved dependency set (and so the mulled container), which is the
+                 deliberate cost of being able to prove the output arrived whole. -->
+            <requirement type="package" version="@TOOL_VERSION@">ucsc-bigbedinfo</requirement>
+        </requirements>
+    </xml>
+    <xml name="citations">
+        <citations>
+            <citation type="doi">10.1093/bioinformatics/btq351</citation>
+            <citation type="bibtex"><![CDATA[
+@misc{pv4_build_hub_bb,
+  author = {Nekrutenko lab and the P. vivax pangenome project},
+  title = {Build UCSC hub BigBed inputs (selection BED12+5 and orthogroup membership BED12)},
+  year = {2026},
+  note = {Consolidated from Pv4-pangenome/v3/ucsc_hub/build_selection_bb.py and build_orthogroup_bb.py}
+}
+            ]]></citation>
+        </citations>
+    </xml>
+</macros>

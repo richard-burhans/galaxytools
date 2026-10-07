@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<macros>
+    <token name="@TOOL_VERSION@">1.0.0</token>
+    <token name="@VERSION_SUFFIX@">0</token>
+    <token name="@PROFILE@">26.0</token>
+    <xml name="requirements">
+        <requirements>
+            <requirement type="package" version="3.12">python</requirement>
+        </requirements>
+    </xml>
+    <xml name="citations">
+        <citations>
+            <citation type="bibtex"><![CDATA[
+@misc{pk_chain_to_bigchain,
+  author = {Nekrutenko lab and the P. knowlesi pangenome project},
+  title = {Convert UCSC chain alignments to bigChain and bigLink BED for assembly hubs},
+  year = {2026},
+  note = {Ported from Pv4-pangenome/v3/tools/chain_to_bigChain.py}
+}
+            ]]></citation>
+        </citations>
+    </xml>
+</macros>

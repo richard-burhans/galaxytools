@@ -1,0 +1,16 @@
+categories:
+- Sequence Analysis
+- Visualization
+description: MAF to bigMaf BED3+1 - bypass mafToBigMaf overlap rejection
+long_description: |
+  Converts a preprocessed MAF into the BED3+1 form consumed by bedToBigBed to
+  build a bigMaf track. Unlike UCSC mafToBigMaf, it does not reject MAFs whose
+  reference rows overlap, which is common in pangenome/graph-derived alignments.
+  For each block the reference row (matched by assembly accession) defines the
+  BED interval and the full MAF block text is stored (newlines -> ';') in the
+  4th column.
+name: maf_to_bigmaf_bed
+owner: richard-burhans
+homepage_url: https://github.com/nekrut/brc-tools
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/maf_to_bigmaf_bed
+type: unrestricted

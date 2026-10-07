@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<macros>
+    <token name="@TOOL_VERSION@">1.0.0</token>
+    <token name="@VERSION_SUFFIX@">0</token>
+    <token name="@PROFILE@">26.0</token>
+    <xml name="requirements">
+        <requirements>
+            <requirement type="package" version="3.12">python</requirement>
+        </requirements>
+    </xml>
+    <xml name="citations">
+        <citations>
+            <citation type="bibtex"><![CDATA[
+@misc{pv_pangenome_genomes_txt,
+  author = {Nekrutenko lab and the P. vivax pangenome project},
+  title = {Build a global UCSC assembly-hub genomes.txt from a per-assembly metadata table},
+  year = {2026},
+  note = {Authored for the Pv4-pangenome assembly-hub pipeline}
+}
+            ]]></citation>
+        </citations>
+    </xml>
+</macros>

@@ -1,0 +1,179 @@
+<tool id="build_hub_bb" name="Build hub BigBed inputs" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>selection BED12+5 and orthogroup membership BED12 for a UCSC hub</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <required_files>
+        <include path="build_hub_bb.py"/>
+        <include path="bigSelectionPlus5.as"/>
+    </required_files>
+    <version_command>python '$__tool_directory__/build_hub_bb.py' --help | head -1</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+## Galaxy stores datasets as .dat; symlink BUSTED archives to a .tar.gz name
+## so the python tarfile reader opens them as gzip-compressed tar.
+ln -s '$busted_strict' busted_strict.tar.gz &&
+#if $relaxed.do_relaxed == 'yes'
+ln -s '$relaxed.busted_relaxed' busted_relaxed.tar.gz &&
+#end if
+python '$__tool_directory__/build_hub_bb.py'
+    --ortholog-table '$ortholog_table'
+    --ref-bed12 '$ref_bed12'
+    --sizes '$sizes'
+    --ref-acc '$ref_acc'
+    --ref-column '$ref_column'
+    --gene-prefix '$gene_prefix'
+    --busted-strict busted_strict.tar.gz
+    --out-selection-strict selection_strict.bed
+    #if $relaxed.do_relaxed == 'yes'
+        --busted-relaxed busted_relaxed.tar.gz
+        --out-selection-relaxed selection_relaxed.bed
+    #end if
+    --out-orthogroup orthogroup_membership.bed
+    &&
+bedToBigBed -type=bed12+5 -as='$__tool_directory__/bigSelectionPlus5.as' -tab
+    selection_strict.bed '$sizes' selection_strict.bb
+## ⚠ Read the bigBed back. Galaxy has NO job-time output validation -- <assert_contents>
+## lives only inside <tests><test><output> and the real <data> type takes no assertion
+## children -- so a truncated-but-well-formed output is a GREEN job, and it surfaces far
+## downstream in whatever tries to load it. A bigBed's R-tree index and totalSummary are
+## addressed from the END of the file, so bigBedInfo either resolves those offsets or it
+## does not: truncation is decidable here, which is exactly when a post-condition is worth
+## its requirement.
+&& bigBedInfo selection_strict.bb > /dev/null
+&&
+#if $relaxed.do_relaxed == 'yes'
+bedToBigBed -type=bed12+5 -as='$__tool_directory__/bigSelectionPlus5.as' -tab
+    selection_relaxed.bed '$sizes' selection_relaxed.bb
+&& bigBedInfo selection_relaxed.bb > /dev/null
+&&
+#end if
+bedToBigBed -type=bed12 orthogroup_membership.bed '$sizes' orthogroup_membership.bb
+&& bigBedInfo orthogroup_membership.bb > /dev/null
+    ]]></command>
+    <inputs>
+        <param argument="--ortholog-table" type="data" format="tabular,tsv" label="Ortholog table (TSV)" help="Tab-separated table with columns orthogroup_id, label, n_strains and one column per strain. The reference column lists reference gene IDs (pipe-separated for multi-copy)."/>
+        <param argument="--ref-bed12" type="data" format="bed" label="Reference gene models (BED12)" help="BED12 of reference gene models. Column 4 (name) must match the gene IDs in the ortholog table; a trailing .N isoform suffix is stripped and the first isoform kept."/>
+        <param argument="--sizes" type="data" format="tabular,fai,txt" label="Chromosome sizes" help="A .fa.fai index or 2-column (chrom, length) sizes file. Only the first two columns are read."/>
+        <param argument="--ref-acc" type="text" value="reference" label="Reference accession label" help="Informational label for the reference assembly (e.g. GCA_900093555.2).">
+            <validator type="regex" message="Letters, digits, underscore, hyphen, dot only">^[A-Za-z0-9_.\-]+$</validator>
+        </param>
+        <param argument="--ref-column" type="text" value="PvP01" label="Reference column name" help="Name of the ortholog-table column that holds reference gene IDs.">
+            <validator type="regex" message="Letters, digits, underscore, hyphen, dot only">^[A-Za-z0-9_.\-]+$</validator>
+        </param>
+        <param argument="--gene-prefix" type="text" value="PVP01_" label="Reference gene-ID prefix" help="Only gene IDs starting with this prefix are taken from the reference column.">
+            <validator type="regex" message="Letters, digits, underscore, hyphen, dot only">^[A-Za-z0-9_.\-]+$</validator>
+        </param>
+        <param argument="--busted-strict" type="data" format="tar.gz,tgz,tar" label="Strict BUSTED archive" help="gzip-compressed tar of HyPhy BUSTED results, laid out as &lt;GENE_ID&gt;/busted.json. p-values are read from the 'test results' block and FDR-corrected across mapped genes."/>
+        <conditional name="relaxed">
+            <param name="do_relaxed" type="select" label="Also build a relaxed selection track?">
+                <option value="no">No - strict only</option>
+                <option value="yes">Yes - add a relaxed BUSTED selection track</option>
+            </param>
+            <when value="no"/>
+            <when value="yes">
+                <param argument="--busted-relaxed" type="data" format="tar.gz,tgz,tar" label="Relaxed BUSTED archive" help="Second BUSTED archive (same &lt;GENE_ID&gt;/busted.json layout), e.g. a relaxed model run."/>
+            </when>
+        </conditional>
+    </inputs>
+    <outputs>
+        <data name="selection_strict_bed" format="bed" from_work_dir="selection_strict.bed" label="${tool.name} on ${on_string}: selection_strict.bed12+5"/>
+        <data name="selection_strict_bb" format="bigbed" from_work_dir="selection_strict.bb" label="${tool.name} on ${on_string}: selection_strict.bb"/>
+        <data name="selection_relaxed_bed" format="bed" from_work_dir="selection_relaxed.bed" label="${tool.name} on ${on_string}: selection_relaxed.bed12+5">
+            <filter>relaxed['do_relaxed'] == 'yes'</filter>
+        </data>
+        <data name="selection_relaxed_bb" format="bigbed" from_work_dir="selection_relaxed.bb" label="${tool.name} on ${on_string}: selection_relaxed.bb">
+            <filter>relaxed['do_relaxed'] == 'yes'</filter>
+        </data>
+        <data name="orthogroup_bed" format="bed" from_work_dir="orthogroup_membership.bed" label="${tool.name} on ${on_string}: orthogroup_membership.bed12"/>
+        <data name="orthogroup_bb" format="bigbed" from_work_dir="orthogroup_membership.bb" label="${tool.name} on ${on_string}: orthogroup_membership.bb"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="4">
+            <param name="ortholog_table" value="ortholog_table.tsv"/>
+            <param name="ref_bed12" value="ref.bed12"/>
+            <param name="sizes" value="ref.sizes"/>
+            <param name="ref_acc" value="TESTREF"/>
+            <param name="ref_column" value="PvP01"/>
+            <param name="gene_prefix" value="PVP01_"/>
+            <param name="busted_strict" value="busted_strict.tar.gz" ftype="tar.gz"/>
+            <conditional name="relaxed">
+                <param name="do_relaxed" value="no"/>
+            </conditional>
+            <output name="selection_strict_bed">
+                <assert_contents>
+                    <!-- BED12+5 = 17 tab-separated columns -->
+                    <has_n_columns n="17"/>
+                    <has_line_matching expression="^LT635612.2\t.*\tOG[0-9]+\t.*\tVIR$"/>
+                    <has_text text="OG000001"/>
+                </assert_contents>
+            </output>
+            <output name="orthogroup_bed">
+                <assert_contents>
+                    <!-- plain BED12 = 12 columns -->
+                    <has_n_columns n="12"/>
+                    <has_text text="OG000001"/>
+                    <has_text text="LT635612.2"/>
+                </assert_contents>
+            </output>
+            <output name="selection_strict_bb">
+                <assert_contents>
+                    <has_size value="20000" delta="15000"/>
+                </assert_contents>
+            </output>
+            <output name="orthogroup_bb">
+                <assert_contents>
+                    <has_size value="20000" delta="15000"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**Build hub BigBed inputs**
+
+Consolidates the two original *P. vivax* hub scripts
+(`build_selection_bb.py` + `build_orthogroup_bb.py`) into one parameterized
+tool. It reads an **ortholog table**, a **reference BED12**, and one (or two)
+**HyPhy BUSTED archives**, then emits the BED files and BigBed tracks a UCSC
+assembly hub needs.
+
+-----
+
+**What it produces**
+
+- *selection (strict)* - a **BED12+5** file (and `.bb`) with one row per
+  reference gene that has a BUSTED result and maps to an orthogroup. The five
+  extra columns are `orthogroup_id`, `n_strains`, `busted_pvalue`,
+  `busted_qvalue_fdr`, and `gene_family`. q-values are Benjamini-Hochberg FDR
+  across all mapped genes; color and score encode significance.
+- *selection (relaxed)* - the same, optionally, from a second BUSTED archive
+  (e.g. a relaxed model run).
+- *orthogroup membership* - a plain **BED12** (and `.bb`) with one row per
+  reference gene that maps to an orthogroup, colored by `n_strains`
+  (few = red ... many = green). Genes whose blocks fall off the end of their
+  chromosome are dropped.
+
+-----
+
+**Inputs**
+
+- *Ortholog table* - TSV with `orthogroup_id`, `label`, `n_strains` and a
+  per-strain column. The **reference column** (default `PvP01`) lists reference
+  gene IDs, pipe-separated for multi-copy entries; only IDs starting with the
+  **gene prefix** (default `PVP01_`) are kept.
+- *Reference BED12* - reference gene models; column 4 names match the table
+  (the trailing `.N` isoform suffix is stripped, first isoform kept).
+- *Chromosome sizes* - a `.fa.fai` or 2-column sizes file.
+- *BUSTED archive(s)* - gzip-compressed tar laid out as
+  `<GENE_ID>/busted.json`; the p-value is read from the `test results` block.
+
+-----
+
+Ported (with full CLI added) from the hardcoded
+`Pv4-pangenome/v3/ucsc_hub/build_selection_bb.py` and
+`build_orthogroup_bb.py`. BigBed conversion uses
+[`bedToBigBed`](https://genome.ucsc.edu/goldenPath/help/bigBed.html) from the
+UCSC Genome Browser utilities.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

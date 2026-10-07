@@ -1,0 +1,17 @@
+categories:
+- Sequence Analysis
+- Genome annotation
+description: Build UCSC hub BigBed inputs - selection BED12+5 and orthogroup membership BED12
+long_description: |
+  Consolidates two hardcoded P. vivax pangenome scripts (build_selection_bb.py
+  and build_orthogroup_bb.py) into one parameterized tool. Reads an ortholog
+  table, reference BED12, chromosome sizes, and one or two HyPhy BUSTED archives
+  (strict and optional relaxed) and emits a selection BED12+5 (with orthogroup,
+  n_strains, BUSTED p-value, BH-FDR q-value, and gene-family columns) plus an
+  orthogroup-membership BED12, converting each to BigBed with bedToBigBed for an
+  assembly hub.
+name: build_hub_bb
+owner: richard-burhans
+homepage_url: https://github.com/nekrut/brc-tools
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/build_hub_bb
+type: unrestricted

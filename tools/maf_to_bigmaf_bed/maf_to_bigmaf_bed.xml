@@ -1,0 +1,88 @@
+<tool id="maf_to_bigmaf_bed" name="MAF to bigMaf BED" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>convert a preprocessed MAF to a bigMaf BED3+1, bypassing mafToBigMaf overlap rejection</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <required_files>
+        <include path="maf_to_bigmaf_bed.py"/>
+    </required_files>
+    <version_command>echo "@TOOL_VERSION@"</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+python '$__tool_directory__/maf_to_bigmaf_bed.py'
+    '$ref_acc'
+    '$input_maf'
+    '$output_bed'
+    ]]></command>
+    <inputs>
+        <param argument="ref_acc" type="text" value="" label="Reference accession" help="Species/assembly accession of the reference row in each MAF block (e.g. GCA_000001.1). The block is anchored on this row; its sequence-name prefix is stripped so the BED chrom matches the chrom-sizes naming.">
+            <validator type="empty_field"/>
+            <validator type="regex" message="Letters, digits, underscore, hyphen, dot only">^[A-Za-z0-9_.\-]+$</validator>
+        </param>
+        <param name="input_maf" argument="input.maf" type="data" format="maf" label="Input MAF" help="A (preprocessed) multiple alignment file. Must carry a '##maf' header line; only blocks after it are read."/>
+    </inputs>
+    <outputs>
+        <data name="output_bed" format="bed" label="${tool.name} on ${on_string}: bigMaf BED3+1"/>
+    </outputs>
+    <tests>
+        <!-- ⛔ AN ORACLE. test.bigMaf.expected is the output of the REAL kent mafToBigMaf v482
+             on this same test.maf, not output this script produced. The fixture's reference rows
+             do NOT overlap, which is the case mafToBigMaf accepts, so the two MUST agree byte for
+             byte — and when this was first compared they did not: the score was passed through as
+             "0.0" where kent writes "0.000000", and the block text was missing its trailing ';'.
+             The previous assertions were derived from this script's own output, so they locked
+             both defects in. -->
+        <test expect_num_outputs="1">
+            <param name="ref_acc" value="GCA_000001.1"/>
+            <param name="input_maf" value="test.maf"/>
+            <output name="output_bed" file="test.bigMaf.expected"/>
+        </test>
+        <!-- A misspelt accession must FAIL, not write an empty track and print a count. -->
+        <test expect_failure="true">
+            <param name="ref_acc" value="GCA_999999.9"/>
+            <param name="input_maf" value="test.maf"/>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**MAF to bigMaf BED**
+
+Converts a preprocessed [MAF](https://genome.ucsc.edu/FAQ/FAQformat.html#format5)
+into the BED3+1 form consumed by `bedToBigBed -type=bed3+1` to build a
+[bigMaf](https://genome.ucsc.edu/goldenPath/help/bigMaf.html) track.
+
+The standard UCSC `mafToBigMaf` tool **rejects MAF files whose reference rows
+overlap**. Pangenome MAFs (e.g. those derived from `odgi`/graph projections)
+routinely contain overlapping reference blocks, so this porting step emits the
+BED directly and skips that check.
+
+For every alignment block the reference row (the `s` line whose species matches
+the supplied accession) defines the BED interval:
+
+- **chrom** - reference sequence name with the `accession.` prefix stripped, so
+  it matches the chrom-sizes naming.
+- **chromStart / chromEnd** - the reference start and start+size from the `s` line.
+- **mafBlock** - the entire MAF block text with newlines replaced by `;`
+  (the UCSC bigMaf convention; see ``bigMaf.as``).
+
+Blocks with no reference row for the given accession are skipped.
+
+-----
+
+**Inputs**
+
+- *Reference accession* - the assembly accession anchoring each block, e.g.
+  ``GCA_000001.1``. ``GCA_``/``GCF_`` accessions are matched as
+  ``prefix.version``; other names match the first dot-delimited token.
+- *Input MAF* - a multiple alignment file with a ``##maf`` header.
+
+**Output**
+
+- A BED3+1 file (one row per reference-anchored block) ready for
+  ``bedToBigBed -type=bed3+1 -as=bigMaf.as``.
+
+-----
+
+Ported from ``Pv4-pangenome/v3/ucsc_hub/maf_to_bigmaf_bed.py``.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

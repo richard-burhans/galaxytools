@@ -1,0 +1,22 @@
+<macros>
+    <token name="@VERSION_SUFFIX@">1</token>
+    <token name="@PROFILE@">26.0</token>
+    <!-- Each kent utility is its OWN bioconda package / biocontainer.
+         Pin each to a real version that resolves to an existing biocontainer. -->
+    <token name="@BEDTOBIGBED_VERSION@">482</token>
+    <token name="@FATOTWOBIT_VERSION@">482</token>
+    <!-- The read-back verifiers, pinned to the same kent release as the writer each one
+         checks: a reader from a different release can disagree about the FORMAT rather
+         than about the file, which would make the check lie in both directions. -->
+    <token name="@TWOBITINFO_VERSION@">482</token>
+    <token name="@TWOBITTOFA_VERSION@">482</token>
+    <token name="@BIGBEDINFO_VERSION@">482</token>
+    <token name="@GFF3TOGENEPRED_VERSION@">482</token>
+    <token name="@GENEPREDTOBED_VERSION@">482</token>
+    <token name="@HUBCHECK_VERSION@">482</token>
+    <xml name="citations">
+        <citations>
+            <citation type="doi">10.1093/bib/bbs038</citation>
+        </citations>
+    </xml>
+</macros>

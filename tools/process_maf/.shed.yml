@@ -1,0 +1,15 @@
+categories:
+- Sequence Analysis
+- Convert Formats
+description: process_maf - reference-first MAF normalization for mafToBigMaf
+long_description: |
+  Normalizes a Multiple Alignment Format (MAF) file for downstream
+  mafToBigMaf / big MAF track building. For each alignment block it drops
+  blocks that lack the reference accession, reorders the s-lines so the
+  reference row is first, and sorts the kept blocks by reference (chrom,
+  start). Overlapping multiz blocks are preserved.
+name: process_maf
+owner: richard-burhans
+homepage_url: https://github.com/nekrut/brc-tools
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/process_maf
+type: unrestricted
