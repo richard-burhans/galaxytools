@@ -5,7 +5,7 @@
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
-        <token name="@KEGALIGN_SUFFIX@">3</token>
+        <token name="@KEGALIGN_SUFFIX@">4</token>
         <import>macros.xml</import>
         <import>sequence_options.xml</import>
         <import>scoring_options.xml</import>
@@ -64,20 +64,38 @@ mkdir -p "\$(pwd)/work" &&
 ## pair was retired by hand. ⚠ The message names a CHROMOSOME, which sends you to debug the
 ## assembly; it is the FILE.
 ##
-## ⚠ THIS IS THE CHEAP HALF, DELIBERATELY. `test -s` is POSIX, needs no new package, and
-## decides the failure that actually happened. It does NOT catch a 2bit truncated partway
-## through its packed bases -- and neither would `twoBitInfo`, which was the obvious
-## candidate: measured on a 99-byte 2bit with kent v482, truncating 1, 4 or 16 bytes leaves
-## `twoBitInfo` exiting ZERO and printing every sequence size, because it resolves the index
-## and the record headers and never reads the bases. Only `twoBitToFa` catches those, and it
-## needs `ucsc-twobittofa` added to `kegalign-full` first. Ship this now; add that with the
-## recipe.
+## ⚠ TWO CHECKS, IN THIS ORDER, AND NEITHER IS REDUNDANT. `test -s` is POSIX, costs nothing
+## and decides the failure that actually happened above. `twoBitToFa` reads every packed base,
+## which is the only way to catch a 2bit truncated partway through them.
+##
+## ⛔ `twoBitInfo` CANNOT DO THE SECOND JOB, and it was the obvious candidate: measured with
+## kent v482, truncating a 2bit by 1, 4 or 16 bytes leaves `twoBitInfo` exiting ZERO and
+## printing every sequence size, because it resolves the index and the record headers and
+## never reads the bases. The window it misses scales with where the index ends, so a larger
+## 2bit has a correspondingly larger blind spot. `twoBitToFa` exits 255 on all of those --
+## re-measured 2026-10-08 on an 86-byte 2bit at -1, -4, -16 and -40 bytes, all 255, and 0
+## when whole.
+##
+## ⚠ AND `test -s` IS NOT MADE REDUNDANT BY IT. `twoBitToFa` prints the SAME message, `End of
+## file reading 4 bytes`, for a zero-byte file and for a one-byte truncation, so it cannot say
+## which happened. `test -s` fails first and its failure has exactly one meaning: the file is
+## empty, which is the case that cost 93 jobs. Keeping both buys a diagnosis, not just a stop.
+##
+## ▶ `/dev/null` as the destination reads every base without spending disk on a FASTA that is
+## 2 GB per genome here and immediately discarded.
+## ▶ `ucsc-twobittofa` arrived in `kegalign-full` build 1 (bioconda-recipes#70004), and the
+## container resolver takes the highest build: `/api/container_resolvers/resolve` answers
+## `kegalign-full:0.3.4--hdfd78af_1` for this tool. ⚠ That was measured on laila, which
+## resolves DOCKER; the endpoint is 403 on usegalaxy.org, which runs SINGULARITY from CVMFS,
+## so confirm the binary is present there before relying on this in production.
 gzip -cdfq '$target' > "\$(pwd)/work/ref.fa" &&
 faToTwoBit "\$(pwd)/work/ref.fa" "\$(pwd)/work/ref.2bit" &&
 test -s "\$(pwd)/work/ref.2bit" &&
+twoBitToFa "\$(pwd)/work/ref.2bit" /dev/null &&
 gzip -cdfq '$query' > "\$(pwd)/work/query.fa" &&
 faToTwoBit "\$(pwd)/work/query.fa" "\$(pwd)/work/query.2bit" &&
 test -s "\$(pwd)/work/query.2bit" &&
+twoBitToFa "\$(pwd)/work/query.2bit" /dev/null &&
 rm -f "\$(pwd)/work/ref.fa" "\$(pwd)/work/query.fa" &&
 
 ## The scripts come from the kegalign package, which installs them to its bin
