@@ -5,7 +5,7 @@
              couple the three tools' versions together; a token only this tool uses has
              no business in one. Bump it here and the other two stay where they are. -->
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
-        <token name="@KEGALIGN_SUFFIX@">4</token>
+        <token name="@KEGALIGN_SUFFIX@">5</token>
         <import>macros.xml</import>
         <import>sequence_options.xml</import>
         <import>scoring_options.xml</import>
@@ -83,19 +83,30 @@ mkdir -p "\$(pwd)/work" &&
 ##
 ## ▶ `/dev/null` as the destination reads every base without spending disk on a FASTA that is
 ## 2 GB per genome here and immediately discarded.
-## ▶ `ucsc-twobittofa` arrived in `kegalign-full` build 1 (bioconda-recipes#70004), and the
-## container resolver takes the highest build: `/api/container_resolvers/resolve` answers
-## `kegalign-full:0.3.4--hdfd78af_1` for this tool. ⚠ That was measured on laila, which
-## resolves DOCKER; the endpoint is 403 on usegalaxy.org, which runs SINGULARITY from CVMFS,
-## so confirm the binary is present there before relying on this in production.
+## ⛔ AND THE READ-BACK IS CONDITIONAL, BECAUSE +galaxy4 BROKE EVERY JOB THAT RAN IT.
+## `ucsc-twobittofa` arrived in `kegalign-full` build 1 (bioconda-recipes#70004) and
+## `/api/container_resolvers/resolve` duly answers `kegalign-full:0.3.4--hdfd78af_1` for this
+## tool -- and the first real job still died at `twoBitToFa: command not found`, exit 127,
+## having reached that line with `faToTwoBit` and `test -s` already passed. An environment
+## built from build 0 has faToTwoBit and not twoBitToFa, and a cached one does not refresh
+## because a new build exists. ⚠ The resolver endpoint reports what a resolver WOULD pick, not
+## what the job ran; asking it is not a measurement of the job's PATH.
+##
+## So the check runs when the binary is there and says so loudly when it is not, which
+## degrades to exactly the +galaxy3 behaviour instead of failing.
+##
+## ⛔ NOT `command -v twoBitToFa && twoBitToFa ... || echo skipped`. Measured under dash: with
+## the binary PRESENT and the 2bit TRUNCATED that form exits **0**, because the `||` catches
+## the tool's own failure and turns the one fault this exists to catch into a shrug. The
+## if/then/else propagates it -- 255 present-and-truncated, 0 present-and-whole, 0 absent.
 gzip -cdfq '$target' > "\$(pwd)/work/ref.fa" &&
 faToTwoBit "\$(pwd)/work/ref.fa" "\$(pwd)/work/ref.2bit" &&
 test -s "\$(pwd)/work/ref.2bit" &&
-twoBitToFa "\$(pwd)/work/ref.2bit" /dev/null &&
+if command -v twoBitToFa > /dev/null 2>&1 ; then twoBitToFa "\$(pwd)/work/ref.2bit" /dev/null ; else echo "WARNING: twoBitToFa is absent from this environment, so the 2bit TRUNCATION check was SKIPPED for ref.2bit; test -s still applied" >&2 ; fi &&
 gzip -cdfq '$query' > "\$(pwd)/work/query.fa" &&
 faToTwoBit "\$(pwd)/work/query.fa" "\$(pwd)/work/query.2bit" &&
 test -s "\$(pwd)/work/query.2bit" &&
-twoBitToFa "\$(pwd)/work/query.2bit" /dev/null &&
+if command -v twoBitToFa > /dev/null 2>&1 ; then twoBitToFa "\$(pwd)/work/query.2bit" /dev/null ; else echo "WARNING: twoBitToFa is absent from this environment, so the 2bit TRUNCATION check was SKIPPED for query.2bit; test -s still applied" >&2 ; fi &&
 rm -f "\$(pwd)/work/ref.fa" "\$(pwd)/work/query.fa" &&
 
 ## The scripts come from the kegalign package, which installs them to its bin
