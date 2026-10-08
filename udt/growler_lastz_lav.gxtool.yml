@@ -13,7 +13,7 @@
 #   converter: scripts/udt_convert.py 0.2.0
 class: GalaxyUserTool
 id: gt-growler-lastz-lav
-version: "1.04.52+galaxy3"
+version: "1.04.52+galaxy4"
 name: growler_lastz_lav (UDT)
 description: "gapped extension of one KegAlign pair file, one target per lastz call, LAV out"
 container: quay.io/biocontainers/kegalign-full:0.3.4--hdfd78af_0
@@ -34,6 +34,29 @@ shell_command: |
   LAV_TRAILER = b'#:eof'
   #: the window repair_killed_jobs.py already proved against real panel LAV files.
   TRAILER_WINDOW = 80
+
+
+  def require_wellformed(path, what):
+      # ⛔ THE TRAILER PROVES THE END ARRIVED; IT PROVES NOTHING ABOUT THE MIDDLE. MEASURED
+      # 2026-10-08 on STLR: a 203,016,405-byte assembled LAV ended with '#:eof', passed both
+      # trailer checks, its producer exited 0, and it held ONE malformed line --
+      # "l 189759 214085#:lav", cut mid-number with a header abutting the stump. Three lavToPsl
+      # jobs died on it with 'Expecting 6 words line 4431827' and 38 jobs paused behind them.
+      # ⚠ Counting '#:eof' against the lastz call count does NOT catch it: the file held 181 for
+      # 181 calls, balanced, because a chunk's LAV carries 2-11 '#:lav' headers of its own.
+      # So assert what the CONSUMER requires -- 6 fields on every 'l' row, lavToPsl's own
+      # expectation -- in one pass, measured at 0.9 s over 203 MB.
+      with open(path, 'rb') as fh:
+          for n, line in enumerate(fh, 1):
+              if b'#:lav' in line and not line.startswith(b'#:lav'):
+                  sys.exit('%s: line %d has content abutting a #:lav header (%r) -- bytes were '
+                           'lost mid-file while assembling it. The output is NOT safe to build '
+                           'chains on.' % (what, n, line[:60]))
+              stripped = line.strip()
+              if stripped[:2] == b'l ' and len(stripped.split()) != 6:
+                  sys.exit('%s: line %d is an alignment row with %d fields, not 6 (%r) -- '
+                           'lavToPsl rejects this as "Expecting 6 words". The output is NOT safe '
+                           'to build chains on.' % (what, n, len(stripped.split()), line[:60]))
 
 
   def require_trailer(path, what):
@@ -126,6 +149,7 @@ shell_command: |
   # no trailer -- asserting unconditionally would fail the one case that is genuinely empty.
   if calls:
       require_trailer(output, 'the assembled LAV output')
+      require_wellformed(output, 'the assembled LAV output')
   print('%d target(s), %d lastz call(s)' % (len(order), calls))
   CONFIGFILE_DRIVER
   ln -s '$(inputs.target.path)' target.2bit
