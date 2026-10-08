@@ -2,7 +2,7 @@
     <description>gapped extension of one KegAlign pair file, one target per lastz call, LAV out</description>
     <macros>
         <token name="@TOOL_VERSION@">1.04.52</token>
-        <token name="@VERSION_SUFFIX@">3</token>
+        <token name="@VERSION_SUFFIX@">4</token>
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
     </macros>
     <requirements>
@@ -59,6 +59,41 @@ FLUSH = 20000
 LAV_TRAILER = b'#:eof'
 #: the window repair_killed_jobs.py already proved against real panel LAV files.
 TRAILER_WINDOW = 80
+
+
+def require_wellformed(path, what):
+    # ⛔ THE TRAILER PROVES THE END ARRIVED; IT PROVES NOTHING ABOUT THE MIDDLE, and a real panel
+    # LAV lost bytes there. MEASURED 2026-10-08 on STLR (laila), a 203,016,405-byte assembled LAV
+    # that ended with '#:eof', passed both trailer checks, and whose producer exited 0:
+    #
+    #     l 189592 2140688 189758 2140854 97
+    #     l 189759 214085#:lav            <- cut mid-number, a header abutting the stump
+    #
+    # ONE malformed line in 203 MB, against 1,085 well-formed '#:lav' headers. Three lavToPsl
+    # jobs then died on it with 'Expecting 6 words line 4431827', 38 jobs paused behind them, and
+    # the pair read as computed until a consumer refused it.
+    #
+    # ⚠ THE TERMINATOR COUNT DOES NOT CATCH THIS. The file held 181 '#:eof' for 181 lastz calls,
+    # exactly balanced, because a chunk's LAV carries 2-11 '#:lav' headers of its own -- so the
+    # header after the stump belongs to the SAME chunk and that chunk's '#:eof' still arrived.
+    # Counting terminators looks like a structural check and is blind to a mid-chunk loss.
+    #
+    # So this reads the assembled file once and asserts what the CONSUMER requires: every 'l' row
+    # carries 6 fields, which is lavToPsl's own expectation, and no header is abutted by content.
+    # Measured at 0.9 s and 10 MB of RSS over that 203 MB file, in one pass, so it is free next to
+    # a lastz call. It is checked on the ASSEMBLY rather than per chunk because every chunk had
+    # already passed its own trailer check -- the loss happened while copying them out.
+    with open(path, 'rb') as fh:
+        for n, line in enumerate(fh, 1):
+            if b'#:lav' in line and not line.startswith(b'#:lav'):
+                sys.exit('%s: line %d has content abutting a #:lav header (%r) -- bytes were lost '
+                         'mid-file while assembling it. The output is NOT safe to build chains on.'
+                         % (what, n, line[:60]))
+            stripped = line.strip()
+            if stripped[:2] == b'l ' and len(stripped.split()) != 6:
+                sys.exit('%s: line %d is an alignment row with %d fields, not 6 (%r) -- lavToPsl '
+                         'rejects this as "Expecting 6 words". The output is NOT safe to build '
+                         'chains on.' % (what, n, len(stripped.split()), line[:60]))
 
 
 def require_trailer(path, what):
@@ -151,6 +186,7 @@ with open(output, 'wb') as out:
 # no trailer -- asserting unconditionally would fail the one case that is genuinely empty.
 if calls:
     require_trailer(output, 'the assembled LAV output')
+    require_wellformed(output, 'the assembled LAV output')
 print('%d target(s), %d lastz call(s)' % (len(order), calls))
 ]]></configfile>
     </configfiles>
