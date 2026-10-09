@@ -2,7 +2,7 @@
     <description>gapped extension of one KegAlign pair file, one target per lastz call, LAV out</description>
     <macros>
         <token name="@TOOL_VERSION@">1.04.52</token>
-        <token name="@VERSION_SUFFIX@">4</token>
+        <token name="@VERSION_SUFFIX@">5</token>
         <token name="@KEGALIGN_VERSION@">0.3.4</token>
     </macros>
     <requirements>
@@ -172,7 +172,16 @@ with open(output, 'wb') as out:
                 rc = subprocess.run(cmd).returncode
                 if rc != 0:
                     sys.exit('lastz exited %d on target %s' % (rc, t.decode()))
+                # BOTH CHECKS, PER CHUNK. require_trailer only proves the '#:eof' arrived, so a chunk
+                # that lost bytes mid-file passes it, gets copied in faithfully, and the ASSEMBLY then
+                # fails require_wellformed. Measured on SSHS (2026-10-09): 'content abutting a #:lav
+                # header' at line 2505203 of the assembled output, which blamed the assembly when the
+                # concatenation had done its job. Checking here names the offending chunk and its
+                # target, and fails before the whole file is copied. The concatenation is not the
+                # suspect: it writes with out.write inside a `with`, so a short write raises OSError
+                # rather than dropping bytes in silence.
                 require_trailer('chunk.lav', 'chunk %d of target %s' % (calls + 1, t.decode()))
+                require_wellformed('chunk.lav', 'chunk %d of target %s' % (calls + 1, t.decode()))
                 with open('chunk.lav', 'rb') as lav:
                     while True:
                         block = lav.read(1 << 22)
