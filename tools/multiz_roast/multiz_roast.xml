@@ -1,8 +1,8 @@
 <tool id="multiz_roast" name="roast" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
     <description>: reference-guided multiple alignment of pairwise MAFs (multiz autoMZ)</description>
     <macros>
-        <token name="@TOOL_VERSION@">11.2</token>
-        <token name="@VERSION_SUFFIX@">1</token>
+        <token name="@TOOL_VERSION@">11.3</token>
+        <token name="@VERSION_SUFFIX@">0</token>
     </macros>
     <xrefs>
         <xref type="bio.tools">multiz</xref>
@@ -45,10 +45,21 @@ for f in \$files; do
 done
 unset IFS
 \#\# a species in the tree with no alignment in this piece gets UCSC's empty stub (autoMultiz.csh)
+\#\# ⚠ So a dropped input is a stub too, and roast still exits 0 with that species missing: the census below
+\#\# says how many species brought blocks, for a check against the inputs that should have arrived.
+n=0; t=0; none=''
 for s in \$leaves; do
     [ "\$s" = "\$ref" ] && continue
-    [ -e "work/\$ref.\$s.sing.maf" ] || echo '\#\#maf version=1 scoring=autoMZ' > "work/\$ref.\$s.sing.maf"
+    t=`expr \$t + 1`
+    if [ -e "work/\$ref.\$s.sing.maf" ]; then
+        n=`expr \$n + 1`
+    else
+        echo '\#\#maf version=1 scoring=autoMZ' > "work/\$ref.\$s.sing.maf"
+        none="\$none \$s"
+    fi
 done
+echo "species with blocks: \$n of \$t"
+echo "species without blocks:\$none"
 echo "tree: \$tree"
 cd work
 mkdir tmp
@@ -71,8 +82,8 @@ mv work/out.maf "\$output"
     <tests>
         <!-- ▶ UCSC's own inputs: hg38 chr21:20,000,000-20,050,000 of the four synNet MAFs behind hg38 multiz5way
              (hgdownload vsTupChi1/vsGalVar1/vsMm10/vsCavPor3), split as UCSC splits them (mafSplit -byTarget
-             -useHashedName=8), with UCSC's hg38.5way.nh, branch lengths and all. A window where multiz 11.2 and
-             UCSC's patched build agree, so the expected output holds for both. lines_diff covers the 12 roast
+             -useHashedName=8), with UCSC's hg38.5way.nh, branch lengths and all. A window where the public 11.2 and
+             UCSC's patched build (whose fix 11.3 carries) agree, so the expected output holds for both. lines_diff covers the 12 roast
              comment lines that record temp paths and a PID. -->
         <test expect_num_outputs="1">
             <param name="pairwise" value="chr21_20M.hg38.tupChi1.maf,chr21_20M.hg38.galVar1.maf,chr21_20M.hg38.mm10.maf,chr21_20M.hg38.cavPor3.maf" ftype="maf"/>
@@ -81,6 +92,7 @@ mv work/out.maf "\$output"
             <output name="output" file="chr21_20M.5way.maf" compare="diff" lines_diff="24"/>
             <assert_stdout>
                 <has_text text="tree: ((hg38 (tupChi1 galVar1)) (mm10 cavPor3))"/>
+                <has_text text="species with blocks: 4 of 4"/>
             </assert_stdout>
         </test>
         <!-- ▶ A species in the tree with no input gets UCSC's empty stub: mm10 is left out, and roast still runs
@@ -95,6 +107,10 @@ mv work/out.maf "\$output"
                     <has_text text="s cavPor3."/>
                 </assert_contents>
             </output>
+            <assert_stdout>
+                <has_text text="species with blocks: 3 of 4"/>
+                <has_text text="species without blocks: mm10"/>
+            </assert_stdout>
         </test>
         <!-- ▶ Refusals, all read from the MAF rows: a species that is not a leaf of the tree (panTro6 is the
              tupChi1 file renamed), the same species given twice, and a reference that is not a leaf. -->
@@ -137,6 +153,10 @@ Each input becomes ``<reference>.<species>.sing.maf``, the species read from the
 empty one, gets UCSC's stub ``##maf version=1 scoring=autoMZ``, so one piece of a genome split can
 be run without every species aligning to it.
 
+.. warning:: A dropped input is stubbed the same way, and roast still succeeds without that species.
+   The tool's stdout reports ``species with blocks: N of M`` and lists the species without blocks;
+   check N against the inputs that should have reached each piece.
+
 The tree is prepared as UCSC does: branch lengths, ``;`` and newlines are removed and commas become
 spaces, giving ``((hg38 (tupChi1 galVar1)) (mm10 cavPor3))``. UCSC's scripts also strip a lowercase
 ``name_`` prefix, which exists for their common-name trees; it is not applied here, because the leaves
@@ -146,8 +166,9 @@ must be the species names the MAF rows use.
    wrongly with exit status 0. ``netToAxt | axtSort | axtToMaf`` (or ``mafSplit`` of such a file)
    gives the right order.
 
-**Output** is roast's MAF: header ``##maf version=1 scoring=roast.v3.3``, blocks with the reference on
-top, and a final ``##eof maf``. Gap annotation (``mafAddIRows``) is a separate, per-sequence step.
+**Output** is roast's MAF: header ``##maf version=1 scoring=roast.v4.4``, blocks with the reference on
+top, and a final ``##eof maf``. multiz 11.3 carries the 2014 fix UCSC builds with (pieces left over in a
+merge are kept rather than dropped), so the output matches UCSC's own multizNway builds. Gap annotation (``mafAddIRows``) is a separate, per-sequence step.
 
 .. _multiz: https://github.com/multiz/multiz
 ]]></help>
