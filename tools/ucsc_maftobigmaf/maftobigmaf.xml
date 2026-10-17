@@ -1,0 +1,147 @@
+<tool id="ucsc_maftobigmaf" name="mafToBigMaf" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: turn a MAF into bigMaf text, for bedToBigBed</description>
+    <macros>
+        <token name="@TOOL_VERSION@">482</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">ucsc-maftobigmaf</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## Galaxy flattens newlines in <command>, so the work is a POSIX sh script (the image is BusyBox) with its
+## inputs as argv, never Cheetah, so the same script runs as a UDT. It uses backticks, never \$( ).
+sh '$script' '$reference' '$input' '$output'
+    ]]></command>
+    <configfiles>
+        <configfile name="script"><![CDATA[set -eu
+ref="\$1"; input="\$2"; output="\$3"
+LC_ALL=C; export LC_ALL
+case "\$ref" in ''|*[!A-Za-z0-9_]*) echo "reference name must be letters, digits or _: \$ref" >&2; exit 2;; esac
+blocks=`grep -c '^a' "\$input" || true`
+case "\$blocks" in ''|*[!0-9]*) echo "could not count the blocks of the input" >&2; exit 4;; esac
+\#\# The browser finds the reference rows as <hub genome>.<sequence>, and a wrong name draws an empty track
+\#\# with no error, so say so here, from the first block. mafToBigMaf checks every block after it.
+top=`grep -m 1 '^s ' "\$input" | sed 's/^s[[:space:]]*//; s/[[:space:]].*//' || true`
+if [ "\$blocks" -gt 0 ]; then
+    case "\$top" in "\$ref".?*) ;; *) echo "the first block's top row is \$top, not \$ref.<sequence>" >&2; exit 3;; esac
+fi
+\#\# mafToBigMaf aborts (exit 255) on a block whose top row is not the reference, and on a reference row that
+\#\# starts before the previous one ends: input out of order, or a reference base covered twice. Both are
+\#\# kept fatal. That check is also why no sort follows, as it does in UCSC's recipe: within each run of
+\#\# one sequence the output is already in start order. The images' sort is BusyBox's, which holds its
+\#\# whole input in memory.
+mafToBigMaf "\$ref" "\$input" "\$output"
+\#\# One line per block, or something was lost. mafToBigMaf never checks its writes: to a full disk it
+\#\# exits 0 with a short file (measured, /dev/full), so this count is the only detector.
+lines=`wc -l < "\$output"`
+if [ "\$lines" -ne "\$blocks" ]; then echo "\$lines bigMaf lines for \$blocks blocks" >&2; exit 4; fi
+\#\# bedToBigBed needs each sequence's lines together; mafToBigMaf does not check that across sequences.
+again=`cut -f1 "\$output" | uniq | sort | uniq -d`
+if [ -n "\$again" ]; then echo "blocks of \$again are not together in the input; sort it by reference sequence and start" >&2; exit 5; fi
+echo "blocks: \$blocks; sequences: `cut -f1 "\$output" | uniq | wc -l`"
+]]></configfile>
+    </configfiles>
+    <inputs>
+        <param name="input" type="data" format="maf" label="MAF"
+               help="The reference as the top row of every block, named reference.sequence, each sequence's blocks together and in start order, no reference base covered twice: roast's output, or pieces of it joined in order."/>
+        <param name="reference" type="text" value="" label="Reference name"
+               help="The hub genome name the reference rows carry (cs10_NCBI_RefSeq_softmasked for cs10_NCBI_RefSeq_softmasked.NC_044371.1). The browser finds the rows by it, so a wrong one draws an empty track. Letters, digits and _ only.">
+            <validator type="regex" message="Letters, digits and _ only">^[A-Za-z0-9_]+$</validator>
+        </param>
+    </inputs>
+    <outputs>
+        <!-- ▶ bed: bigMaf text is bed3+1 (chrom, chromStart, chromEnd, mafBlock), and bed is what bedToBigBed
+             wrappers take. Galaxy has no bigMaf text datatype. -->
+        <data name="output" format="bed" label="${tool.name} on ${on_string}: bigMaf text"/>
+    </outputs>
+    <tests>
+        <!-- ▶ roast's output for UCSC's hg38 5-way at chr21:20,000,000-20,050,000 (multiz_roast's test). 134
+             blocks give 134 lines. Checked with kent's bedToBigBed -type=bed3+1 -as=bigMaf.as -tab
+             -itemsPerSlot=4 (kent src/hg/lib/bigMaf.as, chr21 46709983): a valid bigBed, bigBedInfo itemCount
+             134, basesCovered 30,105, maxDepth 1. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="chr21_20M.5way.maf" ftype="maf"/>
+            <param name="reference" value="hg38"/>
+            <output name="output" file="chr21_20M.5way.bigmaf.bed" ftype="bed"/>
+            <assert_stdout>
+                <has_text text="blocks: 134; sequences: 1"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ Two sequences, each together, chrB before chrA: kept in input order. bedToBigBed needs each
+             sequence together, not the sequences in name order. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="two_seqs.maf" ftype="maf"/>
+            <param name="reference" value="r"/>
+            <output name="output" ftype="bed">
+                <assert_contents>
+                    <has_n_lines n="3"/>
+                    <has_text_matching expression="^chrB\t10\t20\ta score=1\.000000;s r\.chrB 10 10 \+ 1000 AAAAACCCCC;"/>
+                    <has_text_matching expression="\nchrB\t25\t35\t[^\n]*\nchrA\t5\t8\t"/>
+                </assert_contents>
+            </output>
+            <assert_stdout>
+                <has_text text="blocks: 3; sequences: 2"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ Refusals, by exit code (Galaxy replaces a failed job's stderr). 3: the reference name is not the
+             rows' prefix (hg39 for hg38.chr21). 255: mafToBigMaf itself, on reference rows 10-20 then 15-25,
+             a base covered twice. 5: chrB's blocks are split by a chrA block, which bedToBigBed refuses. -->
+        <test expect_failure="true" expect_exit_code="3">
+            <param name="input" value="chr21_20M.5way.maf" ftype="maf"/>
+            <param name="reference" value="hg39"/>
+        </test>
+        <test expect_failure="true" expect_exit_code="255">
+            <param name="input" value="overlap.maf" ftype="maf"/>
+            <param name="reference" value="r"/>
+        </test>
+        <test expect_failure="true" expect_exit_code="5">
+            <param name="input" value="seq_not_together.maf" ftype="maf"/>
+            <param name="reference" value="r"/>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Runs kent's ``mafToBigMaf`` and returns the bigMaf text: one line per MAF block, ``chrom``,
+``chromStart``, ``chromEnd`` of the reference row and the whole block with ``;`` for its newlines.
+``bedToBigBed`` makes the track from it, as in UCSC's vgp577way build (kent
+``src/hg/makeDb/doc/vgp577way/vgp577way.txt``):
+
+::
+
+    mafToBigMaf <reference> in.maf stdout | sort -k2,2n | gzip -c > chr.bigMaf.gz
+    bedToBigBed -itemsPerSlot=4 -type=bed3+1 -as=bigMaf.as -tab all.bigMaf.gz chrom.sizes out.bb
+
+**The reference name** is the hub genome name the reference rows carry: ``cs10_NCBI_RefSeq_softmasked``
+for ``s cs10_NCBI_RefSeq_softmasked.NC_044371.1``. The output's ``chrom`` is the part after it. The
+browser looks for ``<hub genome>.<chrom>`` rows and hubCheck does not test it, so a wrong name gives
+an empty track with no error; here it fails the job.
+
+**No sort.** UCSC sorts mafToBigMaf's output by start. That sort cannot change anything:
+mafToBigMaf refuses a reference row that starts before the previous one of the same sequence ends,
+so within each run of one sequence the lines are already in start order. What bedToBigBed also needs
+is each sequence in one run, which the tool checks instead. (The image's ``sort`` is BusyBox's, which
+holds its whole input in memory: a chromosome's bigMaf text can be several GB.)
+
+**Refusals**, all fatal:
+
+* exit 2: the reference name has a character other than letters, digits and ``_``;
+* exit 3: the first block's top row is not ``<reference>.<sequence>``;
+* exit 255: mafToBigMaf, on a later block whose top row is not the reference, or on reference rows
+  out of order or overlapping (a reference base covered twice);
+* exit 4: the output does not have one line per block (empty, or short);
+* exit 5: a sequence's blocks are not together.
+
+The output is Galaxy ``bed`` (bigMaf text is bed3+1; Galaxy has no bigMaf text datatype). Give it to
+bedToBigBed with ``-type=bed3+1``, ``-as`` kent's ``bigMaf.as`` and ``-tab``.
+
+.. _source code: https://github.com/ucscGenomeBrowser/kent/tree/master/src/hg/utils/mafToBigMaf
+]]></help>
+    <citations>
+        <citation type="doi">10.1093/bib/bbs038</citation>
+    </citations>
+</tool>

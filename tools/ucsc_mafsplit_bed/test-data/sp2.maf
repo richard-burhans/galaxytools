@@ -1,0 +1,12 @@
+##maf version=1 scoring=blastz
+a score=1
+s ref.chrA 12 4 + 1000 ACGT
+s sp2.u 12 4 + 900 ACGT
+
+a score=3
+s ref.chrA 410 4 + 1000 ACGT
+s sp2.u 410 4 + 900 ACGT
+
+a score=4
+s ref.chrB 9 4 + 300 ACGT
+s sp2.v 9 4 + 400 ACGT
