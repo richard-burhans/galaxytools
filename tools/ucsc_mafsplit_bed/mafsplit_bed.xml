@@ -1,0 +1,321 @@
+<tool id="ucsc_mafsplit_bed" name="mafSplit at positions" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: cut a MAF into pieces at bed positions, bundling the other sequences</description>
+    <macros>
+        <token name="@TOOL_VERSION@">482</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <xrefs>
+        <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
+    </xrefs>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">ucsc-mafsplit</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## A separate tool from ucsc_mafsplit, not a mode of it: a UDT cannot have an optional data input.
+## Galaxy flattens newlines in <command>, so the work is a POSIX sh script (the image is BusyBox) with its
+## inputs as argv, never Cheetah, so the same script runs as a UDT. It uses backticks, never \$( ).
+sh '$script' '$input' '$splits'
+    ]]></command>
+    <configfiles>
+        <configfile name="script"><![CDATA[set -eu
+input="\$1"; splits="\$2"
+LC_ALL=C; export LC_ALL
+\#\# mafSplit takes each sequence's cuts in FILE order and skips any cut that lies behind the previous one,
+\#\# so the cuts are sorted first, as UCSC sorts mafSplitPos's output (hg38 multiz100way.txt).
+sed '/^#/d; /^track/d; /^browser/d; /^[[:space:]]*\$/d' "\$splits" | sort -k1,1 -k2,2n > cuts.bed
+\#\# The bed's sequences, plus a line no sequence can match: BusyBox grep -v -f with an empty pattern
+\#\# file selects nothing at all, where GNU grep selects everything.
+sed 's/[[:space:]].*//' cuts.bed | sort -u > cut_seqs
+printf '\t\n' >> cut_seqs
+if grep -qxF small cut_seqs; then echo "a sequence of the bed is named small, the bundle's name" >&2; exit 5; fi
+\#\# Read-only checks of the reference rows (the first row of each block), and the bases of every row.
+\#\# mafSplit names a sequence after the first '.' of its row (after the second for a GC* name, as kent's
+\#\# chromFromSrc does). It reopens a sequence's first piece for writing whenever the sequence reappears,
+\#\# so a sequence whose blocks are not together silently loses all but its last run: refuse that.
+n_in=`awk '
+/^a/ { top = 1; next }
+/^s / {
+    n += \$4
+    if (!top) next
+    top = 0
+    i = index(\$2, ".")
+    if (i == 0) { print "row " \$2 " is not named species.sequence"; bad = 1; exit }
+    c = substr(\$2, i + 1)
+    if (substr(\$2, 1, 2) == "GC") { j = index(c, "."); if (j) c = substr(c, j + 1) }
+    if (c != prev) {
+        if (c in seen) { print "the blocks of " c " are not together; sort the MAF by reference position"; bad = 1; exit }
+        seen[c] = 1; prev = c; last = -1
+    }
+    if (\$3 + 0 < last) { print c " is not sorted by reference start: " \$3 " after " last; bad = 1; exit }
+    last = \$3 + 0
+}
+END { if (!bad) print n + 0 }' "\$input"`
+case "\$n_in" in ''|*[!0-9]*) echo "\$n_in" >&2; exit 3;; esac
+mkdir split out
+mafSplit cuts.bed split/ "\$input"
+\#\# mafSplit writes a header-only file for a piece with no blocks that lies between two pieces with
+\#\# blocks, but none for a piece after a sequence's last block. Drop the empty ones, so a piece exists
+\#\# exactly when it has blocks, whatever its position.
+for f in split/*.maf; do
+    [ -e "\$f" ] || continue
+    grep -q '^a' "\$f" || rm "\$f"
+done
+\#\# Every sequence the bed does not name goes into small.00, in sorted name order. Written with
+\#\# head/tail, which fail on a write error (BusyBox awk and sed do not).
+ls split | sed -n 's/\.00\.maf\$//p' | grep -vxF -f cut_seqs | sort > small_seqs
+k=0
+while read -r s; do
+    for f in "split/\$s".[0-9][0-9].maf; do
+        [ -e "\$f" ] || continue
+        [ -e out/small.00.maf ] || head -n 1 "\$f" > out/small.00.maf
+        tail -n +2 "\$f" >> out/small.00.maf
+        rm "\$f"
+    done
+    k=`expr \$k + 1`
+done < small_seqs
+for f in split/*.maf; do
+    [ -e "\$f" ] || continue
+    mv "\$f" out/
+done
+\#\# Nothing lost: every row's bases are in exactly one piece (a cut block's halves add up).
+n_out=0
+if [ -n "`ls out`" ]; then n_out=`cat out/*.maf | awk '/^s / { n += \$4 } END { print n + 0 }'`; fi
+if [ "\$n_out" != "\$n_in" ]; then echo "the pieces hold \$n_out bases of the input's \$n_in" >&2; exit 4; fi
+\#\# And every piece is small.00 or a piece of a bed sequence.
+printf 'small\n' >> cut_seqs
+stray=`ls out | sed 's/\.[0-9]*\.maf\$//' | grep -vxF -f cut_seqs || true`
+if [ -n "\$stray" ]; then echo "pieces of sequences not in the bed escaped the bundle: \$stray" >&2; exit 6; fi
+echo "pieces: `ls out | wc -l`; bundled \$k sequence(s) into small.00"
+]]></configfile>
+    </configfiles>
+    <inputs>
+        <param name="input" type="data" format="maf" label="MAF"
+               help="The reference must be the top row of every block, named species.sequence (cs10_NCBI_RefSeq_softmasked.NC_044371.1), and each reference sequence's blocks must be together and sorted by start, as axtSort | axtToMaf gives."/>
+        <param name="splits" type="data" format="bed" label="Cut positions"
+               help="One line per cut: the sequence (without the species prefix) and the position in chromStart. chromEnd is ignored; mafSplitPos writes pos, pos+1. Order does not matter."/>
+    </inputs>
+    <outputs>
+        <collection name="pieces" type="list" label="${tool.name} on ${on_string}">
+            <!-- ▶ Greedy .+ keeps the dots of a sequence name: NC_044371.1.00 from NC_044371.1.00.maf. -->
+            <discover_datasets pattern="(?P&lt;designation&gt;.+)\.maf$" directory="out" format="maf" sort_by="filename"/>
+        </collection>
+    </outputs>
+    <tests>
+        <!-- ▶ chrA is cut at 100 and 300 and has blocks below 300 only, so chrA.02 is not written. chrB and
+             chrC are not in the bed and are bundled into small.00, chrB first although chrC comes first in
+             the input. Every score is rewritten with six decimals by kent's mafWrite. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="three_seqs.maf" ftype="maf"/>
+            <param name="splits" value="cuts.bed" ftype="bed"/>
+            <output_collection name="pieces" type="list" count="3">
+                <element name="chrA.00">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 10 10 \+ 1000 AAAAACCCCC"/>
+                        <not_has_text text="ref.chrA 150"/>
+                    </assert_contents>
+                </element>
+                <element name="chrA.01">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 150 6 \+ 1000 GGGTTT"/>
+                    </assert_contents>
+                </element>
+                <element name="small.00">
+                    <assert_contents>
+                        <has_text text="##maf" n="1"/>
+                        <has_n_lines n="9"/>
+                        <has_text_matching expression="ref\.chrB 20 4[\s\S]*ref\.chrC  5 4"/>
+                        <not_has_text text="chrA"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+            <assert_stdout>
+                <has_text text="pieces: 3; bundled 2 sequence(s) into small.00"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ The same cuts given in reverse order. Unsorted, kent's mafSplit would lose the cut at 100 and
+             write an empty piece; the tool sorts the bed first, so the pieces are the same as above. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="three_seqs.maf" ftype="maf"/>
+            <param name="splits" value="cuts_unsorted.bed" ftype="bed"/>
+            <output_collection name="pieces" type="list" count="3">
+                <element name="chrA.00">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 10 10 "/>
+                    </assert_contents>
+                </element>
+                <element name="chrA.01">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 150 6 "/>
+                    </assert_contents>
+                </element>
+                <element name="small.00">
+                    <assert_contents>
+                        <has_text text="ref.chrB"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <!-- ▶ A block across the cut at 100 (reference 95-105, query 200-212 with a 2-base insertion before the
+             cut) becomes two blocks: reference 95+5 and 100+5, query 200+7 and 207+5. No base is lost, and
+             kent's mafSubset gives each half score 0. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="straddle.maf" ftype="maf"/>
+            <param name="splits" value="cuts.bed" ftype="bed"/>
+            <output_collection name="pieces" type="list" count="2">
+                <element name="chrA.00">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA  95 5 \+ 1000 GG--GTT\n"/>
+                        <has_text_matching expression="s sp1\.x    200 7 \+  900 GGTTGTT\n"/>
+                        <has_text text="a score=0.000000"/>
+                    </assert_contents>
+                </element>
+                <element name="chrA.01">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 100 5 \+ 1000 TTTTT\n"/>
+                        <has_text_matching expression="s sp1\.x    207 5 \+  900 TTTTT\n"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+            <assert_stdout>
+                <has_text text="pieces: 2; bundled 0 sequence(s) into small.00"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ Two species, one bed: piece names depend on the bed alone. sp1 has blocks in all three chrA
+             pieces; sp2 has none between 100 and 300, so it has no chrA.01 (mafSplit writes that one
+             header-only, and the tool drops it) while chrA.02 keeps its name. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="sp1.maf" ftype="maf"/>
+            <param name="splits" value="cuts.bed" ftype="bed"/>
+            <output_collection name="pieces" type="list" count="4">
+                <element name="chrA.00">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 10 4 "/>
+                    </assert_contents>
+                </element>
+                <element name="chrA.01">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 200 4 "/>
+                    </assert_contents>
+                </element>
+                <element name="chrA.02">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 400 4 "/>
+                    </assert_contents>
+                </element>
+                <element name="small.00">
+                    <assert_contents>
+                        <has_text text="s sp1.y"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="input" value="sp2.maf" ftype="maf"/>
+            <param name="splits" value="cuts.bed" ftype="bed"/>
+            <output_collection name="pieces" type="list" count="3">
+                <element name="chrA.00">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 12 4 "/>
+                    </assert_contents>
+                </element>
+                <element name="chrA.02">
+                    <assert_contents>
+                        <has_text_matching expression="s ref\.chrA 410 4 "/>
+                    </assert_contents>
+                </element>
+                <element name="small.00">
+                    <assert_contents>
+                        <has_text text="s sp2.v"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+            <assert_stdout>
+                <has_text text="pieces: 3; bundled 1 sequence(s) into small.00"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ cs10's rows: a hub genome name over versioned accessions. The bed names NC_044371.1, which matches
+             the row cs10_NCBI_RefSeq_softmasked.NC_044371.1, and the piece names keep the version. The
+             mitochondrion NC_029855.1 and the scaffold NW_023364.1 are bundled, in that (C locale) order. -->
+        <test expect_num_outputs="1">
+            <param name="input" value="cs10_rows.maf" ftype="maf"/>
+            <param name="splits" value="cs10_cuts.bed" ftype="bed"/>
+            <output_collection name="pieces" type="list" count="3">
+                <element name="NC_044371.1.00">
+                    <assert_contents>
+                        <has_text_matching expression="s cs10_NCBI_RefSeq_softmasked\.NC_044371\.1 500 4 "/>
+                    </assert_contents>
+                </element>
+                <element name="NC_044371.1.01">
+                    <assert_contents>
+                        <has_text_matching expression="s cs10_NCBI_RefSeq_softmasked\.NC_044371\.1 2000 4 "/>
+                    </assert_contents>
+                </element>
+                <element name="small.00">
+                    <assert_contents>
+                        <has_text_matching expression="NC_029855\.1 40 4[\s\S]*NW_023364\.1 30 4"/>
+                    </assert_contents>
+                </element>
+            </output_collection>
+            <assert_stdout>
+                <has_text text="pieces: 3; bundled 2 sequence(s) into small.00"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ Refusals, by exit code (Galaxy replaces a failed job's stderr). 3: chrA's blocks are not together,
+             where kent's mafSplit would reopen chrA.00 and keep only the last run, at exit 0. 5: a bed
+             sequence named small, which would collide with the bundle. -->
+        <test expect_failure="true" expect_exit_code="3">
+            <param name="input" value="not_grouped.maf" ftype="maf"/>
+            <param name="splits" value="cuts.bed" ftype="bed"/>
+        </test>
+        <test expect_failure="true" expect_exit_code="5">
+            <param name="input" value="sp1.maf" ftype="maf"/>
+            <param name="splits" value="cuts_small.bed" ftype="bed"/>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Cuts a MAF at given positions of its reference sequences with kent's ``mafSplit`` (bed mode, no
+``-byTarget``), as UCSC's multizNway builds do before roast (kent ``src/hg/makeDb/doc/hg38/multiz100way.txt``):
+
+::
+
+    mafSplitPos -minGap=10000 hg38 5 stdout | sort -u | sort -k1,1 -k2,2n > mafSplit.bed
+    mafSplit mafSplit.bed hg38_ hg38.<species>.synNet.maf.gz
+
+then bundles every reference sequence the bed does not name into one piece, ``small.00``.
+
+**Cut positions.** Each bed line is one cut, at **chromStart**; chromEnd is ignored (mafSplitPos writes
+``chrom pos pos+1``). Sequence ``s`` cut at positions p1 < p2 < ... gives ``s.00`` = [0, p1),
+``s.01`` = [p1, p2), and so on. The bed is sorted by the tool (kent's mafSplit takes the cuts in file
+order and would lose any cut behind the previous one). The bed names sequences without the species
+prefix: ``NC_044371.1`` matches the row ``cs10_NCBI_RefSeq_softmasked.NC_044371.1``. As in kent, the
+sequence is everything after the row's first ``.``, or after its second for a species name starting
+``GC`` (a GenArk accession).
+
+A block across a cut is cut in two (kent's ``mafSubset``), every row at the same column, so no base is
+lost; each half is given score 0. Place cuts in reference gaps (N runs, as mafSplitPos does) and no
+block meets one.
+
+**Output**: a list of MAFs named ``<sequence>.NN`` (``NC_044371.1.00``), plus ``small.00`` holding every
+sequence not in the bed, one header, in C-locale sorted sequence-name order. Every species split with
+the same bed gets the same names for the pieces it has.
+
+.. warning:: A piece in which a species has no blocks is **absent** from that species' collection,
+   wherever it falls (kent writes an empty piece between two others, and none after a sequence's last
+   block; the tool drops the empty ones). Downstream, take the **union** of piece names over all
+   species, as UCSC's ``run.maf.list`` does, and let roast stub a species missing from a piece.
+
+**Refusals.** Each reference sequence's blocks must be together and sorted by start (exit 3): kent's
+mafSplit reopens a sequence's first piece whenever the sequence reappears and keeps only the last run,
+at exit 0. A bed sequence may not be named ``small`` (exit 5). The tool checks that the pieces hold
+exactly the bases of the input (exit 4) and that no piece of an unnamed sequence escaped the bundle
+(exit 6). stdout reports ``pieces: N; bundled K sequence(s) into small.00``.
+
+.. _source code: https://github.com/ucscGenomeBrowser/kent/tree/master/src/hg/ratStuff/mafSplit
+]]></help>
+    <citations>
+        <citation type="doi">10.1093/bib/bbs038</citation>
+    </citations>
+</tool>

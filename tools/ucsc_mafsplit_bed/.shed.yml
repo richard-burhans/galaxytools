@@ -1,0 +1,13 @@
+name: ucsc_mafsplit_bed
+owner: richard-burhans
+description: Cut a MAF into pieces at BED positions with kent's mafSplit
+long_description: |
+  kent's mafSplit in bed mode: each sequence named in the BED is cut at its
+  positions, every other sequence is bundled into one piece, and empty pieces
+  are dropped. Piece names are the same for every species, so the pieces of a
+  multiz build can be regrouped by name.
+homepage_url: http://hgdownload.cse.ucsc.edu/admin/exe/
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ucsc_mafsplit_bed
+type: unrestricted
+categories:
+  - Sequence Analysis

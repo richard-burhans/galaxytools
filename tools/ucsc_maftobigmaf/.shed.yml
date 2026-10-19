@@ -1,0 +1,12 @@
+name: ucsc_maftobigmaf
+owner: richard-burhans
+description: Turn a MAF into bigMaf text with kent's mafToBigMaf
+long_description: |
+  kent's mafToBigMaf, writing the bed3+1 text that bedToBigBed turns into a
+  bigMaf track for the UCSC Genome Browser. The output is checked to hold one
+  line per alignment block.
+homepage_url: http://hgdownload.cse.ucsc.edu/admin/exe/
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ucsc_maftobigmaf
+type: unrestricted
+categories:
+  - Sequence Analysis

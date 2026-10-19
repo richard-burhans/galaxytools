@@ -1,0 +1,16 @@
+##maf version=1 scoring=blastz
+a score=100
+s cs10_NCBI_RefSeq_softmasked.NC_044371.1 500 4 + 101209240 ACGT
+s 79X.79X.00004171 10 4 + 5000 ACGT
+
+a score=110
+s cs10_NCBI_RefSeq_softmasked.NC_044371.1 2000 4 + 101209240 ACGT
+s 79X.79X.00004171 3000 4 + 5000 ACGT
+
+a score=120
+s cs10_NCBI_RefSeq_softmasked.NW_023364.1 30 4 + 60000 ACGT
+s 79X.79X.00009999 30 4 + 9000 ACGT
+
+a score=130
+s cs10_NCBI_RefSeq_softmasked.NC_029855.1 40 4 + 415602 ACGT
+s 79X.79X.00000001 40 4 + 400000 ACGT

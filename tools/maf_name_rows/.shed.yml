@@ -1,0 +1,13 @@
+name: maf_name_rows
+owner: richard-burhans
+description: Name the rows of pairwise MAFs species.sequence, by row position
+long_description: |
+  Gives each block of an axtToMaf pairwise MAF the row names multiz roast needs:
+  row 1 becomes <reference>.<sequence>, row 2 <species>.<sequence>, with optional
+  per-genome sequence renames. Rows are told apart by position, never by name.
+  A second mode renames species prefixes after roast.
+homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/maf_name_rows
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/maf_name_rows
+type: unrestricted
+categories:
+  - Sequence Analysis
