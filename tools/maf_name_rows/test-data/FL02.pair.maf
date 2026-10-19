@@ -1,0 +1,17 @@
+##maf version=1 scoring=blastz
+a score=35077.000000
+s NC_044376.1                 3490  60 + 61561104 TTTGTCTTTCTATGAACTAGAAATGGATTTTAGGGAATTAGGAAACCTGAAAATTAATAA
+s lcl|fl02_chr_009 27928  60 + 55145003 TTTGTCTTTCTATGAACTAGAAATGGATTTTAGGGAATTAGGAAACCTGAAAATTAATAA
+
+a score=89672.000000
+s NC_044376.1                 6084412   56 + 61561104 tttaaccaatgttcgaaagaacatagcatttctctaaatgcaagtaaactct----gtag
+s lcl|fl02_chr_007 47893901   59 + 78358135 tttaaccaatgttcgaaagaacatagcattt-tctaaatgcaagtaaactcttgtcgtag
+
+a score=37039.000000
+s NC_044376.1                 6401703  58 + 61561104 TACTTGTATATGCTTCTTATATGCAAGTTTAACT--Aaattagattagtagtggtggtcc
+s lcl|fl02_chr_004 51392032  60 + 85143560 tacttgtatatgcttactatATGCAAGTTTAACTTAGaattagattagtagtggtggtcc
+
+a score=3404065.000000
+s NC_044376.1                10709359    59 + 61561104 ataaaacttcaattaccataatagaaaaa-tatttaattgaactaaataatgactaagaa
+s lcl|fl02_chr_001 70106871    60 - 95824234 ataaaacttcAATTaccataatagaaaaaatatttaattgaactaaataatgactaagaa
+

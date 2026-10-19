@@ -1,0 +1,12 @@
+##maf version=1 scoring=blastz
+a score=1
+s r.chrB 10 10 + 1000 AAAAACCCCC
+s q.x 0 10 + 500 AAAAACCCCC
+
+a score=2
+s r.chrB 25 10 + 1000 GGGGGTTTTT
+s q.y 100 10 + 500 GGGGGTTTTT
+
+a score=2
+s r.chrA 5 3 + 1000 GGG
+s q.y 200 3 + 500 GGG

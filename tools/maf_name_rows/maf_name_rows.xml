@@ -1,0 +1,414 @@
+<tool id="maf_name_rows" name="Name MAF rows" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
+    <description>: species.sequence row names for pairwise MAFs, by row position</description>
+    <macros>
+        <token name="@TOOL_VERSION@">1.0.0</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <requirements>
+        <requirement type="package" version="5.3.1">gawk</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## Galaxy flattens newlines in <command>, so the work is a POSIX sh script with its inputs as argv,
+## never Cheetah, so the same script runs as a UDT. Every input is passed in both modes: a UDT has no
+## conditionals and no optional data.
+sh '$script' '$mode' '$input' '$species' '$renames' '$sizes' '$reference' '$output'
+    ]]></command>
+    <configfiles>
+        <configfile name="script"><![CDATA[set -eu
+mode="\$1"; input="\$2"; species="\$3"; renames="\$4"; sizes="\$5"; ref="\$6"; output="\$7"
+\#\# roast takes a species up to the first '.', needs a leading letter, and deletes every line holding
+\#\# 'maf' or 'eof' (speciesTree.c), so a name with either would lose its rows at exit 0.
+case "\$ref" in
+    ''|[!A-Za-z]*|*[!A-Za-z0-9_]*|*maf*|*eof*)
+        echo "reference name must be a letter then letters, digits or _, without maf or eof: \$ref" >&2; exit 1;;
+esac
+\#\# GNU awk, never BusyBox awk: BusyBox truncates on a failed write and exits 0. gawk exits non-zero on a
+\#\# failed write, and close() is checked as well, so a full disk fails the job.
+case "\$mode" in
+forward)
+\#\# Every block of an axtToMaf pair is row 1 = the reference, row 2 = the query, with bare sequence names.
+\#\# The rows are told apart by POSITION: names cannot be trusted (a query genome can have a sequence
+\#\# with the reference's mitochondrion's name and length). Only the name token is replaced; every other
+\#\# byte of the line, padding included, is kept.
+gawk -v ref="\$ref" -v out="\$output" -v spfile="\$species" -v rnfile="\$renames" -v szfile="\$sizes" '
+function die(m) { print "maf_name_rows: " m > "/dev/stderr"; failed = 1; exit 1 }
+function endblock() {
+    if (rows != 2) die("the block at line " bline " has " rows " s line(s), not 2 (the reference, then the query)")
+    inblock = 0
+}
+function put(name,   lead) {
+    match(\$0, /^s +/); lead = substr(\$0, 1, RLENGTH)
+    print lead name substr(\$0, RLENGTH + 1 + length(f[2])) > out
+}
+BEGIN {
+    n = 0
+    while ((r = (getline line < spfile)) > 0) {
+        sub(/\r\$/, "", line)
+        if (line ~ /^[ \t]*\$/) continue
+        n++
+        if (n > 1 || split(line, p, "\t") != 2) die("the species dataset must be ONE line, label TAB species name: " line)
+        label = p[1]; sp = p[2]
+    }
+    if (r < 0) die("cannot read the species dataset")
+    if (n == 0) die("the species dataset is empty")
+    if (label !~ /^[^ ]+\$/) die("the label must be one word: " label)
+    if (sp !~ /^[A-Za-z][A-Za-z0-9_]*\$/ || sp ~ /maf|eof/) die("species name " sp " cannot go through roast: a letter then letters, digits or _, without maf or eof")
+    if (sp == ref) die("species name " sp " is the reference name")
+    ln = 0
+    while ((r = (getline line < rnfile)) > 0) {
+        ln++
+        sub(/\r\$/, "", line)
+        if (ln == 1) {
+            if (line != "genome\thub_name\toriginal_name") die("the renames table must start with the header genome, hub_name, original_name: " line)
+            continue
+        }
+        if (line ~ /^[ \t]*\$/) continue
+        if (split(line, p, "\t") != 3) die("renames line " ln " does not have 3 columns: " line)
+        if (p[1] != label) continue
+        if ((p[3] in hub) && hub[p[3]] != p[2]) die("renames give " p[3] " two hub names for " label)
+        hub[p[3]] = p[2]; nren++
+    }
+    if (r < 0) die("cannot read the renames table")
+    if (ln == 0) die("the renames table is empty (it needs at least its header)")
+    ns = 0
+    while ((r = (getline line < szfile)) > 0) {
+        if (line ~ /^[ \t]*\$/) continue
+        if (split(line, p, "\t") < 2 || p[2] !~ /^[0-9]+\$/) die("sizes line is not sequence TAB size: " line)
+        size[p[1]] = p[2]; ns++
+    }
+    if (r < 0) die("cannot read the reference sizes")
+    if (ns == 0) die("the reference sizes are empty")
+}
+{
+    if (\$0 ~ /^[ \t]*\$/) { if (inblock) endblock(); print > out; next }
+    c = substr(\$0, 1, 1)
+    if (c == "a" && (\$0 == "a" || substr(\$0, 2, 1) == " ")) {
+        if (inblock) endblock()
+        inblock = 1; rows = 0; bline = NR; blocks++
+        print > out; next
+    }
+    if (!inblock) {
+        if (c == "#") { print > out; next }
+        die("line " NR " is outside a block and is not a header line: " substr(\$0, 1, 60))
+    }
+    if (c != "s" || substr(\$0, 2, 1) != " ") die("line " NR " in a block is not an s line, and a pairwise MAF has only s lines: " substr(\$0, 1, 60))
+    rows++
+    if (rows > 2) die("the block at line " bline " has more than 2 s lines (the reference, then the query)")
+    if (split(\$0, f, " ") != 7) die("the s line at line " NR " does not have 7 fields")
+    if (rows == 1) {
+        q = f[2]
+        if (!(q in size)) die("reference sequence " q " (row 1, line " NR ") is not in the reference sizes: rows must carry bare sequence names")
+        if (f[6] != size[q]) die("reference sequence " q " has size " f[6] " at line " NR ", but " size[q] " in the reference sizes")
+        if (f[5] != "+") die("the reference row at line " NR " is on the - strand")
+        \#\# multiz merges unsorted input wrongly with exit status 0, so the order is checked here
+        if (q != cur) {
+            if (q in done) die("reference sequence " q " starts again at line " NR " after another sequence began: the input is not sorted")
+            if (cur != "") done[cur] = 1
+            cur = q; last = -1; nseq++
+        }
+        if (f[3] + 0 < last) die("the reference start goes backwards at line " NR ": " q " " f[3] " after " last)
+        last = f[3] + 0
+        put(ref "." q)
+    } else {
+        if (f[2] in hub) { put(sp "." hub[f[2]]); renamed++ } else put(sp "." f[2])
+    }
+}
+END {
+    if (failed) exit 1
+    if (inblock) endblock()
+    printf "" > out
+    if (close(out) != 0) die("cannot write " out)
+    print "blocks: " blocks + 0 " on " nseq + 0 " reference sequence(s)"
+    print "species: " sp " (label " label ", " nren + 0 " sequence rename(s) for it)"
+    print "query rows renamed: " renamed + 0
+}' "\$input"
+;;
+species)
+\#\# After roast: every s, i, e and q line has species.sequence; only the species part is renamed, the
+\#\# reference's rows never, and every other line is copied unchanged.
+gawk -v ref="\$ref" -v out="\$output" -v rnfile="\$renames" '
+function die(m) { print "maf_name_rows: " m > "/dev/stderr"; failed = 1; exit 1 }
+BEGIN {
+    ln = 0; nmap = 0
+    while ((r = (getline line < rnfile)) > 0) {
+        ln++
+        sub(/\r\$/, "", line)
+        if (ln == 1) {
+            if (line != "from\tto") die("the species renames must start with the header from, to: " line)
+            continue
+        }
+        if (line ~ /^[ \t]*\$/) continue
+        if (split(line, p, "\t") != 2 || p[1] !~ /^[^ .]+\$/ || p[2] !~ /^[^ .]+\$/) die("species renames line " ln " is not from TAB to, each without a . or a space: " line)
+        if (p[1] == ref || p[2] == ref) die("species renames line " ln " names the reference " ref)
+        if (p[1] in map) die("species " p[1] " is renamed twice")
+        if (p[2] in target) die("two species are renamed to " p[2])
+        map[p[1]] = p[2]; target[p[2]] = 1; nmap++
+    }
+    if (r < 0) die("cannot read the species renames")
+    if (nmap == 0) die("the species renames table has no rows")
+}
+{
+    c = substr(\$0, 1, 1)
+    if ((c == "s" || c == "i" || c == "e" || c == "q") && substr(\$0, 2, 1) == " ") {
+        split(\$0, f, " ")
+        d = index(f[2], ".")
+        if (d < 2) die("the row at line " NR " has no species prefix: " f[2])
+        s = substr(f[2], 1, d - 1)
+        if (s != ref) {
+            if (s in map) {
+                match(\$0, /^[sieq] +/)
+                print substr(\$0, 1, RLENGTH) map[s] substr(\$0, RLENGTH + 1 + length(s)) > out
+                n[s]++; next
+            }
+            if (s in target) die("line " NR " already uses the new name " s ": renaming would merge two species")
+        }
+    }
+    print > out
+}
+END {
+    if (failed) exit 1
+    printf "" > out
+    if (close(out) != 0) die("cannot write " out)
+    for (s in map) print "renamed " s " -> " map[s] ": " n[s] + 0 " line(s)"
+}' "\$input"
+;;
+*) echo "mode must be forward or species: \$mode" >&2; exit 1;;
+esac
+]]></configfile>
+    </configfiles>
+    <inputs>
+        <param name="mode" type="select" label="Mode"
+               help="forward: name the rows of a pairwise axtToMaf MAF. species: rename species prefixes in a multiple alignment (after roast).">
+            <option value="forward" selected="true">forward: pairwise MAF, rows named by position</option>
+            <option value="species">species: rename species prefixes only</option>
+        </param>
+        <param name="input" type="data" format="maf" label="MAF"
+               help="forward: a pairwise MAF straight from axtToMaf, bare sequence names, row 1 the reference, row 2 the query, sorted by reference position. species: any MAF whose rows are species.sequence."/>
+        <param name="species" type="data" format="txt,tabular" label="Species line (forward; ignored in species mode)"
+               help="One line, label TAB species name: the label selects this genome's rows of the renames table, the species name prefixes the query rows (79X TAB g79X)."/>
+        <param name="renames" type="data" format="tabular" label="Renames table"
+               help="forward: genome, hub_name, original_name with that header (hub_sequence_renames.tsv); rows whose genome is the label rename query sequences. species: from, to with that header (g79X TAB 79X)."/>
+        <param name="sizes" type="data" format="tabular,len,txt" label="Reference chrom.sizes (forward; ignored in species mode)"
+               help="sequence TAB size for the reference genome. Every reference row must name a sequence in it, with the same size."/>
+        <param name="reference" type="text" value="" label="Reference name"
+               help="The reference genome's name as the rows will carry it (the hub genome name, cs10_NCBI_RefSeq_softmasked). A letter, then letters, digits or _.">
+            <validator type="regex" message="A letter, then letters, digits or _">^[A-Za-z][A-Za-z0-9_]*$</validator>
+        </param>
+    </inputs>
+    <outputs>
+        <data name="output" format="maf"/>
+    </outputs>
+    <tests>
+        <!-- ▶ Real panel rows: the first five blocks of the cs10 x 79X synNet MAF (axtToMaf, no prefixes), each
+             trimmed to its first 60 alignment columns with the size recomputed. The query gets the alias g79X,
+             since 79X cannot pass through roast. 79X has no sequence renames, so its names are kept. The
+             expected file was made by a text substitution on the input, not by this tool. -->
+        <test expect_num_outputs="1">
+            <param name="mode" value="forward"/>
+            <param name="input" value="79X.pair.maf" ftype="maf"/>
+            <param name="species" value="79X.species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <output name="output" file="79X.named.maf" compare="diff"/>
+            <assert_stdout>
+                <has_text text="blocks: 5 on 2 reference sequence(s)"/>
+                <has_text text="query rows renamed: 0"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ FL02_coge60295's sequences were renamed for the hub (lcl|fl02_chr_009 to lcl_fl02_chr_009). Its
+             rows come from multiz-lowmem/chr44376/pairs, which were rebuilt WITH prefixes and hub names; the
+             input reconstructs the panel's bare form by stripping the prefixes and undoing the renames, and
+             the expected output is those rebuilt rows with cs10 written as the hub genome name. -->
+        <test expect_num_outputs="1">
+            <param name="mode" value="forward"/>
+            <param name="input" value="FL02.pair.maf" ftype="maf"/>
+            <param name="species" value="FL02.species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <output name="output" file="FL02.named.maf" compare="diff"/>
+            <assert_stdout>
+                <has_text text="134 sequence rename(s)"/>
+                <has_text text="query rows renamed: 4"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ ASM2916894v1 has a sequence named NC_029855.1, cs10's mitochondrion's name and length. The block
+             is the first 79X block with the query renamed so; row 1 still becomes cs10, row 2 the species. -->
+        <test expect_num_outputs="1">
+            <param name="mode" value="forward"/>
+            <param name="input" value="ASM2916894v1.pair.maf" ftype="maf"/>
+            <param name="species" value="ASM2916894v1.species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <output name="output" file="ASM2916894v1.named.maf" compare="diff">
+                <assert_contents>
+                    <has_text text="s cs10_NCBI_RefSeq_softmasked.NC_029855.1 "/>
+                    <has_text text="s ASM2916894v1.NC_029855.1 "/>
+                </assert_contents>
+            </output>
+        </test>
+        <!-- ▶ Refusals: a block with 3 s lines; rows that already carry a prefix (the rebuilt FL02 rows), so
+             the reference sequence is not in the sizes; a size that differs from the sizes; a reference start
+             going backwards; a reference sequence entered again after another; a species name roast cannot
+             take. -->
+        <test expect_failure="true">
+            <param name="mode" value="forward"/>
+            <param name="input" value="three_rows.maf" ftype="maf"/>
+            <param name="species" value="79X.species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <assert_stderr>
+                <has_text text="the block at line 2 has more than 2 s lines"/>
+            </assert_stderr>
+        </test>
+        <test expect_failure="true">
+            <param name="mode" value="forward"/>
+            <param name="input" value="FL02.prefixed.maf" ftype="maf"/>
+            <param name="species" value="FL02.species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <assert_stderr>
+                <has_text text="reference sequence cs10.NC_044376.1 (row 1, line 3) is not in the reference sizes"/>
+            </assert_stderr>
+        </test>
+        <test expect_failure="true">
+            <param name="mode" value="forward"/>
+            <param name="input" value="wrong_size.maf" ftype="maf"/>
+            <param name="species" value="79X.species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <assert_stderr>
+                <has_text text="has size 415603 at line 3, but 415602 in the reference sizes"/>
+            </assert_stderr>
+        </test>
+        <test expect_failure="true">
+            <param name="mode" value="forward"/>
+            <param name="input" value="backwards.maf" ftype="maf"/>
+            <param name="species" value="79X.species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <assert_stderr>
+                <has_text text="the reference start goes backwards at line 7: NC_029855.1 0 after 99709"/>
+            </assert_stderr>
+        </test>
+        <test expect_failure="true">
+            <param name="mode" value="forward"/>
+            <param name="input" value="reentered.maf" ftype="maf"/>
+            <param name="species" value="79X.species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <assert_stderr>
+                <has_text text="reference sequence NC_029855.1 starts again at line 11"/>
+            </assert_stderr>
+        </test>
+        <test expect_failure="true">
+            <param name="mode" value="forward"/>
+            <param name="input" value="79X.pair.maf" ftype="maf"/>
+            <param name="species" value="79X.bad_species.txt" ftype="txt"/>
+            <param name="renames" value="hub_sequence_renames.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <assert_stderr>
+                <has_text text="species name 79X cannot go through roast"/>
+            </assert_stderr>
+        </test>
+        <!-- ▶ species mode on a roast-shaped block: s, i, s and e lines of three species. g79X becomes 79X on
+             its s and i lines; the reference, the other species, the # lines and ##eof are unchanged. The
+             species and sizes inputs are required by the flat interface and ignored. -->
+        <test expect_num_outputs="1">
+            <param name="mode" value="species"/>
+            <param name="input" value="roast3.maf" ftype="maf"/>
+            <param name="species" value="79X.species.txt" ftype="txt"/>
+            <param name="renames" value="g79X_to_79X.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <output name="output" file="roast3.renamed.maf" compare="diff"/>
+            <assert_stdout>
+                <has_text text="renamed g79X -> 79X: 2 line(s)"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ The round trip: forward with the alias (test 1's expected output, 79X.named.maf), then species mode
+             g79X to 79X, gives the input's rows named cs10_NCBI_RefSeq_softmasked.NC_029855.1 and
+             79X.79X.00004171, every other byte as in the input. 79X.roundtrip.maf was made from 79X.pair.maf
+             by text substitution, not by this tool. -->
+        <test expect_num_outputs="1">
+            <param name="mode" value="species"/>
+            <param name="input" value="79X.named.maf" ftype="maf"/>
+            <param name="species" value="79X.species.txt" ftype="txt"/>
+            <param name="renames" value="g79X_to_79X.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <output name="output" file="79X.roundtrip.maf" compare="diff"/>
+        </test>
+        <!-- ▶ Renaming onto a name the rows already use would merge two species: refused. -->
+        <test expect_failure="true">
+            <param name="mode" value="species"/>
+            <param name="input" value="79X.roundtrip.maf" ftype="maf"/>
+            <param name="species" value="79X.species.txt" ftype="txt"/>
+            <param name="renames" value="g79X_to_79X.tsv" ftype="tabular"/>
+            <param name="sizes" value="cs10.chrom.sizes" ftype="tabular"/>
+            <param name="reference" value="cs10_NCBI_RefSeq_softmasked"/>
+            <assert_stderr>
+                <has_text text="line 4 already uses the new name 79X"/>
+            </assert_stderr>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Gives a pairwise MAF the ``species.sequence`` row names that ``roast`` (multiz) needs, and renames
+species afterwards.
+
+**forward** (before roast). The input is ``axtToMaf`` output with no prefixes: every block is one
+``a`` line, then row 1 = the reference and row 2 = the query, as bare sequence names::
+
+    s NC_029855.1       0 99709 + 415602 ...
+    s 79X.00004171 316080 99682 + 442978 ...
+
+Row 1 becomes ``<reference>.<sequence>`` and row 2 ``<species>.<hub sequence>``::
+
+    s cs10_NCBI_RefSeq_softmasked.NC_029855.1       0 99709 + 415602 ...
+    s g79X.79X.00004171 316080 99682 + 442978 ...
+
+The rows are told apart by **position, never by name**: a sequence name does not identify a genome
+(many use bare accessions, and one query genome has a sequence with the name and length of the
+reference's mitochondrion). Only the name is replaced; every other byte of a line is kept.
+
+The **species line** is one line, ``label<TAB>species name``. The label selects this genome's rows of
+the renames table (``genome  hub_name  original_name``, with that header); a query sequence whose
+``original_name`` is listed becomes its ``hub_name`` (``lcl|fl02_chr_009`` to ``lcl_fl02_chr_009``),
+others keep their name. The species name is what roast will see, so it can be an alias of the
+label (``79X<TAB>g79X``): it must be a letter then letters, digits or ``_``, and must not contain
+``maf`` or ``eof`` (roast deletes every line that does).
+
+The job fails, with the reason on stderr, on:
+
+* a block with other than two ``s`` lines, or any other line inside a block;
+* a reference sequence missing from the reference sizes, or with a different size;
+* a reference row on the ``-`` strand;
+* a reference start that goes backwards within a sequence, or a reference sequence that starts again
+  after another one began. multiz merges unsorted input wrongly with exit status 0.
+
+``#`` lines outside blocks (the ``##maf`` header) and blank lines are kept as they are.
+
+**species** (after roast). Renames the species prefix (the text before the first ``.``) of every
+``s``, ``i``, ``e`` and ``q`` line, using the renames input as a two-column table ``from  to`` with
+that header (``g79X  79X``). The reference's rows are never renamed, a new name that the rows already
+use is refused, and every other line is copied unchanged. The species line and sizes inputs are
+required by the interface and ignored in this mode.
+
+.. note:: The interface is flat, with every input required in both modes, so that the same tool runs
+   as a User-Defined Tool, which has no conditionals and no optional datasets.
+]]></help>
+    <citations>
+        <citation type="doi">10.1101/gr.1933104</citation>
+    </citations>
+</tool>

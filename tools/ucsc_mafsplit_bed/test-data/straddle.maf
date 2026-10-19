@@ -1,0 +1,4 @@
+##maf version=1 scoring=blastz
+a score=70
+s ref.chrA 95 10 + 1000 GG--GTTTTTTT
+s sp1.x 200 12 + 900 GGTTGTTTTTTT

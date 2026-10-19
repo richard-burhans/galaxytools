@@ -18,6 +18,11 @@ when CI passes on `main`.
 | [`ncbi_egapx`](tools/ncbi_egapx) | NCBI Eukaryotic Genome Annotation Pipeline (EGAPx) | |
 | [`ncbi_fcs_adaptor`](tools/ncbi_fcs_adaptor) | detects adaptor and vector contamination in genome sequences | |
 | [`rdeval`](tools/rdeval) | multithreaded read analysis and manipulation | |
+| [`multiz_roast`](tools/multiz_roast) | multiz roast (autoMZ): reference-guided multiple alignment of pairwise MAFs | prints a census of the species that brought blocks |
+| [`maf_name_rows`](tools/maf_name_rows) | names pairwise MAF rows `species.sequence` by row position, for roast; renames species after it | |
+| [`ucsc_mafsplit_bed`](tools/ucsc_mafsplit_bed) | kent's mafSplit at BED positions, the other sequences bundled into one piece | piece names agree across species |
+| [`maf_concat`](tools/maf_concat) | joins one reference sequence's MAF pieces in coordinate order | refuses overlapping pieces |
+| [`ucsc_maftobigmaf`](tools/ucsc_maftobigmaf) | kent's mafToBigMaf, the bigMaf text for bedToBigBed | checks one line per block |
 
 ### KegAlign and Batched LASTZ are one pipeline in two tools
 

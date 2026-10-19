@@ -1,0 +1,12 @@
+name: maf_concat
+owner: richard-burhans
+description: Concatenate the MAF pieces of one reference sequence in coordinate order
+long_description: |
+  Joins the pieces of a split multiple alignment back into one MAF per
+  reference sequence, ordered by each piece's first reference position, with one
+  header and one end marker. Overlapping pieces are refused.
+homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/maf_concat
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/maf_concat
+type: unrestricted
+categories:
+  - Sequence Analysis

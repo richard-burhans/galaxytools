@@ -1,0 +1,16 @@
+##maf version=1 scoring=blastz
+a score=30
+s ref.chrC 5 4 + 200 ACGT
+s sp1.x 50 4 + 900 ACGT
+
+a score=40
+s ref.chrA 10 10 + 1000 AAAAACCCCC
+s sp1.x 0 10 + 900 AAAAACCCCC
+
+a score=50
+s ref.chrA 150 6 + 1000 GGGTTT
+s sp1.x 100 6 + 900 GGGTTT
+
+a score=60
+s ref.chrB 20 4 + 300 TTGG
+s sp1.y 20 4 + 400 TTGG
