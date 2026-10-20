@@ -50,7 +50,7 @@ steps:
           - 2
   concat:
     tool_id: gt-maf-concat
-    tool_version: 1.0.0+galaxy0
+    tool_version: 1.1.0+galaxy0
     doc: One sequence's pieces in coordinate order.
     in:
       pieces: by_sequence/output
