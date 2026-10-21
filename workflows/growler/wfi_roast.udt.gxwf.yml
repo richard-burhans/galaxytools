@@ -21,7 +21,7 @@ outputs:
 steps:
   roast:
     tool_id: gt-multiz-roast
-    tool_version: 11.3+galaxy0
+    tool_version: 11.4+galaxy0
     doc: autoMZ per piece; the inner list feeds the multiple input.
     in:
       pairwise: pieces

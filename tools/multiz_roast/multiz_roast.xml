@@ -1,7 +1,7 @@
 <tool id="multiz_roast" name="roast" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
     <description>: reference-guided multiple alignment of pairwise MAFs (multiz autoMZ)</description>
     <macros>
-        <token name="@TOOL_VERSION@">11.3</token>
+        <token name="@TOOL_VERSION@">11.4</token>
         <token name="@VERSION_SUFFIX@">0</token>
     </macros>
     <xrefs>
@@ -167,7 +167,7 @@ must be the species names the MAF rows use.
    gives the right order.
 
 **Output** is roast's MAF: header ``##maf version=1 scoring=roast.v4.4``, blocks with the reference on
-top, and a final ``##eof maf``. multiz 11.3 carries the 2014 fix UCSC builds with (pieces left over in a
+top, and a final ``##eof maf``. multiz carries, from 11.3 on, the 2014 fix UCSC builds with (pieces left over in a
 merge are kept rather than dropped), so the output matches UCSC's own multizNway builds. Gap annotation (``mafAddIRows``) is a separate, per-sequence step.
 
 .. _multiz: https://github.com/multiz/multiz
