@@ -1,5 +1,5 @@
 categories:
-- Collection Operations
+- Text Manipulation
 description: Duplicate a dataset into the structure of a given list.
 long_description: |
     Copies one dataset into every element of a list shaped like a template list
