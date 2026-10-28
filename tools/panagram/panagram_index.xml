@@ -2,7 +2,7 @@
     <description>: an alignment-free pan-k-mer index of genome assemblies</description>
     <macros>
         <token name="@TOOL_VERSION@">1.1.0</token>
-        <token name="@VERSION_SUFFIX@">0</token>
+        <token name="@VERSION_SUFFIX@">1</token>
     </macros>
     <requirements>
         <requirement type="package" version="@TOOL_VERSION@">panagram</requirement>
@@ -54,7 +54,9 @@ awk -F '\t' 'NR > 1 && \$3 != "" { n++ } END { print n + 0 }' "\$samples" > gff_
 echo "genomes: `printf '%s\n' \$names | wc -l | tr -d ' '`; anchors: \$anchor_list; annotated: `cat gff_count`"
 slots="\${GALAXY_SLOTS:-1}"
 mem_mb="\${GALAXY_MEMORY_MB:-8192}"
-kmc_gb=`expr \$mem_mb / 1024 / \$slots`
+\#\# Shell arithmetic, not expr: expr exits 1 when its result is 0 (8 GB over 16 slots), which set -e turns
+\#\# into a silent exit before the floor below.
+kmc_gb=\$(( mem_mb / 1024 / slots ))
 [ "\$kmc_gb" -ge 1 ] || kmc_gb=1
 \#\# Inputs may be mounted read-only (containers), and samtools faidx writes its .fai next to the FASTA,
 \#\# so each FASTA is linked into the working directory and samples.tsv points at the link.
