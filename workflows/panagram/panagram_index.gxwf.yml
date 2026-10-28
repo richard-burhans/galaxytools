@@ -1,0 +1,71 @@
+class: GalaxyWorkflow
+label: Panagram index (genomes to a pan-k-mer index)
+doc: |
+  Builds a Panagram pan-k-mer index of a list of genomes with the panagram_index tool, and emits the genome
+  name map. Genome names are the list's element identifiers (letters, digits and _ only; the tool refuses
+  anything else, so the name check needs no step of its own). Anchor GFF3s are matched to genomes by element
+  identifier (refA.gff3 annotates refA) and read only for anchors.
+  Draft, 2026-10-28: the preparation steps of cannabis-genome reports/panagram_plan.md section 5 that are not
+  yet here are N2 (upper-casing, only if gate G0 calls for it) and N3's check that each anchor GFF3 has rows of
+  the requested feature type, which belongs in the tool.
+creator:
+  - class: Person
+    name: Richard Burhans
+    identifier: https://orcid.org/0009-0006-5949-0958
+license: MIT
+inputs:
+  genomes:
+    type: collection
+    collection_type: list
+    doc: Soft-masked genome FASTAs, one per genome. The list's order is part of the index.
+  gffs:
+    type: collection
+    collection_type: list
+    optional: true
+    doc: GFF3 annotations for anchor genomes, each named like its genome.
+  anchors:
+    type: string
+    doc: Names of the anchor genomes, separated by commas or spaces.
+  k:
+    type: int
+    default: 21
+    doc: k-mer length.
+  max_bin_kbp:
+    type: int
+    default: 200
+    doc: Largest bin, in kb.
+  keep_bitvectors:
+    type: boolean
+    default: false
+    doc: Also return KMC's bitvector databases, which a later anchor needs.
+outputs:
+  index:
+    outputSource: index/index
+  genome_dist:
+    outputSource: index/genome_dist
+  logs:
+    outputSource: index/logs
+  names:
+    outputSource: names/output
+steps:
+  names:
+    tool_id: toolshed.g2.bx.psu.edu/repos/iuc/collection_element_identifiers/collection_element_identifiers/0.0.3
+    doc: The genome name map, one name per line in index order.
+    in:
+      input_collection: genomes
+  index:
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/panagram/panagram_index/1.1.0+galaxy1
+    in:
+      genomes: genomes
+      gffs: gffs
+      anchors: anchors
+      k: k
+      keep_bitvectors: keep_bitvectors
+      advanced|max_bin_kbp: max_bin_kbp
+    # The tool's own defaults, written out: a step whose state omits a parameter is refused at invocation
+    # ("Workflow step has upgrade messages").
+    state:
+      advanced:
+        lowres_step: 100
+        min_bin_count: 100
+        gff_gene_types: gene
