@@ -1,0 +1,4 @@
+##gff-version 3
+chr1	test	gene	1001	5000	.	+	.	ID=gene1;Name=geneA
+chr1	test	gene	22000	30000	.	+	.	ID=gene2;Name=geneB
+chr2	test	gene	10001	15000	.	-	.	ID=gene3;Name=geneC
