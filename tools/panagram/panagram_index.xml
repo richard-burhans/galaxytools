@@ -56,10 +56,15 @@ slots="\${GALAXY_SLOTS:-1}"
 mem_mb="\${GALAXY_MEMORY_MB:-8192}"
 kmc_gb=`expr \$mem_mb / 1024 / \$slots`
 [ "\$kmc_gb" -ge 1 ] || kmc_gb=1
-mkdir -p index/tmp
-cp "\$samples" index/samples.tsv
+\#\# Inputs may be mounted read-only (containers), and samtools faidx writes its .fai next to the FASTA,
+\#\# so each FASTA is linked into the working directory and samples.tsv points at the link.
+mkdir -p index/tmp inputs
+awk -F '\t' 'NR > 1 { print \$1, \$2 }' "\$samples" | while read -r n f; do ln -s "\$f" "inputs/\$n.fa"; done
+awk -F '\t' -v OFS='\t' -v d="\$PWD/inputs" 'NR > 1 { \$2 = d "/" \$1 ".fa" } { print }' "\$samples" > index/samples.tsv
 cd index
 export TMPDIR="\$PWD/tmp"
+\#\# Snakemake asks getpass for a user name, which fails for a container uid with no passwd entry.
+export USER="\${USER:-galaxy}"
 panagram index samples.tsv -k "\$k" -c "\$slots" --anchor_genomes \$anchor_list --max_bin_kbp "\$max_bin_kbp" --lowres_step "\$lowres_step" --min_bin_count "\$min_bin_count" --gff_gene_types \$gene_types --kmc.memory "\$kmc_gb" --kmc.threads "\$slots" --prepare
 \#\# Snakemake 9 reads a target placed right after --resources' values as a resource, so it comes first.
 snakemake all --cores "\$slots" --resources mem_mb="\$mem_mb" > ../snakemake.log 2>&1 || { tail -n 50 ../snakemake.log >&2; exit 1; }
@@ -98,7 +103,8 @@ fi
         </section>
     </inputs>
     <outputs>
-        <data name="index" format="panagram_index" label="${tool.name}: index"/>
+        <!-- "directory" until a Galaxy release with the panagram_index datatype (galaxyproject/galaxy#24537) is deployed; then switch this, the test ftypes and any Panagram inputs to panagram_index in one version bump. -->
+        <data name="index" format="directory" label="${tool.name}: index"/>
         <data name="genome_dist" format="tabular" label="${tool.name}: genome distances"/>
         <data name="logs" format="tar" label="${tool.name}: logs"/>
         <data name="bitvectors" format="tar" label="${tool.name}: bitvector databases">
@@ -120,7 +126,7 @@ fi
             <section name="advanced">
                 <param name="max_bin_kbp" value="10"/>
             </section>
-            <output name="index" ftype="panagram_index">
+            <output name="index" ftype="directory">
                 <extra_files type="file" name="config.yaml">
                     <assert_contents>
                         <has_text text="k: 21"/>
@@ -170,7 +176,7 @@ fi
             <section name="advanced">
                 <param name="max_bin_kbp" value="10"/>
             </section>
-            <output name="index" ftype="panagram_index">
+            <output name="index" ftype="directory">
                 <extra_files type="file" name="anchor/refA/gene.bed">
                     <assert_contents>
                         <has_text text="geneA"/>
@@ -242,7 +248,7 @@ The tool runs ``panagram index --prepare`` and then the Snakemake workflow it wr
 
 **Outputs**
 
-- *index* (``panagram_index``): ``config.yaml``, ``samples.tsv``, ``genome_dist.tsv`` and
+- *index* (``directory``): ``config.yaml``, ``samples.tsv``, ``genome_dist.tsv`` and
   ``anchor/``, the directory ``panagram view`` reads. ``anchor/<name>/bitsum.bins.tsv`` holds, per bin, the number of
   positions shared by 0..n genomes.
 - *genome distances*: Mash distances for every pair of genomes (``genome_dist.tsv``: genome, genome,
