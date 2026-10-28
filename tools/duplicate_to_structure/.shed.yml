@@ -1,0 +1,11 @@
+categories:
+- Collection Operations
+description: Duplicate a dataset into the structure of a given list.
+long_description: |
+    Copies one dataset into every element of a list shaped like a template list
+    (its element identifiers and order), so that the result links element by
+    element with that list in a workflow. Mapped over, it gives a list:list.
+name: duplicate_to_structure
+owner: richard-burhans
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/duplicate_to_structure
+type: unrestricted

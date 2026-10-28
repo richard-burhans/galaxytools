@@ -1,0 +1,76 @@
+<tool id="duplicate_to_structure" name="Duplicate a dataset into a list's structure" version="1.0.0" profile="24.0" license="MIT">
+    <description>one copy per element, with the template list's identifiers and order</description>
+    <requirements>
+        <requirement type="package" version="9.5">coreutils</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "1.0.0" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## Galaxy flattens newlines in <command>, so every copy is chained with &&.
+#for $key in $output.keys()
+cp '$input' '$output[$key]' &&
+#end for
+echo "copied into ${len($output.keys())} elements"
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="data" label="Dataset to duplicate"/>
+        <param name="template" type="data_collection" collection_type="list" label="List whose structure to copy"
+               help="The output has its element identifiers and order; its datasets are not read. Map over a list:list to get a list:list."/>
+    </inputs>
+    <outputs>
+        <collection name="output" type="list" structured_like="template" format_source="input" label="${input.name} shaped like ${template.name}"/>
+    </outputs>
+    <tests>
+        <!-- ▶ A list: every element is the input, under the template's identifiers and order. -->
+        <test>
+            <param name="input" value="reference.txt" ftype="txt"/>
+            <param name="template">
+                <collection type="list">
+                    <element name="sample_b" value="x.txt"/>
+                    <element name="sample_a" value="x.txt"/>
+                </collection>
+            </param>
+            <output_collection name="output" type="list" count="2">
+                <element name="sample_b" ftype="txt" file="reference.txt"/>
+                <element name="sample_a" ftype="txt" file="reference.txt"/>
+            </output_collection>
+            <assert_stdout>
+                <has_text text="copied into 2 elements"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ The output's format is the input's. -->
+        <test>
+            <param name="input" value="reference.tabular" ftype="tabular"/>
+            <param name="template">
+                <collection type="list">
+                    <element name="chr1" value="x.txt"/>
+                </collection>
+            </param>
+            <output_collection name="output" type="list" count="1">
+                <element name="chr1" ftype="tabular" file="reference.tabular"/>
+            </output_collection>
+            <assert_stdout>
+                <has_text text="copied into 1 elements"/>
+            </assert_stdout>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Copies one dataset into every element of a list shaped like a *template* list: the output has the
+template's element identifiers and order. The template's datasets are not read.
+
+Collections link in a workflow only when their structures match. To pair one dataset per genome with
+that genome's ``list`` of pieces, run this tool with the dataset and the ``list``: the result links
+with the pieces element by element. Mapped over an outer list (a ``list`` of datasets against a
+``list:list`` of pieces), it returns a ``list:list`` with the template's structure.
+
+Built-in tools cover two neighbours: ``Duplicate file to collection`` takes a fixed count and makes up
+its own identifiers, and ``Apply rules`` reshapes a single collection.
+
+.. warning:: Each element is a full copy, written to disk, not a reference to the input. For a large
+   dataset and a large template, the output is the dataset's size times the number of elements.
+]]></help>
+    <citations>
+        <citation type="doi">10.1093/nar/gkae410</citation>
+    </citations>
+</tool>
