@@ -1,0 +1,266 @@
+<tool id="panagram_index" name="Panagram index" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="24.0" license="MIT">
+    <description>: an alignment-free pan-k-mer index of genome assemblies</description>
+    <macros>
+        <token name="@TOOL_VERSION@">1.1.0</token>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <requirements>
+        <requirement type="package" version="@TOOL_VERSION@">panagram</requirement>
+    </requirements>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## Galaxy flattens newlines in <command>, so the work is a shell script; its inputs are argv.
+bash '$script' '$samples' '$k' '$anchors' '$advanced.max_bin_kbp' '$advanced.lowres_step' '$advanced.min_bin_count' '$advanced.gff_gene_types' '$index.extra_files_path' '$genome_dist' '$logs' '$keep_bitvectors'
+#if $keep_bitvectors
+    '$bitvectors'
+#else
+    none
+#end if
+    ]]></command>
+    <configfiles>
+        <configfile name="samples"><![CDATA[#import re
+name	fasta	gff	id	anchor
+#set $gff_by_name = {}
+#if $gffs
+#for $g in $gffs
+#silent $gff_by_name.update({re.sub(r'\.gff3?$', '', str($g.element_identifier)): str($g)})
+#end for
+#end if
+#set $anchor_set = [a for a in re.split(r'[\s,]+', str($anchors)) if a]
+#for $i, $f in enumerate($genomes)
+#set $name = re.sub(r'\.(fa|fasta|fna|fas)$', '', str($f.element_identifier))
+${name}	${f}	${gff_by_name.get($name, '')}	${i}	${'True' if $name in $anchor_set else 'False'}
+#end for
+]]></configfile>
+        <configfile name="script"><![CDATA[set -eu
+samples="\$1"; k="\$2"; anchors="\$3"; max_bin_kbp="\$4"; lowres_step="\$5"; min_bin_count="\$6"
+gene_types="\$7"; index_dir="\$8"; genome_dist="\$9"; logs="\${10}"; keep_bitvectors="\${11}"; bitvectors="\${12}"
+\#\# Names are written verbatim into a kmc_tools script whose tokenizer reads '-' as subtraction, so only
+\#\# letters, digits and _ are accepted; a name that would break the build is refused before KMC runs.
+names=`awk -F '\t' 'NR > 1 { print \$1 }' "\$samples"`
+for n in \$names; do
+    case "\$n" in ''|*[!A-Za-z0-9_]*) echo "genome name must be letters, digits or _: '\$n' (from its element identifier)" >&2; exit 1;; esac
+done
+dups=`printf '%s\n' \$names | sort | uniq -d`
+[ -z "\$dups" ] || { echo "genome name given twice: \$dups" >&2; exit 1; }
+anchor_list=`echo "\$anchors" | tr ',' ' '`
+anchor_list=`echo \$anchor_list`
+[ -n "`echo \$anchor_list`" ] || { echo "no anchor genome given" >&2; exit 1; }
+for a in \$anchor_list; do
+    printf '%s\n' \$names | grep -qx "\$a" || { echo "anchor \$a is not one of the genomes" >&2; exit 1; }
+done
+\#\# A GFF3 whose name matches no genome would be silently ignored, so it is refused.
+awk -F '\t' 'NR > 1 && \$3 != "" { n++ } END { print n + 0 }' "\$samples" > gff_count
+echo "genomes: `printf '%s\n' \$names | wc -l | tr -d ' '`; anchors: \$anchor_list; annotated: `cat gff_count`"
+slots="\${GALAXY_SLOTS:-1}"
+mem_mb="\${GALAXY_MEMORY_MB:-8192}"
+kmc_gb=`expr \$mem_mb / 1024 / \$slots`
+[ "\$kmc_gb" -ge 1 ] || kmc_gb=1
+mkdir -p index/tmp
+cp "\$samples" index/samples.tsv
+cd index
+export TMPDIR="\$PWD/tmp"
+panagram index samples.tsv -k "\$k" -c "\$slots" --anchor_genomes \$anchor_list --max_bin_kbp "\$max_bin_kbp" --lowres_step "\$lowres_step" --min_bin_count "\$min_bin_count" --gff_gene_types \$gene_types --kmc.memory "\$kmc_gb" --kmc.threads "\$slots" --prepare
+\#\# Snakemake 9 reads a target placed right after --resources' values as a resource, so it comes first.
+snakemake all --cores "\$slots" --resources mem_mb="\$mem_mb" > ../snakemake.log 2>&1 || { tail -n 50 ../snakemake.log >&2; exit 1; }
+tail -n 3 ../snakemake.log
+cp ../snakemake.log logs/snakemake.log
+\#\# The viewable index: what `panagram view` reads, without KMC's databases or temporary files.
+mkdir -p "\$index_dir"
+cp -R config.yaml samples.tsv genome_dist.tsv anchor "\$index_dir"/
+cp genome_dist.tsv "\$genome_dist"
+tar -cf "\$logs" logs
+\#\# The bitvector databases are all a later anchor needs from kmc/ (with the FASTAs and any GFF3).
+if [ "\$keep_bitvectors" = "true" ]; then
+    tar -cf "\$bitvectors" kmc/bitvec*.kmc_* kmc/opdef*.txt
+fi
+]]></configfile>
+    </configfiles>
+    <inputs>
+        <param name="genomes" type="data_collection" collection_type="list" format="fasta" label="Genome assemblies"
+               help="A list of FASTAs, one per genome. The list's order is part of the index (each genome's bit is its position). A genome's name is its element identifier, less a FASTA extension; letters, digits and _ only."/>
+        <param name="anchors" type="text" value="" label="Anchor genomes" help="Names of the genomes to index in their own coordinates, separated by commas or spaces. Each anchor costs one indexing job and its own index.">
+            <validator type="regex" message="Genome names separated by commas or spaces">^[A-Za-z0-9_, ]+$</validator>
+        </param>
+        <param name="gffs" type="data" format="gff3" multiple="true" optional="true" label="Gene annotations for anchors"
+               help="GFF3 files named like the genome they annotate (refA.gff3 for refA). Read only for anchors."/>
+        <param argument="--k" type="integer" value="21" min="11" max="101" label="k-mer length"
+               help="Panagram's default is 21."/>
+        <param name="keep_bitvectors" type="boolean" truevalue="true" falsevalue="false" checked="false" label="Also output the bitvector databases"
+               help="KMC's merged bitvectors and their opdef files, which is all a later anchor needs from the KMC step (with the same FASTAs)."/>
+        <section name="advanced" title="Binning" expanded="false">
+            <param argument="--max_bin_kbp" type="integer" value="200" min="1" label="Bin size for chromosome-scale counts (kb)"/>
+            <param argument="--lowres_step" type="integer" value="100" min="1" label="Step of the low-resolution bitmap (bp)"/>
+            <param argument="--min_bin_count" type="integer" value="100" min="1" label="Minimum number of bins"/>
+            <param argument="--gff_gene_types" type="text" value="gene" label="GFF3 feature types indexed as genes" help="Separated by spaces.">
+                <validator type="regex" message="Feature types separated by spaces">^[A-Za-z0-9_ ]+$</validator>
+            </param>
+        </section>
+    </inputs>
+    <outputs>
+        <data name="index" format="panagram_index" label="${tool.name}: index"/>
+        <data name="genome_dist" format="tabular" label="${tool.name}: genome distances"/>
+        <data name="logs" format="tar" label="${tool.name}: logs"/>
+        <data name="bitvectors" format="tar" label="${tool.name}: bitvector databases">
+            <filter>keep_bitvectors</filter>
+        </data>
+    </outputs>
+    <tests>
+        <!-- ▶ Four synthetic genomes (two chromosomes, 100 kb; hapD lacks 15 kb of chr1), anchored on refA. -->
+        <test expect_num_outputs="3">
+            <param name="genomes">
+                <collection type="list">
+                    <element name="refA" value="refA.fa" ftype="fasta"/>
+                    <element name="hapB" value="hapB.fa" ftype="fasta"/>
+                    <element name="hapC" value="hapC.fa" ftype="fasta"/>
+                    <element name="hapD" value="hapD.fa" ftype="fasta"/>
+                </collection>
+            </param>
+            <param name="anchors" value="refA"/>
+            <section name="advanced">
+                <param name="max_bin_kbp" value="10"/>
+            </section>
+            <output name="index" ftype="panagram_index">
+                <extra_files type="file" name="config.yaml">
+                    <assert_contents>
+                        <has_text text="k: 21"/>
+                    </assert_contents>
+                </extra_files>
+                <extra_files type="file" name="anchor/refA/bitsum.bins.tsv">
+                    <assert_contents>
+                        <has_n_columns n="7"/>
+                    </assert_contents>
+                </extra_files>
+                <extra_files type="file" name="anchor/refA/chrs.tsv">
+                    <assert_contents>
+                        <has_text text="chr1"/>
+                        <has_text text="chr2"/>
+                    </assert_contents>
+                </extra_files>
+            </output>
+            <output name="genome_dist">
+                <assert_contents>
+                    <has_text text="hapD"/>
+                    <has_n_columns n="5"/>
+                    <has_n_lines n="6"/>
+                </assert_contents>
+            </output>
+            <output name="logs">
+                <assert_contents>
+                    <has_archive_member path="logs/snakemake.log"/>
+                </assert_contents>
+            </output>
+            <assert_stdout>
+                <has_text text="genomes: 4; anchors: refA; annotated: 0"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ Two anchors, a GFF3 on refA, identifiers carrying a .fa extension, and the bitvector databases kept. -->
+        <test expect_num_outputs="4">
+            <param name="genomes">
+                <collection type="list">
+                    <element name="refA.fa" value="refA.fa" ftype="fasta"/>
+                    <element name="hapB.fa" value="hapB.fa" ftype="fasta"/>
+                    <element name="hapC.fa" value="hapC.fa" ftype="fasta"/>
+                    <element name="hapD.fa" value="hapD.fa" ftype="fasta"/>
+                </collection>
+            </param>
+            <param name="anchors" value="refA, hapB"/>
+            <param name="gffs" value="refA.gff3" ftype="gff3"/>
+            <param name="keep_bitvectors" value="true"/>
+            <section name="advanced">
+                <param name="max_bin_kbp" value="10"/>
+            </section>
+            <output name="index" ftype="panagram_index">
+                <extra_files type="file" name="anchor/refA/gene.bed">
+                    <assert_contents>
+                        <has_text text="geneA"/>
+                        <has_text text="geneC"/>
+                    </assert_contents>
+                </extra_files>
+                <extra_files type="file" name="anchor/hapB/chrs.tsv">
+                    <assert_contents>
+                        <has_text text="chr1"/>
+                    </assert_contents>
+                </extra_files>
+            </output>
+            <output name="bitvectors">
+                <assert_contents>
+                    <has_archive_member path="kmc/bitvec0.kmc_pre"/>
+                    <has_archive_member path="kmc/opdef0.txt"/>
+                </assert_contents>
+            </output>
+            <assert_stdout>
+                <has_text text="anchors: refA hapB; annotated: 1"/>
+            </assert_stdout>
+        </test>
+        <!-- ▶ Refusals before KMC runs: an anchor that is not a genome, and a name kmc_tools would misread. -->
+        <test expect_failure="true">
+            <param name="genomes">
+                <collection type="list">
+                    <element name="refA" value="refA.fa" ftype="fasta"/>
+                    <element name="hapB" value="hapB.fa" ftype="fasta"/>
+                </collection>
+            </param>
+            <param name="anchors" value="hapX"/>
+            <assert_stderr>
+                <has_text text="anchor hapX is not one of the genomes"/>
+            </assert_stderr>
+        </test>
+        <test expect_failure="true">
+            <param name="genomes">
+                <collection type="list">
+                    <element name="ref-A" value="refA.fa" ftype="fasta"/>
+                    <element name="hapB" value="hapB.fa" ftype="fasta"/>
+                </collection>
+            </param>
+            <param name="anchors" value="hapB"/>
+            <assert_stderr>
+                <has_text text="genome name must be letters, digits or _: 'ref-A'"/>
+            </assert_stderr>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Builds a Panagram_ index: the k-mers of every genome are counted with KMC, and each *anchor* genome is
+annotated, position by position, with which genomes share the k-mer that starts there. The index shows
+the presence and absence of sequence across genomes without aligning them.
+
+The tool runs ``panagram index --prepare`` and then the Snakemake workflow it writes, with
+``--cores`` from the job's slots and ``--resources mem_mb`` from its memory.
+
+**Inputs**
+
+- *Genome assemblies*: a list of FASTAs, one per genome. The list's order is part of the index (a
+  genome's bit is its position). A genome's name is its element identifier less ``.fa``, ``.fasta``,
+  ``.fna`` or ``.fas``; names are letters, digits and ``_``
+  only, because Panagram passes them to ``kmc_tools``, which reads ``-`` as subtraction.
+- *Anchor genomes*: every anchor gets its own bitmap, bins and gene index. Few anchors keep the
+  index small and the run short; anchors must be chromosome-scale, since the browser and every bin
+  are in anchor coordinates.
+- *Gene annotations*: optional GFF3 files, matched to genomes by name and read for anchors only.
+
+**Outputs**
+
+- *index* (``panagram_index``): ``config.yaml``, ``samples.tsv``, ``genome_dist.tsv`` and
+  ``anchor/``, the directory ``panagram view`` reads. ``anchor/<name>/bitsum.bins.tsv`` holds, per bin, the number of
+  positions shared by 0..n genomes.
+- *genome distances*: Mash distances for every pair of genomes (``genome_dist.tsv``: genome, genome,
+  distance, p-value, shared hashes).
+- *logs*: Panagram's and Snakemake's logs, with per-step benchmarks.
+- *bitvector databases* (optional): ``kmc/bitvec*`` and ``kmc/opdef*.txt``, which a later anchor
+  needs; the per-genome KMC databases are not kept.
+
+.. warning:: KMC's databases are large: about 4 bytes per input base were kept in a cannabis test,
+   so the job needs several times the total input size in free disk.
+
+The genome and chromosome UMAP coordinates in the index are not reproducible between runs, even with
+the same inputs; the bitmaps, bins and distances are.
+
+.. _Panagram: https://github.com/kjenike/panagram
+]]></help>
+    <citations>
+        <citation type="doi">10.64898/2026.10.21.760756</citation>
+        <citation type="doi">10.1093/bioinformatics/btx304</citation>
+    </citations>
+</tool>

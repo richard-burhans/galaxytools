@@ -1,0 +1,14 @@
+categories:
+- Sequence Analysis
+- Variant Analysis
+description: Panagram builds an alignment-free pan-k-mer index of genome assemblies.
+homepage_url: https://github.com/kjenike/panagram
+long_description: |
+    Panagram counts the k-mers of every genome with KMC and annotates each anchor
+    genome, position by position, with the genomes that share its k-mers. The index
+    shows presence and absence of sequence across a pangenome without alignment, and
+    is browsed with panagram view.
+name: panagram
+owner: richard-burhans
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/panagram
+type: unrestricted
