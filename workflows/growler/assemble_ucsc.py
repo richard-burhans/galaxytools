@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate growler_ucsc_pair.gxwf.yml: KegAlign seeding, then UCSC's own pairwise pipeline.
 
-    python3 assemble_ucsc.py            # write the document
+    python3 assemble_ucsc.py            # write the documents (pair, chain-only, panel)
     python3 assemble_ucsc.py --check    # fail if the committed document is stale
     python3 assemble_ucsc.py --self-test
 
@@ -62,6 +62,11 @@ UCSC_TOOLS = {
     "netfilter": f"{IUC}/ucsc_netfilter/ucsc_netfilter/482+galaxy0",
     "nettoaxt": f"{IUC}/ucsc_nettoaxt/ucsc_nettoaxt/482+galaxy0",
     "axttomaf": f"{IUC}/ucsc_axttomaf/ucsc_axtomaf/482+galaxy1",
+    # option E (build_panel): the per-element 2bit references
+    "element_ids": f"{IUC}/collection_element_identifiers/collection_element_identifiers/0.0.3",
+    "wc": "wc_gnu",
+    "to_int": "param_value_from_file",
+    "duplicate": "__DUPLICATE_FILE_TO_COLLECTION__",
 }
 
 #: Workflow inputs: (type, default, doc). Defaults are lastz's / doBlastzChainNet.pl's own.
@@ -308,6 +313,90 @@ def assert_chain_arm_identical(full: dict, chain: dict) -> list[str]:
     return bad + [f"missing {m}" for m in sorted(missing)]
 
 
+PANEL_OUT = HERE / "growler_ucsc_panel.gxwf.yml"
+#: The steps that read a 2bit next to a KegAlign `pairs` element, so need one 2bit PER ELEMENT.
+PER_ELEMENT = ("lastz_lav", "axtchain", "chainantirepeat")
+#: Option E's steps, in order; each 2bit is duplicated to the shape of `pairs`.
+OPTION_E = ("chunk_ids", "chunk_count", "chunk_n", "target_2bit_x", "query_2bit_x")
+PANEL_REWIRE = {"kegalign/target_2bit": "target_2bit_x/output", "kegalign/query_2bit": "query_2bit_x/output"}
+
+
+def build_panel(full: dict) -> dict:
+    """growler_ucsc_pair over a LIST of queries against one target: option E of
+    reports/growler_iwc_collections_design.md section 5 (cannabis-genome).
+
+    ▶ KegAlign is mapped over the queries, so `pairs` is list:list (query x chunk) while each query's
+    2bits are a list. Galaxy links two collections only of identical structure, so the three steps
+    that read a 2bit beside a `pairs` element (PER_ELEMENT) get a list:list of 2bit REFERENCES built
+    natively: each query's chunk count (collection_element_identifiers | wc -l | to integer) feeds
+    __DUPLICATE_FILE_TO_COLLECTION__. chainMergeSort then collapses each query's chunks, and every
+    later step is the pair document's own at list depth (`assert_panel_identical`).
+    Measured on vgp 2026-10-28 (cannabis-genome scripts/probe_option_e.py): 8 of 8 chunks met their
+    own query, and the duplicates are references (8 HDAs over 2 datasets), not copies.
+
+    ⛔ GALAXY LINKS BY POSITION, NEVER BY IDENTIFIER. With the queries reversed against `pairs`, the
+    same probe paired 0 of 8 chunks correctly and raised nothing. Here both sides are outputs of the
+    same mapped KegAlign step, so their order agrees by construction; nothing may sort, filter or
+    relabel one side only between KegAlign and the PER_ELEMENT steps.
+    """
+    doc = copy.deepcopy(full)
+    doc["label"] = "Growler UCSC panel (one target, a list of queries, flat)"
+    doc["doc"] = ("One target against a list of queries: KegAlign mapped over the queries, then kent's "
+                  "doBlastzChainNet.pl and doRecipBest.pl steps per query. Every output is a list keyed "
+                  "by query. See assemble_ucsc.py build_panel for option E.")
+    old = doc["steps"]
+    old["kegalign"]["in"]["query"] = "queries"
+    for name in PER_ELEMENT:
+        old[name]["in"] = {k: PANEL_REWIRE.get(v, v) for k, v in old[name]["in"].items()}
+    new = {
+        "chunk_ids": _step("element_ids", "chunk_ids", {"input_collection": "kegalign/pairs"}),
+        "chunk_count": _step("wc", "chunk_count", {"input1": "chunk_ids/output"},
+                             {"options": ["lines"], "include_header": False}),
+        "chunk_n": _step("to_int", "chunk_n", {"input1": "chunk_count/out_file1"},
+                         {"param_type": "integer", "remove_newlines": True}),
+        "target_2bit_x": _step("duplicate", "target_2bit_x",
+                               {"input": "kegalign/target_2bit", "number": "chunk_n/integer_param"},
+                               {"element_identifier": "chunk"}),
+        "query_2bit_x": _step("duplicate", "query_2bit_x",
+                              {"input": "kegalign/query_2bit", "number": "chunk_n/integer_param"},
+                              {"element_identifier": "chunk"}),
+    }
+    doc["steps"] = {"kegalign": old["kegalign"], **new, **{k: v for k, v in old.items() if k != "kegalign"}}
+    inputs = {}
+    for k, v in doc["inputs"].items():
+        if k == "query_fasta":
+            inputs["queries"] = {"type": "collection", "collection_type": "list",
+                                 "doc": "Query genomes, soft-masked FASTA; element identifier = genome label."}
+        elif k == "query_sizes":
+            inputs[k] = {"type": "collection", "collection_type": "list",
+                         "doc": "Query chromosome sizes, a list in the SAME ORDER as queries."}
+        else:
+            inputs[k] = v
+    doc["inputs"] = inputs
+    for out in doc["outputs"].values():
+        out["doc"] = (out.get("doc", "") + " (a list keyed by query)").strip()
+    return with_connected_values(doc)
+
+
+def assert_panel_identical(full: dict, panel: dict) -> list[str]:
+    """Every step the panel shares with the pair document must equal it, up to the deliberate rewiring."""
+    bad = []
+    for name, st in panel["steps"].items():
+        if name in OPTION_E:
+            continue
+        ref = copy.deepcopy(full["steps"][name])
+        if name == "kegalign":
+            ref["in"]["query"] = "queries"
+        if name in PER_ELEMENT:
+            ref["in"] = {k: PANEL_REWIRE.get(v, v) for k, v in ref["in"].items()}
+        if ref != st:
+            bad.append(name)
+    missing = set(full["steps"]) - set(panel["steps"])
+    stray = [f"{n} reads kegalign's 2bit beside a pairs element" for n in PER_ELEMENT
+             if set(panel["steps"][n]["in"].values()) & set(PANEL_REWIRE)]
+    return bad + [f"missing {m}" for m in sorted(missing)] + stray
+
+
 #: (step, input, must read from) -- the wiring that makes this UCSC's pipeline and not a lookalike.
 UCSC_ORDER = [
     ("lavtopsl", "input", "lastz_lav/output"),
@@ -368,9 +457,12 @@ LANES = [
     (6, "Reciprocal-best MAF, the multiz input for other genomes: netToAxt | axtSort | axtToMaf  "
         "(lines 252-258)", "red", ["rbest_axt", "rbest_sorted", "rbest_maf"]),
 ]
+#: The panel's stages: LANES with option E's steps in stage 1, after KegAlign.
+PANEL_LANES = [(num, title, colour, (names[:1] + list(OPTION_E) + names[1:]) if num == 1 else names)
+               for num, title, colour, names in LANES]
 #: Left column: inputs grouped by what they control, top to bottom; anything unlisted joins the last.
 INPUT_GROUPS = [
-    ("Genomes", ["target_fasta", "query_fasta", "target_2bit", "query_2bit", "alignments"]),
+    ("Genomes", ["target_fasta", "query_fasta", "queries", "target_2bit", "query_2bit", "alignments"]),
     ("Scoring", ["scores", "linear_gap", "chain_min_score"]),
     ("lastz / KegAlign parameters (UCSC's K L X Y H M T)",
      ["hspthresh", "gappedthresh", "xdrop", "ydrop", "inner", "masking", "notransition", "noentropy",
@@ -414,15 +506,15 @@ def node_height(step: dict, used_outputs: int) -> int:
     return int(px * 1.1)
 
 
-def lane_problems(doc: dict, partial: bool = False) -> list[str]:
+def lane_problems(doc: dict, partial: bool = False, lanes: list | None = None) -> list[str]:
     """Steps in no stage or two; with `partial` (the chain-only document) a stage may name absent steps."""
-    placed = [n for *_, names in LANES for n in names]
+    placed = [n for *_, names in (lanes or LANES) for n in names]
     return ([f"{n} is in no lane" for n in doc["steps"] if n not in placed]
             + [f"{n} is in a lane but not a step" for n in placed if n not in doc["steps"] and not partial]
             + [f"{n} is in two lanes" for n in sorted({n for n in placed if placed.count(n) > 1})])
 
 
-def layout(doc: dict, max_band: int = 9) -> dict:
+def layout(doc: dict, max_band: int = 9, lanes: list | None = None) -> dict:
     """A copy of `doc` placed by a topological sort for x and the hand-drawn STAGES for y and frames.
 
     Column: a step sits one past its deepest source; an input one before its FIRST consumer, so a
@@ -459,7 +551,7 @@ def layout(doc: dict, max_band: int = 9) -> dict:
     # each stage's frame is a clean box, and a stage that wraps gets a second frame marked (cont.).
     # Column 0 of a band holds the inputs whose first consumer is in it, grouped as INPUT_GROUPS.
     stage, meta = {}, {}
-    for num, title, colour, names in LANES:
+    for num, title, colour, names in (lanes or LANES):
         meta[num] = (f"{num}  {title}", colour)
         stage.update({n: num for n in names if n in d["steps"]})
     # ▶ A STAGE IS NEVER SPLIT: it joins the current band if all its columns fit, else it opens the
@@ -607,12 +699,34 @@ def self_test() -> int:
     tampered = copy.deepcopy(chain)
     tampered["steps"]["net"]["state"]["minSpace"] = 25
     check("  and a drifted chain step is caught", assert_chain_arm_identical(doc, tampered) == ["net"])
+    panel = build_panel(doc)
+    check("panel: no dangling connection", dangling(panel) == [])
+    check("panel: every connection marked ConnectedValue", unmarked_connections(panel) == [])
+    check("panel: every step in exactly one stage", lane_problems(panel, lanes=PANEL_LANES) == [])
+    check("panel: every shared step identical to the pair document's", assert_panel_identical(doc, panel) == [])
+    check("panel: KegAlign maps over the queries list", panel["steps"]["kegalign"]["in"]["query"] == "queries"
+          and panel["inputs"]["queries"]["collection_type"] == "list")
+    check("panel: lastz, axtChain and chainAntiRepeat read the per-element 2bits",
+          all(panel["steps"][n]["in"][k] == f"{side}_2bit_x/output" for n in PER_ELEMENT
+              for k, side in (("target" if n == "lastz_lav" else "in_target", "target"),
+                              ("query" if n == "lastz_lav" else "in_query", "query"))))
+    check("panel: both duplicates count from the same pairs", {panel["steps"][f"{s}_2bit_x"]["in"]["number"]
+          for s in ("target", "query")} == {"chunk_n/integer_param"})
+    check("panel: the nets still read KegAlign's per-query 2bits",
+          panel["steps"]["synnet_axt"]["in"]["in_query"] == "kegalign/query_2bit")
+    drifted = copy.deepcopy(panel)
+    drifted["steps"]["axtchain"]["in"]["in_query"] = "kegalign/query_2bit"
+    check("  and a PER_ELEMENT step reading the per-query 2bit is caught",
+          "axtchain" in assert_panel_identical(doc, drifted))
     if OUT.exists():
         committed = yaml.safe_load(OUT.read_text(encoding="utf-8"))
         check("the committed document matches a fresh build", committed == layout(doc))
     if CHAIN_OUT.exists():
         check("the committed chain-only document matches",
               yaml.safe_load(CHAIN_OUT.read_text(encoding="utf-8")) == layout(chain))
+    if PANEL_OUT.exists():
+        check("the committed panel document matches",
+              yaml.safe_load(PANEL_OUT.read_text(encoding="utf-8")) == layout(panel, lanes=PANEL_LANES))
     print("\nall tests passed" if not fails else f"\n{fails} FAILED")
     return 1 if fails else 0
 
@@ -633,8 +747,13 @@ def main() -> int:
     problems = assert_chain_arm_identical(doc, chain) + dangling(chain)
     if problems:
         sys.exit("REFUSING the chain-only document:\n  " + "\n  ".join(problems))
+    panel = build_panel(doc)
+    problems = (assert_panel_identical(doc, panel) + dangling(panel) + unmarked_connections(panel)
+                + lane_problems(panel, lanes=PANEL_LANES))
+    if problems:
+        sys.exit("REFUSING the panel document:\n  " + "\n  ".join(problems))
     # positions are applied last, to what is written; every check above ran on the unplaced documents
-    for path, d in ((OUT, layout(doc)), (CHAIN_OUT, layout(chain))):
+    for path, d in ((OUT, layout(doc)), (CHAIN_OUT, layout(chain)), (PANEL_OUT, layout(panel, lanes=PANEL_LANES))):
         if a.check:
             if not path.exists() or yaml.safe_load(path.read_text(encoding="utf-8")) != d:
                 sys.exit(f"{path.name} is stale -- run assemble_ucsc.py and commit")
