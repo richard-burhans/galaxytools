@@ -1,0 +1,43 @@
+<tool id="interactive_tool_panagram_view" tool_type="interactive" name="Panagram view" version="1.1.0+galaxy0" profile="24.0" license="MIT">
+    <description>browse a Panagram pan-k-mer index</description>
+    <requirements>
+        <container type="docker">quay.io/biocontainers/panagram:1.1.0--pyhdfd78af_0</container>
+    </requirements>
+    <entry_points>
+        <!-- Path-based: no wildcard DNS name is needed, and the viewer is told its path through PANAGRAM_URL_BASE. -->
+        <entry_point name="Panagram view of $index.display_name" label="panagram" requires_domain="False" requires_path_in_url="True">
+            <port>8050</port>
+        </entry_point>
+    </entry_points>
+    <environment_variables>
+        <environment_variable name="PANAGRAM_URL_BASE" inject="entry_point_path_for_label">panagram</environment_variable>
+    </environment_variables>
+    <command detect_errors="exit_code"><![CDATA[
+## Dash wants the path with a trailing slash. The index is read in place (read-only is fine, measured).
+base="\${PANAGRAM_URL_BASE%/}/" &&
+panagram view '$index.extra_files_path' --host 0.0.0.0 --port 8050 --url_base "\$base" --ndebug
+    ]]></command>
+    <inputs>
+        <!-- "directory" until a Galaxy release with the panagram_index datatype (galaxyproject/galaxy#24537) is deployed; then panagram_index, as in panagram_index.xml. -->
+        <param name="index" type="data" format="directory" label="Panagram index" help="The index output of Panagram index."/>
+    </inputs>
+    <outputs>
+        <data name="log" format="txt" label="${tool.name} log"/>
+    </outputs>
+    <help><![CDATA[
+**What it does**
+
+Starts Panagram's interactive viewer on an index built by *Panagram index*, and opens it in Galaxy. The viewer
+shows, along each anchor genome, how many of the indexed genomes share its k-mers, chromosome by chromosome and
+bin by bin, with a genome-distance tree and per-anchor overviews.
+
+The viewer runs until it is stopped from the Interactive Tools list.
+
+**Input**
+
+- *Panagram index*: the ``index`` output of *Panagram index* (a directory dataset).
+    ]]></help>
+    <citations>
+        <citation type="doi">10.64898/2026.10.21.760756</citation>
+    </citations>
+</tool>

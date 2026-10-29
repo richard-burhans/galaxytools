@@ -1,0 +1,12 @@
+categories:
+- Sequence Analysis
+- Visualization
+description: Browse a Panagram pan-k-mer index in Galaxy (Interactive Tool).
+homepage_url: https://github.com/kjenike/panagram
+long_description: |
+    Starts panagram view on an index built by Panagram index and opens it as a Galaxy
+    Interactive Tool, served under a path (no wildcard DNS name needed).
+name: panagram_view
+owner: richard-burhans
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/panagram_view
+type: unrestricted
