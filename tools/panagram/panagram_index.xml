@@ -2,7 +2,7 @@
     <description>: an alignment-free pan-k-mer index of genome assemblies</description>
     <macros>
         <token name="@TOOL_VERSION@">1.1.0</token>
-        <token name="@VERSION_SUFFIX@">1</token>
+        <token name="@VERSION_SUFFIX@">2</token>
     </macros>
     <requirements>
         <requirement type="package" version="@TOOL_VERSION@">panagram</requirement>
@@ -62,16 +62,44 @@ kmc_gb=\$(( mem_mb / 1024 / slots ))
 \#\# so each FASTA is linked into the working directory and samples.tsv points at the link.
 mkdir -p index/tmp inputs
 awk -F '\t' 'NR > 1 { print \$1, \$2 }' "\$samples" | while read -r n f; do ln -s "\$f" "inputs/\$n.fa"; done
-awk -F '\t' -v OFS='\t' -v d="\$PWD/inputs" 'NR > 1 { \$2 = d "/" \$1 ".fa" } { print }' "\$samples" > index/samples.tsv
+inputs_dir="\$PWD/inputs"
+awk -F '\t' -v OFS='\t' -v d="\$inputs_dir" 'NR > 1 { \$2 = d "/" \$1 ".fa" } { print }' "\$samples" > index/samples.tsv
 cd index
 export TMPDIR="\$PWD/tmp"
 \#\# Snakemake asks getpass for a user name, which fails for a container uid with no passwd entry.
 export USER="\${USER:-galaxy}"
 panagram index samples.tsv -k "\$k" -c "\$slots" --anchor_genomes \$anchor_list --max_bin_kbp "\$max_bin_kbp" --lowres_step "\$lowres_step" --min_bin_count "\$min_bin_count" --gff_gene_types \$gene_types --kmc.memory "\$kmc_gb" --kmc.threads "\$slots" --prepare
+\#\# SIZE THE ANCHOR JOBS FROM WHAT THEY WILL READ. Panagram declares 1 + 1.5 x input MB per anchor, and
+\#\# Snakemake caps a job's reservation at the total below, so with 8 GB every anchor reserved 8 GB while a
+\#\# 43-genome build's used 19.5 GB. The bitvectors and the anchors' .fai are built first, then each anchor is
+\#\# sized as bitvector bytes + 32 x bitvector files x its longest sequence (bytes) + 2 GB, times 1.25. That model
+\#\# matched measured anchor peaks within about 1 GB on 8- to 43-genome cannabis builds.
+nbv=\$(( (`printf '%s\n' \$names | wc -l` + 31) / 32 ))
+targets=""
+i=0
+while [ "\$i" -lt "\$nbv" ]; do targets="\$targets kmc/bitvec\$i.kmc_pre kmc/bitvec\$i.kmc_suf"; i=\$(( i + 1 )); done
+for a in \$anchor_list; do targets="\$targets \$inputs_dir/\$a.fa.fai"; done
+snakemake \$targets --cores "\$slots" --resources mem_mb="\$mem_mb" > ../snakemake.prep.log 2>&1 || { tail -n 50 ../snakemake.prep.log >&2; exit 1; }
+bv_bytes=`stat -c %s kmc/bitvec*.kmc_pre kmc/bitvec*.kmc_suf | awk '{ b += \$1 } END { print b }'`
+anchor_mb=0
+for a in \$anchor_list; do
+    longest=`awk 'BEGIN { m = 0 } \$2 > m { m = \$2 } END { print m }' "\$inputs_dir/\$a.fa.fai"`
+    need=\$(( (bv_bytes + 32 * nbv * longest) / 1000000 + 2000 ))
+    echo "anchor \$a: longest sequence \$longest bp, needs about \$need MB"
+    [ "\$need" -le "\$anchor_mb" ] || anchor_mb=\$need
+done
+anchor_mb=\$(( anchor_mb * 5 / 4 ))
+echo "bitvectors: \$nbv file(s), \$bv_bytes bytes; anchor memory: \$anchor_mb MB; job memory: \${GALAXY_MEMORY_MB:-unset}"
+if [ -n "\${GALAXY_MEMORY_MB:-}" ]; then
+    [ "\$anchor_mb" -le "\$mem_mb" ] || { echo "an anchor needs about \$anchor_mb MB but the job has \$mem_mb MB; give the job more memory" >&2; exit 1; }
+elif [ "\$anchor_mb" -gt "\$mem_mb" ]; then
+    \#\# The server stated no limit, so the default total would only cap the reservation, not the memory.
+    mem_mb=\$anchor_mb
+fi
 \#\# Snakemake 9 reads a target placed right after --resources' values as a resource, so it comes first.
-snakemake all --cores "\$slots" --resources mem_mb="\$mem_mb" > ../snakemake.log 2>&1 || { tail -n 50 ../snakemake.log >&2; exit 1; }
+snakemake all --cores "\$slots" --resources mem_mb="\$mem_mb" --set-resources anchor:mem_mb="\$anchor_mb" > ../snakemake.log 2>&1 || { tail -n 50 ../snakemake.log >&2; exit 1; }
 tail -n 3 ../snakemake.log
-cp ../snakemake.log logs/snakemake.log
+cat ../snakemake.prep.log ../snakemake.log > logs/snakemake.log
 \#\# The viewable index: what `panagram view` reads, without KMC's databases or temporary files.
 mkdir -p "\$index_dir"
 cp -R config.yaml samples.tsv genome_dist.tsv anchor "\$index_dir"/
@@ -160,6 +188,8 @@ fi
             </output>
             <assert_stdout>
                 <has_text text="genomes: 4; anchors: refA; annotated: 0"/>
+                <has_text text="bitvectors: 1 file(s)"/>
+                <has_text text="anchor refA: longest sequence"/>
             </assert_stdout>
         </test>
         <!-- ▶ Two anchors, a GFF3 on refA, identifiers carrying a .fa extension, and the bitvector databases kept. -->
@@ -235,7 +265,10 @@ annotated, position by position, with which genomes share the k-mer that starts 
 the presence and absence of sequence across genomes without aligning them.
 
 The tool runs ``panagram index --prepare`` and then the Snakemake workflow it writes, with
-``--cores`` from the job's slots and ``--resources mem_mb`` from its memory.
+``--cores`` from the job's slots and ``--resources mem_mb`` from its memory. It builds the KMC
+bitvectors first and sizes each anchor job from them: bitvector bytes, plus 32 bytes per bitvector file
+per base of the anchor's longest sequence, plus 2 GB, times 1.25. If the job's memory is smaller, it
+stops before any anchor runs.
 
 **Inputs**
 
