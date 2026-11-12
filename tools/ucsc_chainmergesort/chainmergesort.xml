@@ -1,8 +1,8 @@
-<tool id="ucsc_chainmergesort" name="chainMergeSort" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="22.01" license="MIT">
-    <description>: combine sorted chain files into one sorted chain file</description>
+<tool id="ucsc_chainmergesort" name="chainMergeSort" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="25.0" license="MIT">
+    <description>combine sorted chain files into one sorted chain file</description>
     <macros>
         <token name="@TOOL_VERSION@">482</token>
-        <token name="@VERSION_SUFFIX@">2</token>
+        <token name="@VERSION_SUFFIX@">3</token>
     </macros>
     <xrefs>
         <xref type="bio.tools">UCSC_Genome_Browser_Utilities</xref>
@@ -11,102 +11,80 @@
         <requirement type="package" version="@TOOL_VERSION@">ucsc-chainmergesort</requirement>
     </requirements>
     <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
-    <command detect_errors="exit_code"><![CDATA[
-## ⛔ THE FILE LIST GOES IN A FILE, NOT ON THE COMMAND LINE. This tool exists to collapse an axis
-## that a pairwise workflow maps over, so the input is routinely a collection with one element per
-## chromosome pair -- a few hundred paths, each a long Galaxy dataset path. `chainMergeSort a b c
-## ...` would work until a panel got wide enough to hit ARG_MAX, and then fail on the size of the
-## panel rather than on anything about the data. `-inputList` is the option upstream provides for
-## exactly this and has no downside.
-##
-## ⛔ TRUNCATE FIRST. `>>` into a file nothing creates empty means a SECOND execution of this
-## command in the same working directory doubles the list -- chainMergeSort then merges every
-## input twice and renumbers, so the output carries 2x the chains with entirely plausible ids and
-## netChainSubset downstream happily matches nets to the duplicates. Nothing raises. A fresh job
-## directory makes that unreachable in normal operation; re-running the generated job script by
-## hand, which is the standard way to debug one of these, does not.
+    <command detect_errors="aggressive"><![CDATA[
 : > input_list.txt &&
+chains_in=0 &&
 #for $chain in $in_chains:
 echo '$chain' >> input_list.txt &&
+chains_in=\$((chains_in + \$(grep -c '^chain ' '$chain' || :))) &&
 #end for
 chainMergeSort -inputList=input_list.txt -tempDir=./ > '$out' &&
-##
-## ⛔ A CHAIN FILE ALWAYS ENDS WITH A NEWLINE, AND A TRUNCATED ONE DOES NOT. Measured on laila
-## 2026-10-07: this tool wrote 2,004,365,312 bytes -- PAGE-ALIGNED on 4096, the signature of a
-## write stopped by ENOSPC -- ending mid-header at `chain 71887 NC_044370.1 `, and EXITED 0.
-## Galaxy marked the dataset ok, 46 downstream jobs ran against it, and chainPreNet was the first
-## thing to notice, TWO DAYS later, with `q end mismatch 18638619 vs 18657537`. That message names
-## coordinates and sends you to debug the alignment; the file had simply been cut off.
-##
-## ⚠ `test -z` ON THE LAST BYTE, because command substitution strips a trailing newline: the
-## expansion is EMPTY exactly when the final byte is one, and is the offending character otherwise.
-## `test -s` comes first because an empty file also expands to nothing and would otherwise pass.
-## Only `test` and `tail` are used -- both report a failed write inside a biocontainer, where awk
-## and sed exit 0 on one.
-##
-## ⚠ THIS PROVES THE FILE ARRIVED WHOLE, NOT THAT THE CHAINS ARE VALID. Whether each chain's blocks
-## sum to its declared span needs a parse, which is what chainPreNet does. A sweep of 1227
-## chain/maf/psl files across 49 pairs found exactly ONE failing this test, so it is a narrow check
-## against a real and otherwise silent fault.
-test -s '$out' &&
+## chainMergeSort does not check its writes: the output must hold every chain and end with a newline
+test "\$(grep -c '^chain ' '$out')" -eq "\$chains_in" &&
 test -z "\$(tail -c 1 '$out')"
     ]]></command>
     <inputs>
-        <param name="in_chains" format="chain" type="data" multiple="true" label="Chain datasets to merge"
-               help="Each input must already be sorted by score -- this is a merge, not a sort. In a pairwise pipeline that means one chainSort (or one axtChain, whose output is score-ordered) per element upstream of here."/>
+        <param name="in_chains" type="data" format="chain" multiple="true" label="Chain files to merge"
+               help="Each file must already be sorted by score, for example by chainSort or axtChain."/>
     </inputs>
     <outputs>
         <data name="out" format="chain"/>
     </outputs>
     <tests>
-        <!-- ▶ THE TEST IS THE TWO PROPERTIES THE CONSUMERS DEPEND ON, not merely that output appears.
-             The inputs interleave by score (5000/3000 against 4000/2000), so a run that simply
-             concatenated them would still produce four chains and a plausible-looking file. And
-             the ids are 7, 8, 3, 4: deliberately colliding across the two files, the way
-             independent axtChain runs collide, so the expected output pins the RENUMBERING. -->
         <test expect_num_outputs="1">
             <param name="in_chains" value="part_a.chain,part_b.chain" ftype="chain"/>
-            <output name="out" file="merged.chain">
+            <output name="out" file="merged.chain" ftype="chain"/>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="in_chains" value="hg38_panTro6_a.chain,hg38_panTro6_b.chain,empty.chain" ftype="chain"/>
+            <output name="out" file="hg38_panTro6_merged.chain" ftype="chain"/>
+        </test>
+        <test expect_num_outputs="1">
+            <param name="in_chains" value="empty.chain" ftype="chain"/>
+            <output name="out" ftype="chain">
                 <assert_contents>
-                    <has_line_matching expression="chain 5000 .* 1"/>
-                    <has_line_matching expression="chain 4000 .* 2"/>
-                    <has_line_matching expression="chain 3000 .* 3"/>
-                    <has_line_matching expression="chain 2000 .* 4"/>
+                    <has_size value="0"/>
                 </assert_contents>
             </output>
+        </test>
+        <test expect_failure="true" expect_exit_code="255">
+            <param name="in_chains" value="part_a.chain,span_mismatch.chain" ftype="chain"/>
         </test>
     </tests>
     <help><![CDATA[
 **What it does**
 
-`chainMergeSort`_ combines several chain files that are each already sorted by score into one file
-sorted by score. It is a k-way merge: it streams its inputs rather than loading them, which is why
-``chainSort``'s own documentation points here for anything large.
+`chainMergeSort`_ combines several `chain`_ files into one file sorted by score. Each input file must
+already be sorted by score. The tool reads the files in one pass and does not load them into memory.
+Thus it can merge data that is too large for ``chainSort``.
 
-**Why a pairwise pipeline needs it**
+In UCSC's pairwise alignment pipeline (``doBlastzChainNet.pl``), many separate jobs make chains, for
+example one job per chromosome pair. This tool combines their chains into the single ``all.chain``
+file that ``chainPreNet`` and ``chainNet`` need.
 
-A whole-genome alignment can be computed one chromosome pair at a time, which is what lets Galaxy
-run the expensive stages in parallel. The chain/net stages that follow cannot be partitioned that
-way: ``chainPreNet`` and ``chainNet`` each walk one score-ordered stream marking target and query
-space *simultaneously*, so a chain on ``(tchr1, qchr5)`` competes with one on ``(tchr3, qchr5)``.
-This tool is where the per-chromosome-pair axis collapses back into one stream, and its output --
-score-ordered -- is exactly ``chainPreNet``'s precondition, so it replaces a final ``chainSort``
-rather than adding a pass.
+**Input**
+
+One or more chain files, each sorted by score. If an input is not sorted, the output is not sorted,
+and the tool does not show an error. The tool accepts empty files.
+
+**Output**
+
+One chain file sorted by score. The tool numbers the chain IDs again, from 1.
 
 .. class:: warningmark
 
-**The ids are renumbered, and that is the point.** Independent ``axtChain`` runs each number their
-chains from 1, so chunks arriving here carry colliding ids -- and ``netChainSubset`` matches nets to
-chains **by id**. Renumbering is what repairs that. Upstream offers a ``-saveId`` flag to keep the
-existing ids; this wrapper deliberately does not expose it, because on the one workflow shape that
-makes this tool necessary, the flag that sounds conservative is the one that corrupts the result.
+The new numbers are necessary. Separate ``axtChain`` jobs each number their chains from 1, so two
+chains can have the same ID. ``netChainSubset`` finds the chain for each net by its ID. Thus this
+wrapper does not offer the upstream option ``-saveId``, which keeps the old IDs.
 
 For implementation details see chainMergeSort's `source code`_.
 
 .. _chainMergeSort: http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/FOOTER.txt
+.. _chain: https://genome.ucsc.edu/goldenPath/help/chain.html
 .. _source code: https://github.com/ucscGenomeBrowser/kent/blob/master/src/hg/mouseStuff/chainMergeSort/chainMergeSort.c
-]]>    </help>
+]]></help>
     <citations>
         <citation type="doi">10.1093/bib/bbs038</citation>
+        <citation type="doi">10.1073/pnas.1932072100</citation>
     </citations>
 </tool>
