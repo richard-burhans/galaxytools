@@ -8,6 +8,15 @@
         </requirements>
     </xml>
     <xml name="citations">
-        <citations/>
+        <citations>
+            <citation type="bibtex"><![CDATA[
+@misc{fasta_uppercase,
+  author = {Burhans, Richard},
+  title = {FASTA uppercase: convert sequence lines to uppercase},
+  year = {2026},
+  url = {https://github.com/richard-burhans/galaxytools}
+}
+            ]]></citation>
+        </citations>
     </xml>
 </macros>

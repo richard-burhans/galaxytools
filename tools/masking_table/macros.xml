@@ -8,6 +8,15 @@
         </requirements>
     </xml>
     <xml name="citations">
-        <citations/>
+        <citations>
+            <citation type="bibtex"><![CDATA[
+@misc{masking_table,
+  author = {Burhans, Richard},
+  title = {Masking table: aggregate per-sample genomecov masking statistics},
+  year = {2026},
+  url = {https://github.com/richard-burhans/galaxytools}
+}
+            ]]></citation>
+        </citations>
     </xml>
 </macros>
