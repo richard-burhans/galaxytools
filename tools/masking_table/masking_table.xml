@@ -1,0 +1,65 @@
+<tool id="masking_table" name="Masking table" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>pivot per-masker bedtools genomecov into a MultiQC custom-content table</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <version_command>echo "@TOOL_VERSION@"</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+python3 '$__tool_directory__/masking_table.py'
+    --dustmasker #echo " ".join(["%s=%s" % (str($el.element_identifier), str($el)) for $el in $dustmasker])#
+    --windowmasker #echo " ".join(["%s=%s" % (str($el.element_identifier), str($el)) for $el in $windowmasker])#
+    --tantan #echo " ".join(["%s=%s" % (str($el.element_identifier), str($el)) for $el in $tantan])#
+    --fastan #echo " ".join(["%s=%s" % (str($el.element_identifier), str($el)) for $el in $fastan])#
+    #if $union
+    --union #echo " ".join(["%s=%s" % (str($el.element_identifier), str($el)) for $el in $union])#
+    #end if
+    --out '$output'
+    ]]></command>
+    <inputs>
+        <param name="dustmasker" type="data_collection" format="tabular,txt" label="DustMasker genomecov (per strain)" help="bedtools genomecov (hist, -max 1) output for dustmasker intervals; element identifier = strain." collection_type="list"/>
+        <param name="windowmasker" type="data_collection" format="tabular,txt" label="WindowMasker genomecov (per strain)" collection_type="list"/>
+        <param name="tantan" type="data_collection" format="tabular,txt" label="tantan genomecov (per strain)" collection_type="list"/>
+        <param name="fastan" type="data_collection" format="tabular,txt" label="FasTAN genomecov (per strain)" collection_type="list"/>
+        <param name="union" type="data_collection" format="tabular,txt" optional="true" label="Union genomecov (per strain, optional)" help="bedtools genomecov for the merged union of all maskers. Adds a 'union' column." collection_type="list"/>
+    </inputs>
+    <outputs>
+        <data name="output" format="tabular" label="${tool.name}: % genome masked per strain"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1">
+            <param name="dustmasker">
+                <collection type="list">
+                    <element name="s1" value="s1.genomecov" ftype="tabular"/>
+                </collection>
+            </param>
+            <param name="windowmasker">
+                <collection type="list">
+                    <element name="s1" value="s1.genomecov" ftype="tabular"/>
+                </collection>
+            </param>
+            <param name="tantan">
+                <collection type="list">
+                    <element name="s1" value="s1.genomecov" ftype="tabular"/>
+                </collection>
+            </param>
+            <param name="fastan">
+                <collection type="list">
+                    <element name="s1" value="s1.genomecov" ftype="tabular"/>
+                </collection>
+            </param>
+            <output name="output" ftype="tabular">
+                <assert_contents>
+                    <has_line_matching expression="^Sample\tdustmasker\twindowmasker\ttantan\tfastan\tunion$"/>
+                    <has_line_matching expression="^s1\t13\.63\t13\.63\t13\.63\t13\.63\t0\.00$"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+This tool reads each masker's per-strain `bedtools genomecov` (hist, `-max 1`) output. It extracts the genome-wide masked fraction (`genome  1  ...` row, column 5) and converts it to a percentage.
+
+It writes a tab-separated table with one row per strain and one column per masker (plus `union` if provided). The header line has no leading `#`, so MultiQC custom-content (`plot_type: table`) renders it directly.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

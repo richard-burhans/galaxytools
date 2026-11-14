@@ -1,0 +1,50 @@
+<tool id="fastan" name="FasTAN" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>tandem-repeat arrays as content-annotated BED6</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <version_command>echo "@TOOL_VERSION@"</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+set -o pipefail &&
+#if $input.is_of_type('fasta.gz')
+    gunzip -c '$input'
+#else
+    cat '$input'
+#end if
+| awk '/^>/{print;next}{print toupper(\$0)}' > in.fa &&
+FAtoGDB in.fa gdb || true ;
+FasTAN -m -p -T\${GALAXY_SLOTS:-4} gdb &&
+ONEview gdb.1ano
+| awk -f '$__tool_directory__/ano2bed6.awk'
+| LC_ALL=C sort -k1,1 -k2,2n > '$output'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="fasta,fasta.gz" label="Assembly FASTA"/>
+    </inputs>
+    <outputs>
+        <data name="output" format="bed" label="${tool.name} on ${on_string}: tandem arrays (BED6)"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1">
+            <param name="input" value="repeats.fa" ftype="fasta"/>
+            <output name="output" ftype="bed">
+                <assert_contents>
+                    <has_n_columns n="6"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**FasTAN** (Gene Myers) finds tandem-repeat arrays and splits them into repeat units.
+
+The tool outputs **BED6**:
+
+- **name**: `u<unit_size>` (tandem unit length)
+- **score**: unit identity (`1000 - 10 * divergence`, 0–1000 grayscale)
+- **strand**: real orientation
+
+Pipeline: `FAtoGDB` -> `FasTAN -m -p` (`.1ano`) -> `ONEview` -> `ano2bed6.awk`. The tool converts the input sequence to uppercase first so it computes the mask from sequence alone.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

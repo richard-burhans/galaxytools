@@ -1,0 +1,37 @@
+<tool id="fasta_uppercase" name="FASTA uppercase" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>convert sequence lines to uppercase, discarding pre-existing soft-masking</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <version_command>echo "@TOOL_VERSION@"</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+set -o pipefail &&
+#if $input.is_of_type('fasta.gz')
+    gunzip -c '$input'
+#else
+    cat '$input'
+#end if
+| awk -f '$__tool_directory__/fasta_uppercase.awk' > '$output'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="fasta,fasta.gz" label="Assembly FASTA" help="Plain or gzipped FASTA, soft-masked or unmasked."/>
+    </inputs>
+    <outputs>
+        <data name="output" format="fasta" label="${tool.name} on ${on_string}: upper-cased"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1">
+            <param name="input" value="mixed_case.fa" ftype="fasta"/>
+            <output name="output" file="mixed_case_upper.fa" ftype="fasta"/>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**fasta_uppercase** converts every sequence line to uppercase and keeps FASTA header lines unchanged.
+
+Sequence names are case-sensitive identifiers (for example, `scaffold_12` must not become `SCAFFOLD_12`).
+
+In repeat-masking workflows, remove any prior soft-mask first so `bedtools maskfasta -soft` writes only the new repeat masks.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>

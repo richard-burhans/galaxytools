@@ -1,0 +1,44 @@
+<tool id="windowmasker" name="WindowMasker" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>NCBI WindowMasker genome-frequency repeat/low-complexity intervals as content-annotated BED6</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <version_command>windowmasker -version-full | head -n 1</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+set -o pipefail &&
+#if $input.is_of_type('fasta.gz')
+    gunzip -c '$input'
+#else
+    cat '$input'
+#end if
+| awk '/^>/{print;next}{print toupper(\$0)}' > in.fa &&
+windowmasker -mk_counts -in in.fa -out counts &&
+windowmasker -ustat counts -in in.fa -outfmt interval
+| awk -f '$__tool_directory__/interval2bed.awk'
+| python3 '$__tool_directory__/lc_classify.py' in.fa -
+| LC_ALL=C sort -k1,1 -k2,2n > '$output'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="fasta,fasta.gz" label="Assembly FASTA"/>
+    </inputs>
+    <outputs>
+        <data name="output" format="bed" label="${tool.name} on ${on_string}: masked intervals (BED6)"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1">
+            <param name="input" value="repeats.fa" ftype="fasta"/>
+            <output name="output" ftype="bed">
+                <assert_contents>
+                    <has_n_columns n="6"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**WindowMasker** (NCBI BLAST+) learns over-represented k-mers directly from the input genome (no repeat library needed) and finds repeats in two passes (`-mk_counts` and `-ustat`).
+
+The tool outputs **BED6** with content annotations (`name` = repeat-unit signature, `score` = purity × 1000, `strand` = `.`). It converts the input sequence to uppercase first so it computes the mask from sequence alone.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>
