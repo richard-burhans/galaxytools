@@ -1,0 +1,11 @@
+name: tantan
+owner: richard-burhans
+description: tantan low-complexity intervals as content-annotated BED6
+long_description: |
+  Runs tantan (-f3 BED output) on an upper-cased FASTA and classifies
+  low-complexity intervals into a content-annotated BED6 track.
+homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/tantan
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/tantan
+type: unrestricted
+categories:
+  - Sequence Analysis

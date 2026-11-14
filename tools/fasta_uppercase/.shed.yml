@@ -1,0 +1,11 @@
+name: fasta_uppercase
+owner: richard-burhans
+description: Convert FASTA sequence lines to uppercase, discarding pre-existing soft-masking
+long_description: |
+  Rewrites every sequence line of a plain or gzipped FASTA file in uppercase
+  while preserving FASTA header lines verbatim.
+homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/fasta_uppercase
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/fasta_uppercase
+type: unrestricted
+categories:
+  - Sequence Analysis

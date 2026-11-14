@@ -1,0 +1,43 @@
+<tool id="tantan" name="tantan" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <description>probabilistic low-complexity intervals as content-annotated BED6</description>
+    <macros>
+        <import>macros.xml</import>
+    </macros>
+    <expand macro="requirements"/>
+    <version_command>tantan --version</version_command>
+    <command detect_errors="aggressive"><![CDATA[
+set -o pipefail &&
+#if $input.is_of_type('fasta.gz')
+    gunzip -c '$input'
+#else
+    cat '$input'
+#end if
+| awk '/^>/{print;next}{print toupper(\$0)}' > in.fa &&
+tantan -f3 in.fa
+| python3 '$__tool_directory__/lc_classify.py' in.fa -
+| LC_ALL=C sort -k1,1 -k2,2n > '$output'
+    ]]></command>
+    <inputs>
+        <param name="input" type="data" format="fasta,fasta.gz" label="Assembly FASTA"/>
+    </inputs>
+    <outputs>
+        <data name="output" format="bed" label="${tool.name} on ${on_string}: low-complexity (BED6)"/>
+    </outputs>
+    <tests>
+        <test expect_num_outputs="1">
+            <param name="input" value="repeats.fa" ftype="fasta"/>
+            <output name="output" ftype="bed">
+                <assert_contents>
+                    <has_n_columns n="6"/>
+                    <has_line_matching expression="^seq1\t[0-9]+\t[0-9]+\t[^\t]+\t[0-9]+\t\.$"/>
+                </assert_contents>
+            </output>
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+**tantan** (Martin Frith) runs probabilistic low-complexity repeat detection, well suited to AT-rich genomes.
+
+The tool outputs **BED6** with content annotations (`name` = repeat-unit signature, `score` = purity × 1000, `strand` = `.`). It converts the input sequence to uppercase first so it computes the mask from sequence alone.
+    ]]></help>
+    <expand macro="citations"/>
+</tool>
