@@ -1,0 +1,10 @@
+categories:
+- Sequence Analysis
+description: Test copy of IUC seqtk with seqtk_seq -U, for testing before the IUC PR
+homepage_url: https://github.com/lh3/seqtk
+long_description: |
+  Sequence Analysis toolkit provides several small utilities for working with FastA and FastQ data.
+name: seqtk
+owner: richard-burhans
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/seqtk
+type: unrestricted
