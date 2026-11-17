@@ -1,0 +1,11 @@
+name: windowmasker_bed6
+owner: richard-burhans
+description: NCBI WindowMasker genome-frequency repeat/low-complexity intervals as content-annotated BED6
+long_description: |
+  Runs two-pass NCBI BLAST+ windowmasker (-mk_counts and -ustat) on an
+  upper-cased FASTA and classifies masked intervals into a content-annotated BED6 track.
+homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/windowmasker_bed6
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/windowmasker_bed6
+type: unrestricted
+categories:
+  - Sequence Analysis
