@@ -1,10 +1,13 @@
 name: tantan
 owner: richard-burhans
-description: tantan low-complexity intervals as content-annotated BED6
+description: Find and mask simple repeats in DNA sequences with tantan
 long_description: |
-  Runs tantan (-f3 BED output) on an upper-cased FASTA and classifies
-  low-complexity intervals into a content-annotated BED6 track.
-homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/tantan
+  tantan finds simple repeats in DNA sequences with a probabilistic model.
+  Simple repeats include tandem repeats and low-complexity regions. The tool
+  writes a BED file of repeat intervals or a FASTA file with the repeats
+  soft-masked or hard-masked. The masks help to prevent false homology
+  predictions in sequence searches.
+homepage_url: https://gitlab.com/mcfrith/tantan
 remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/tantan
 type: unrestricted
 categories:
