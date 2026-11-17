@@ -1,0 +1,12 @@
+name: ncbi_blast_plus
+owner: richard-burhans
+homepage_url: https://blast.ncbi.nlm.nih.gov/
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/ncbi_blast_plus
+description: Test copy of the NCBI BLAST+ dustmasker wrapper
+long_description: |
+  Test copy of the devteam/galaxy_blast NCBI BLAST+ dustmasker wrapper
+  (ncbi_dustmasker_wrapper), updated to BLAST+ 2.17.0 with a BED output
+  option. Changes are intended for upstream galaxy_blast.
+categories:
+- Sequence Analysis
+type: unrestricted
