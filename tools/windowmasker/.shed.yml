@@ -1,9 +1,9 @@
-name: windowmasker_iuc
+name: windowmasker
 owner: richard-burhans
-description: Test copy of IUC windowmasker (BLAST+ 2.16.0, -set_t_low fix), for testing before the IUC PR
+description: Identify repetitive regions using WindowMasker (IUC wrapper with BLAST+ 2.16.0 and a -set_t_low fix)
 type: unrestricted
 homepage_url: https://www.ncbi.nlm.nih.gov/IEB/ToolBox/CPP_DOC/lxr/source/src/app/winmasker/
-remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/windowmasker_iuc
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/windowmasker
 categories: [Sequence Analysis]
 long_description: |
   WindowMasker identifies repetitive sequences and low complexity regions within a
