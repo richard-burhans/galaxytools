@@ -1,0 +1,16 @@
+<macros>
+    <token name="@TOOL_VERSION@">51</token>
+    <token name="@VERSION_SUFFIX@">0</token>
+    <token name="@PROFILE@">25.0</token>
+    <xml name="requirements">
+        <requirements>
+            <requirement type="package" version="@TOOL_VERSION@">tantan</requirement>
+            <requirement type="package" version="3.12">python</requirement>
+        </requirements>
+    </xml>
+    <xml name="citations">
+        <citations>
+            <citation type="doi">10.1093/nar/gkr010</citation>
+        </citations>
+    </xml>
+</macros>
