@@ -1,10 +1,12 @@
 name: fastan
 owner: richard-burhans
-description: FasTAN tandem-repeat arrays as content-annotated BED6
+description: FasTAN finds tandem-repeat arrays and reports them as BED6
 long_description: |
-  Runs FAtoGDB, FasTAN (-m -p), and ONEview on an upper-cased FASTA and
-  converts tandem-repeat annotations into a content-annotated BED6 track.
-homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/fastan
+  FasTAN (Gene Myers) finds tandem-repeat arrays in a FASTA file. The tool
+  runs FAtoGDB, FasTAN and ONEview and writes one BED6 line for each array.
+  The name column holds the repeat unit length. The score column holds
+  1000 - 10 * divergence.
+homepage_url: https://github.com/thegenemyers/FASTAN
 remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/fastan
 type: unrestricted
 categories:
