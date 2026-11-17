@@ -1,0 +1,128 @@
+<tool id="ncbi_dustmasker_wrapper" name="NCBI BLAST+ dustmasker" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@">
+    <!-- dustmasker wrapper from Edward Kirton and Nicola Soranzo -->
+    <description>masks low complexity regions</description>
+    <macros>
+        <token name="@BINARY@">dustmasker</token>
+        <import>ncbi_macros.xml</import>
+    </macros>
+    <expand macro="preamble" />
+    <command detect_errors="aggressive"><![CDATA[
+## The command is a Cheetah template which allows some Python based syntax.
+## Lines starting hash hash are comments. Galaxy will turn newlines into spaces
+set -o pipefail &&
+dustmasker
+#if $db_opts.db_opts_selector == "db":
+  -in '${db_opts.database.fields.path}' -infmt blastdb
+#elif $db_opts.db_opts_selector == "histdb":
+  -in '${os.path.join($db_opts.histdb.files_path, "blastdb")}' -infmt blastdb
+#else
+  -in
+    #if $subject.ext == "fasta"
+        '$subject'
+    #else
+        <(gunzip -c '$subject')
+    #end if
+  -infmt fasta
+#end if
+-window $window -level $level -linker $linker
+#if $outformat == "bed":
+  ## BLAST+ interval coordinates are 0-based with an inclusive end
+  -outfmt interval
+  | awk -v OFS='\t' '/^>/ {chrom = substr(\$1, 2); next} {print chrom, \$1, \$3 + 1}'
+  > '$outfile'
+#else:
+  -out '$outfile' -outfmt $outformat
+#end if
+    ]]></command>
+    <inputs>
+        <expand macro="input_conditional_nucleotide_db" />
+        <param argument="-window" type="integer" value="64" label="DUST window length" />
+        <param argument="-level" type="integer" value="20" label="DUST level" help="Score threshold for subwindows" />
+        <param argument="-linker" type="integer" value="1" label="DUST linker" help="How close masked intervals should be to get merged together" />
+        <param name="outformat" argument="-outfmt" type="select" label="Output format">
+            <!-- seqloc_* formats are not very useful
+                 and what BLAST+ calls 'interval' is not what Galaxy calls interval format
+            -->
+            <option value="fasta">FASTA</option>
+            <option value="maskinfo_asn1_bin">maskinfo ASN.1 binary</option>
+            <option value="maskinfo_asn1_text" selected="true">maskinfo ASN.1 text</option>
+            <option value="maskinfo_xml">maskinfo_xml</option>
+            <option value="bed">BED</option>
+        </param>
+    </inputs>
+    <outputs>
+        <data name="outfile" format="maskinfo-asn1" label="DUST Masked File">
+            <change_format>
+                <when input="outformat" value="fasta" format="fasta" />
+                <when input="outformat" value="maskinfo_asn1_bin" format="maskinfo-asn1-binary" />
+                <!--
+                <when input="outformat" value="maskinfo_asn1_text" format="maskinfo-asn1" />
+                -->
+                <when input="outformat" value="maskinfo_xml" format="xml" />
+                <when input="outformat" value="bed" format="bed" />
+            </change_format>
+        </data>
+    </outputs>
+    <tests>
+        <test>
+            <conditional name="db_opts">
+                <param name="db_opts_selector" value="file" />
+                <param name="subject" value="three_human_mRNA.fasta" ftype="fasta" />
+            </conditional>
+            <param name="window" value="64" />
+            <param name="level" value="20" />
+            <param name="linker" value="1" />
+            <param name="outformat" value="fasta" />
+            <output name="outfile" file="dustmasker_three_human.fasta" />
+        </test>
+        <test>
+            <conditional name="db_opts">
+                <param name="db_opts_selector" value="file" />
+                <param name="subject" value="three_human_mRNA.fasta.gz" ftype="fasta.gz" />
+            </conditional>
+            <param name="window" value="64" />
+            <param name="level" value="20" />
+            <param name="linker" value="1" />
+            <param name="outformat" value="maskinfo_asn1_bin" />
+            <output name="outfile" file="dustmasker_three_human.maskinfo-asn1-binary" />
+        </test>
+        <test>
+            <conditional name="db_opts">
+                <param name="db_opts_selector" value="file" />
+                <param name="subject" value="three_human_mRNA.fasta" ftype="fasta" />
+            </conditional>
+            <param name="window" value="64" />
+            <param name="level" value="20" />
+            <param name="linker" value="1" />
+            <param name="outformat" value="maskinfo_asn1_text" />
+            <output name="outfile" file="dustmasker_three_human.maskinfo-asn1" />
+        </test>
+        <test>
+            <conditional name="db_opts">
+                <param name="db_opts_selector" value="file" />
+                <param name="subject" value="three_human_mRNA.fasta" ftype="fasta" />
+            </conditional>
+            <param name="window" value="64" />
+            <param name="level" value="20" />
+            <param name="linker" value="1" />
+            <param name="outformat" value="bed" />
+            <output name="outfile" file="dustmasker_three_human.bed" ftype="bed" />
+        </test>
+    </tests>
+    <help>
+**What it does**
+
+This tool identifies and masks out low complexity regions of a nucleotide database (or sequences in FASTA format) by using the symmetric DUST_ algorithm.
+
+If you select *maskinfo ASN.1* (binary or text) as output format, the output file can be used as masking data for NCBI BLAST+ makeblastdb tool.
+
+If you select *BED* as output format, the tool writes one line for each masked interval. Each line gives the sequence identifier (the first word of the FASTA header), the start and the end. The start is 0-based and the end is exclusive, as in all BED files.
+
+More information about dustmasker can be found in the `BLAST Command Line Applications User Manual`_.
+
+.. _BLAST Command Line Applications User Manual: https://www.ncbi.nlm.nih.gov/books/NBK279690/
+.. _DUST: https://www.ncbi.nlm.nih.gov/pubmed/16796549
+
+    </help>
+    <expand macro="blast_citations" />
+</tool>

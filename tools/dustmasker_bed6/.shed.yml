@@ -1,11 +1,11 @@
-name: dustmasker
+name: dustmasker_bed6
 owner: richard-burhans
 description: NCBI symmetric-DUST low-complexity intervals as content-annotated BED6
 long_description: |
   Runs NCBI BLAST+ dustmasker on an upper-cased FASTA and classifies
   low-complexity intervals into a content-annotated BED6 track.
-homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/dustmasker
-remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/dustmasker
+homepage_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/dustmasker_bed6
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/dustmasker_bed6
 type: unrestricted
 categories:
   - Sequence Analysis
