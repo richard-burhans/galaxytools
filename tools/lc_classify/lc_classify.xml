@@ -2,7 +2,7 @@
     <description>by repeat unit and purity (BED6)</description>
     <macros>
         <token name="@TOOL_VERSION@">1.0.0</token>
-        <token name="@VERSION_SUFFIX@">0</token>
+        <token name="@VERSION_SUFFIX@">1</token>
         <token name="@PROFILE@">25.0</token>
     </macros>
     <requirements>
@@ -97,11 +97,8 @@ A BED6 file, sorted by chromosome and start.
 - The tool reads the FASTA one record at a time. Memory use thus stays low on large assemblies.
     ]]></help>
     <citations>
-        <citation type="bibtex">@misc{githublc_classify,
-    author = {Burhans, Richard},
-    title = {lc_classify},
-    publisher = {GitHub},
-    url = {https://github.com/richard-burhans/galaxytools/tree/main/tools/lc_classify}
-}</citation>
+        <citation type="doi">10.1089/cmb.2006.13.1028</citation>
+        <citation type="doi">10.1093/bioinformatics/bti774</citation>
+        <citation type="doi">10.1093/nar/gkq1212</citation>
     </citations>
 </tool>
