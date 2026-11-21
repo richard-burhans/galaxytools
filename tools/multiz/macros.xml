@@ -1,5 +1,5 @@
 <macros>
-    <!-- Pin tracks the latest Bioconda/Biocontainers multiz release (11.10--hab16a5f_0). -->
+    <!-- Pin tracks the latest Bioconda/Biocontainers multiz release (11.10). -->
     <token name="@TOOL_VERSION@">11.10</token>
     <token name="@GAWK_VERSION@">5.3.1</token>
     <token name="@PROFILE@">22.01</token>
