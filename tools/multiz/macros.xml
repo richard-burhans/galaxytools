@@ -1,0 +1,26 @@
+<macros>
+    <!-- Pin tracks the latest Bioconda/Biocontainers multiz release.
+         Bump to 11.10 as soon as bioconda/bioconda-recipes#71379 merges. -->
+    <token name="@TOOL_VERSION@">11.6</token>
+    <token name="@GAWK_VERSION@">5.3.1</token>
+    <token name="@PROFILE@">22.01</token>
+
+    <xml name="multiz_requirements">
+        <requirements>
+            <requirement type="package" version="@TOOL_VERSION@">multiz</requirement>
+            <requirement type="package" version="@GAWK_VERSION@">gawk</requirement>
+        </requirements>
+    </xml>
+
+    <xml name="multiz_xrefs">
+        <xrefs>
+            <xref type="bio.tools">multiz</xref>
+        </xrefs>
+    </xml>
+
+    <xml name="multiz_citations">
+        <citations>
+            <citation type="doi">10.1101/gr.1933104</citation>
+        </citations>
+    </xml>
+</macros>

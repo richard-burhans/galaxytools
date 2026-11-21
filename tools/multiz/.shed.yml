@@ -1,0 +1,27 @@
+categories:
+- Sequence Analysis
+description: Multiple genome alignment of pairwise MAFs with multiz (tba and roast / autoMZ)
+homepage_url: https://github.com/multiz/multiz
+long_description: |
+  Two tools from the multiz suite (https://github.com/multiz/multiz) that build
+  multi-species MAF alignments from ordered pairwise MAFs and a Newick guide tree:
+
+  - multiz_tba: reference-free multiple alignment (tba) from all-vs-all ordered
+    pairwise MAFs and species FASTAs.
+  - multiz_roast: reference-guided multiple alignment (roast / autoMZ) from
+    pairwise MAFs sharing a reference, with UCSC-style empty-species stubbing.
+
+  Both tools accept pre-prefixed (species.sequence) MAFs directly, or unprefixed
+  pairwise MAFs paired with collection element identifiers and an optional
+  identifier-to-species map for in-job prefixing with zero intermediate datasets.
+name: multiz
+owner: richard-burhans
+remote_repository_url: https://github.com/richard-burhans/galaxytools/tree/main/tools/multiz
+type: unrestricted
+auto_tool_repositories:
+  name_template: "{{ tool_id }}"
+  description_template: "Wrapper for multiz: {{ tool_name }}."
+suite:
+  name: "suite_multiz"
+  description: "multiz multiple genome alignment suite (tba and roast)."
+  type: repository_suite_definition
