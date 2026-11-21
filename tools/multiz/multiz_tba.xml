@@ -1,0 +1,475 @@
+<tool id="multiz_tba" name="tba" version="@TOOL_VERSION@+galaxy@VERSION_SUFFIX@" profile="@PROFILE@" license="MIT">
+    <description>: reference-free multiple alignment of pairwise MAFs (multiz TBA)</description>
+    <macros>
+        <import>macros.xml</import>
+        <token name="@VERSION_SUFFIX@">0</token>
+    </macros>
+    <expand macro="multiz_xrefs"/>
+    <expand macro="multiz_requirements"/>
+    <version_command><![CDATA[ echo "@TOOL_VERSION@" ]]></version_command>
+    <command detect_errors="exit_code"><![CDATA[
+## Galaxy flattens newlines in <command>, so the work is a POSIX sh script with argv inputs,
+## never Cheetah, so the exact same script runs as a dev UDT.
+## Backticks (never \$(...)) and bare \$var (never \${var}) keep XML->UDT conversion 1-to-1.
+sh '$script' '$tree' '$output' '$pairwise' '$sequences' '#if $sequence_ids then $sequence_ids else ""#' '#if $pairwise_ids then $pairwise_ids else ""#' '#if $species_map then $species_map else ""#'
+    ]]></command>
+    <configfiles>
+        <configfile name="script"><![CDATA[set -eu
+treefile="\$1"; output="\$2"; files="\$3"; seqfiles="\$4"
+seq_ids_file="\$5"; pair_ids_file="\$6"; species_map_file="\$7"
+
+[ -n "\$files" ] || { echo "no pairwise MAFs reached the job" >&2; exit 1; }
+[ -n "\$seqfiles" ] || { echo "no FASTA sequences reached the job" >&2; exit 1; }
+
+AWK=gawk
+command -v gawk >/dev/null 2>&1 || AWK=awk
+
+mkdir -p work/tmp
+## Strip branch lengths (including + exponents), internal bootstrap/node labels after ')',
+## trailing ';', and whitespace; convert commas to spaces for tba.
+tree=`sed 's/:[-+0-9.eE]*//g; s/)[A-Za-z0-9_.-]*/)/g; s/;//; /^ *\$/d' "\$treefile" | tr '\n' ' ' | sed 's/ //g; s/,/ /g'`
+leaves=" `echo "\$tree" | tr '()' '  ' | tr -s ' '` "
+
+nleaves=0
+for s in \$leaves; do
+    case "\$s" in
+        ''|[!A-Za-z]*|*[!A-Za-z0-9_]*|*maf*|*eof*)
+            echo "tree leaf \$s cannot go through tba: must be a letter then letters, digits or _, without maf or eof" >&2
+            exit 1
+            ;;
+    esac
+    nleaves=`expr \$nleaves + 1`
+done
+[ "\$nleaves" -ge 2 ] || { echo "tree must have at least 2 leaves, found \$nleaves" >&2; exit 1; }
+
+cat > resolve_and_stage.awk <<'AWK_EOF'
+function trim(s) {
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "", s)
+    return s
+}
+function valid_species(sp) {
+    return (sp ~ /^[A-Za-z][A-Za-z0-9_]*$/ && sp !~ /maf|eof/)
+}
+function map_species(raw) {
+    if (raw in smap) return smap[raw]
+    return raw
+}
+function in_leaves(sp) {
+    return (sp in leaf_set)
+}
+function split_pair(pid,    i, n, sep, seps, pos, a, b, sa, sb, rest) {
+    seps[1] = "__"
+    seps[2] = "."
+    seps[3] = "_"
+    for (i = 1; i <= 3; i++) {
+        sep = seps[i]
+        pos = 1
+        while (1) {
+            rest = substr(pid, pos)
+            n = index(rest, sep)
+            if (n == 0) break
+            a = substr(pid, 1, pos + n - 2)
+            b = substr(pid, pos + n - 1 + length(sep))
+            if ((a in known_raw || a in leaf_set) && (b in known_raw || b in leaf_set)) {
+                sa = map_species(a)
+                sb = map_species(b)
+                if (in_leaves(sa) && in_leaves(sb)) {
+                    pair_sp1 = sa
+                    pair_sp2 = sb
+                    return 1
+                }
+            }
+            pos = pos + n
+        }
+    }
+    return 0
+}
+BEGIN {
+    nleaves = split(leaves_str, larr, /[[:space:]]+/)
+    for (i = 1; i <= nleaves; i++) {
+        if (larr[i] != "") leaf_set[larr[i]] = 1
+    }
+    if (species_map_file != "") {
+        while ((getline line < species_map_file) > 0) {
+            gsub(/\r$/, "", line)
+            if (line == "" || line ~ /^#/) continue
+            nf = split(line, cols, /\t/)
+            if (nf >= 2) {
+                k = trim(cols[1])
+                v = trim(cols[2])
+                if (k != "" && v != "") {
+                    smap[k] = v
+                    known_raw[k] = 1
+                }
+            }
+        }
+        close(species_map_file)
+    }
+    if (mode == "fastas") {
+        nf = split(paths_str, paths, /,/)
+        ni = 0
+        while ((getline line < ids_file) > 0) {
+            gsub(/\r$/, "", line)
+            line = trim(line)
+            if (line == "") continue
+            ni++
+            ids[ni] = line
+        }
+        close(ids_file)
+        if (ni != nf) {
+            printf("sequence_ids count (%d) != sequences count (%d)\n", ni, nf) > "/dev/stderr"
+            exit 1
+        }
+        for (i = 1; i <= nf; i++) {
+            raw = ids[i]
+            sp = map_species(raw)
+            if (!valid_species(sp)) {
+                printf("species name %s (from %s) cannot go through tba: must be a letter then letters, digits or _, without maf or eof (supply species_map if needed)\n", sp, raw) > "/dev/stderr"
+                exit 1
+            }
+            if (!in_leaves(sp)) {
+                printf("%s (from sequence_id %s) is not in the tree\n", sp, raw) > "/dev/stderr"
+                exit 1
+            }
+            printf("%s\t%s\n", sp, paths[i])
+        }
+    } else if (mode == "mafs") {
+        if (seq_ids_file != "") {
+            while ((getline line < seq_ids_file) > 0) {
+                gsub(/\r$/, "", line)
+                line = trim(line)
+                if (line != "") known_raw[line] = 1
+            }
+            close(seq_ids_file)
+        }
+        nf = split(paths_str, paths, /,/)
+        ni = 0
+        while ((getline line < ids_file) > 0) {
+            gsub(/\r$/, "", line)
+            line = trim(line)
+            if (line == "") continue
+            ni++
+            ids[ni] = line
+        }
+        close(ids_file)
+        if (ni != nf) {
+            printf("pairwise_ids count (%d) != pairwise count (%d)\n", ni, nf) > "/dev/stderr"
+            exit 1
+        }
+        for (i = 1; i <= nf; i++) {
+            pid = ids[i]
+            if (!split_pair(pid)) {
+                printf("cannot split pairwise identifier %s into two species in the tree\n", pid) > "/dev/stderr"
+                exit 1
+            }
+            if (pair_sp1 == pair_sp2) {
+                printf("skipping self-pair %s\n", pid) > "/dev/stderr"
+                continue
+            }
+            printf("%s\t%s\t%s\n", pair_sp1, pair_sp2, paths[i])
+        }
+    }
+}
+AWK_EOF
+
+nsp=0
+if [ -n "\$seq_ids_file" ]; then
+    "\$AWK" -v mode="fastas" \
+        -v leaves_str="\$leaves" \
+        -v paths_str="\$seqfiles" \
+        -v ids_file="\$seq_ids_file" \
+        -v species_map_file="\$species_map_file" \
+        -f resolve_and_stage.awk > fasta_plan.tsv
+    while IFS='	' read -r sp f; do
+        [ -n "\$sp" ] || continue
+        if [ -e "work/\$sp" ]; then
+            echo "\$sp FASTA is given twice" >&2
+            exit 1
+        fi
+        p="\$sp."
+        ## Check whether ALL headers already carry the species prefix; if not, prefix EVERY header unconditionally.
+        prefixed=`"\$AWK" -v p="\$p" '/^>/{ n++; if (index(\$1, ">" p) == 1) m++ } END { print (n > 0 && n == m) ? "yes" : "no" }' "\$f"`
+        if [ "\$prefixed" = "yes" ]; then
+            ln -s "\$f" "work/\$sp"
+        else
+            exp_bytes=`"\$AWK" -v p="\$p" -v out="work/\$sp" '
+                /^>/ { sub(/^>/, ">" p) }
+                { print > out; nb += length(\$0) + 1 }
+                END { if (close(out) != 0) { print "failed writing " out > "/dev/stderr"; exit 1 }; print nb + 0 }
+            ' "\$f"`
+            got_bytes=`wc -c < "work/\$sp" | tr -d '[:space:]'`
+            if [ "\$got_bytes" != "\$exp_bytes" ]; then
+                echo "truncated write staging FASTA for \$sp (expected \$exp_bytes bytes, got \$got_bytes)" >&2
+                exit 1
+            fi
+        fi
+        nsp=`expr \$nsp + 1`
+    done < fasta_plan.tsv
+else
+    IFS=','
+    for f in \$seqfiles; do
+        unset IFS
+        sp=`"\$AWK" '/^>/{ sub(/^>/, "", \$1); split(\$1, p, "."); print p[1]; exit }' "\$f"`
+        IFS=','
+        [ -n "\$sp" ] || continue
+        case "\$leaves" in *" \$sp "*) ;; *) echo "\$sp (from FASTA) is not in the tree" >&2; exit 1;; esac
+        if [ -e "work/\$sp" ]; then
+            echo "\$sp FASTA is given twice" >&2
+            exit 1
+        fi
+        ln -s "\$f" "work/\$sp"
+        nsp=`expr \$nsp + 1`
+    done
+    unset IFS
+fi
+
+if [ "\$nsp" -ne "\$nleaves" ]; then
+    echo "expected \$nleaves species FASTAs matching tree leaves, staged \$nsp" >&2
+    exit 1
+fi
+
+n=0
+empty=0
+if [ -n "\$pair_ids_file" ]; then
+    "\$AWK" -v mode="mafs" \
+        -v leaves_str="\$leaves" \
+        -v paths_str="\$files" \
+        -v ids_file="\$pair_ids_file" \
+        -v seq_ids_file="\$seq_ids_file" \
+        -v species_map_file="\$species_map_file" \
+        -f resolve_and_stage.awk > maf_plan.tsv
+    while IFS='	' read -r sp1 sp2 f; do
+        [ -n "\$sp1" ] && [ -n "\$sp2" ] || continue
+        if [ -e "work/\$sp1.\$sp2.sing.maf" ]; then
+            echo "\$sp1.\$sp2 is given twice" >&2
+            exit 1
+        fi
+        first_s1=`"\$AWK" '/^s[[:space:]]/{ print \$2; exit }' "\$f"`
+        if [ -z "\$first_s1" ]; then
+            empty=`expr \$empty + 1`
+            continue
+        fi
+        p1="\$sp1."
+        p2="\$sp2."
+        ## Detect whether file is already prefixed on first block; stream-validate sort order and prefix unconditionally if bare.
+        first_s2=`"\$AWK" '/^s[[:space:]]/{ c++; if (c == 2) { print \$2; exit } }' "\$f"`
+        already_prefixed="no"
+        case "\$first_s1|\$first_s2" in
+            "\$p1"*"|\$p2"*) already_prefixed="yes" ;;
+        esac
+        exp_bytes=`"\$AWK" -v p1="\$p1" -v p2="\$p2" -v pre="\$already_prefixed" -v out="work/\$sp1.\$sp2.sing.maf" '
+            function die(m) { print "multiz_tba: " m > "/dev/stderr"; failed = 1; exit 1 }
+            function endblock() {
+                if (row != 2) die("block at line " bline " has " row " s line(s), expected 2")
+                inblock = 0
+            }
+            function emit(s) { print s > out; nb += length(s) + 1 }
+            function put_prefixed(pref,   lead) {
+                match(\$0, /^s +/)
+                lead = substr(\$0, 1, RLENGTH)
+                emit(lead pref substr(\$0, RLENGTH + 1))
+            }
+            /^[[:space:]]*$/ {
+                if (inblock) endblock()
+                if (pre == "no") emit(\$0)
+                next
+            }
+            /^a([[:space:]]|$)/ {
+                if (inblock) endblock()
+                inblock = 1; row = 0; bline = NR
+                if (pre == "no") emit(\$0)
+                next
+            }
+            /^s[[:space:]]/ {
+                if (split(\$0, f, " ") != 7) die("s line at line " NR " does not have 7 fields")
+                if (row == 0) {
+                    q = f[2]
+                    if (f[5] != "+") die("target row at line " NR " is on the - strand")
+                    if (q != cur) {
+                        if (q in done) die("target sequence " q " restarts at line " NR ": input MAF is not sorted")
+                        if (cur != "") done[cur] = 1
+                        cur = q; last = -1
+                    }
+                    if (f[3] + 0 < last) die("target start goes backwards at line " NR ": " q " " f[3] " after " last)
+                    last = f[3] + 0
+                    if (pre == "no") put_prefixed(p1)
+                } else if (row == 1) {
+                    if (pre == "no") put_prefixed(p2)
+                } else {
+                    die("block at line " bline " has >2 s lines")
+                }
+                row++
+                next
+            }
+            { if (pre == "no") emit(\$0) }
+            END {
+                if (failed) exit 1
+                if (inblock) endblock()
+                if (pre == "no" && close(out) != 0) die("failed writing " out)
+                print nb + 0
+            }
+        ' "\$f"`
+        if [ "\$already_prefixed" = "yes" ]; then
+            ln -s "\$f" "work/\$sp1.\$sp2.sing.maf"
+        else
+            got_bytes=`wc -c < "work/\$sp1.\$sp2.sing.maf" | tr -d '[:space:]'`
+            if [ "\$got_bytes" != "\$exp_bytes" ]; then
+                echo "truncated write staging MAF for \$sp1.\$sp2 (expected \$exp_bytes bytes, got \$got_bytes)" >&2
+                exit 1
+            fi
+        fi
+        n=`expr \$n + 1`
+    done < maf_plan.tsv
+else
+    IFS=','
+    for f in \$files; do
+        unset IFS
+        sp1=`"\$AWK" '/^s /{ split(\$2, p, "."); print p[1]; exit }' "\$f"`
+        sp2=`"\$AWK" -v s1="\$sp1" '/^s /{ split(\$2, p, "."); if (p[1] != s1) { print p[1]; exit } }' "\$f"`
+        IFS=','
+        if [ -z "\$sp1" ] || [ -z "\$sp2" ]; then
+            empty=`expr \$empty + 1`
+            continue
+        fi
+        case "\$leaves" in *" \$sp1 "*) ;; *) echo "\$sp1 is not in the tree" >&2; exit 1;; esac
+        case "\$leaves" in *" \$sp2 "*) ;; *) echo "\$sp2 is not in the tree" >&2; exit 1;; esac
+        if [ -e "work/\$sp1.\$sp2.sing.maf" ]; then echo "\$sp1.\$sp2 is given twice" >&2; exit 1; fi
+        ln -s "\$f" "work/\$sp1.\$sp2.sing.maf"
+        n=`expr \$n + 1`
+    done
+    unset IFS
+fi
+
+expected=`expr \$nleaves \* \( \$nleaves - 1 \)`
+received=`expr \$n + \$empty`
+if [ "\$received" -lt "\$expected" ]; then
+    echo "expected \$expected ordered pairwise MAFs for \$nleaves species, received \$received (\$n non-empty, \$empty empty)" >&2
+    exit 1
+fi
+[ "\$n" -gt 0 ] || { echo "no non-empty pairwise MAFs found" >&2; exit 1; }
+echo "species staged: \$nsp of \$nleaves"
+echo "pairwise MAFs staged: \$n of \$expected"
+echo "empty pairs skipped: \$empty"
+echo "tree: \$tree"
+cd work
+tba + T="\$PWD/tmp" "\$tree" *.*.sing.maf out.maf > /dev/null
+cd ..
+mv work/out.maf "\$output"
+]]></configfile>
+    </configfiles>
+    <inputs>
+        <param name="pairwise" type="data" format="maf" multiple="true" label="Pairwise MAFs"
+               help="All N*(N-1) ordered pairwise reciprocal-best MAFs (both A.B and B.A directions), sorted by target coordinate. May already have species.sequence row names, or bare sequence names when pairwise_ids is supplied."/>
+        <param name="sequences" type="data" format="fasta" multiple="true" label="Species FASTA sequences"
+               help="One genome FASTA per species in the guide tree. May already have species.sequence headers, or bare headers when sequence_ids is supplied."/>
+        <param name="tree" type="data" format="newick,nhx,txt" label="Species guide tree"
+               help="Rooted Newick tree giving the TBA merge order (branch lengths and internal labels are stripped). Every leaf must be a letter followed by letters, digits or _, without maf or eof."/>
+        <param name="sequence_ids" type="data" format="txt" optional="true" label="Species FASTA element identifiers"
+               help="Optional newline-delimited element identifiers in the same order as the FASTA collection (from collection_element_identifiers). Enables in-job prefixing of unprefixed FASTA headers."/>
+        <param name="pairwise_ids" type="data" format="txt" optional="true" label="Pairwise MAF element identifiers"
+               help="Optional newline-delimited pair identifiers in the same order as the pairwise MAF collection (sp1__sp2, sp1.sp2, or sp1_sp2). Enables in-job prefixing of unprefixed MAF s-lines by row position."/>
+        <param name="species_map" type="data" format="tabular" optional="true" label="Identifier-to-species map (2-column TSV)"
+               help="Optional 2-column TSV (collection_id TAB tree_leaf_name) mapping raw identifiers (such as NCBI accessions containing dots like GCA_032713075.1) to TBA-safe leaf names in the guide tree."/>
+    </inputs>
+    <outputs>
+        <data name="output" format="maf" label="${tool.name} on ${on_string}"/>
+    </outputs>
+    <tests>
+        <!-- Pre-prefixed 3-species happy path -->
+        <test expect_num_outputs="1">
+            <param name="pairwise" value="tba_spA.spB.prefixed.maf,tba_spB.spA.prefixed.maf,tba_spA.spC.prefixed.maf,tba_spC.spA.prefixed.maf,tba_spB.spC.prefixed.maf,tba_spC.spB.prefixed.maf" ftype="maf"/>
+            <param name="sequences" value="tba_spA.prefixed.fa,tba_spB.prefixed.fa,tba_spC.prefixed.fa" ftype="fasta"/>
+            <param name="tree" value="tba_3sp.nh" ftype="newick"/>
+            <output name="output" ftype="maf">
+                <assert_contents>
+                    <has_text text="##maf version="/>
+                    <has_text text="s spA.chr1 "/>
+                    <has_text text="s spB.chr1 "/>
+                    <has_text text="s spC.chr1 "/>
+                </assert_contents>
+            </output>
+            <assert_stdout>
+                <has_text text="species staged: 3 of 3"/>
+                <has_text text="pairwise MAFs staged: 6 of 6"/>
+                <has_text text="tree: ((spA spB) spC)"/>
+            </assert_stdout>
+        </test>
+        <!-- Unprefixed 3-species happy path with accession IDs + species_map -->
+        <test expect_num_outputs="1">
+            <param name="pairwise" value="tba_spA.spB.bare.maf,tba_spB.spA.bare.maf,tba_spA.spC.bare.maf,tba_spC.spA.bare.maf,tba_spB.spC.bare.maf,tba_spC.spB.bare.maf" ftype="maf"/>
+            <param name="sequences" value="tba_spA.bare.fa,tba_spB.bare.fa,tba_spC.bare.fa" ftype="fasta"/>
+            <param name="tree" value="tba_3sp.nh" ftype="newick"/>
+            <param name="sequence_ids" value="tba_seq_ids.txt" ftype="txt"/>
+            <param name="pairwise_ids" value="tba_pair_ids.txt" ftype="txt"/>
+            <param name="species_map" value="tba_species_map.tsv" ftype="tabular"/>
+            <output name="output" ftype="maf">
+                <assert_contents>
+                    <has_text text="##maf version="/>
+                    <has_text text="s spA.chr1 "/>
+                    <has_text text="s spB.chr1 "/>
+                    <has_text text="s spC.chr1 "/>
+                </assert_contents>
+            </output>
+            <assert_stdout>
+                <has_text text="species staged: 3 of 3"/>
+                <has_text text="pairwise MAFs staged: 6 of 6"/>
+                <has_text text="tree: ((spA spB) spC)"/>
+            </assert_stdout>
+        </test>
+        <!-- Refusal: dot in species identifier without species_map -->
+        <test expect_failure="true">
+            <param name="pairwise" value="tba_spA.spB.bare.maf,tba_spB.spA.bare.maf" ftype="maf"/>
+            <param name="sequences" value="tba_spA.bare.fa,tba_spB.bare.fa,tba_spC.bare.fa" ftype="fasta"/>
+            <param name="tree" value="tba_3sp.nh" ftype="newick"/>
+            <param name="sequence_ids" value="tba_seq_ids.txt" ftype="txt"/>
+            <assert_stderr>
+                <has_text text="cannot go through tba"/>
+            </assert_stderr>
+        </test>
+        <!-- Refusal: missing ordered pairs (only 2 of 6 provided) -->
+        <test expect_failure="true">
+            <param name="pairwise" value="tba_spA.spB.prefixed.maf,tba_spB.spA.prefixed.maf" ftype="maf"/>
+            <param name="sequences" value="tba_spA.prefixed.fa,tba_spB.prefixed.fa,tba_spC.prefixed.fa" ftype="fasta"/>
+            <param name="tree" value="tba_3sp.nh" ftype="newick"/>
+            <assert_stderr>
+                <has_text text="expected 6 ordered pairwise MAFs"/>
+            </assert_stderr>
+        </test>
+        <!-- Refusal: duplicate ordered pair -->
+        <test expect_failure="true">
+            <param name="pairwise" value="tba_spA.spB.prefixed.maf,tba_spA.spB.prefixed.maf" ftype="maf"/>
+            <param name="sequences" value="tba_spA.prefixed.fa,tba_spB.prefixed.fa,tba_spC.prefixed.fa" ftype="fasta"/>
+            <param name="tree" value="tba_3sp.nh" ftype="newick"/>
+            <assert_stderr>
+                <has_text text="spA.spB is given twice"/>
+            </assert_stderr>
+        </test>
+    </tests>
+    <help><![CDATA[
+**What it does**
+
+Runs ``tba`` (Threaded Blockset Aligner from `multiz`_) to build a reference-free multiple
+genome alignment from all ``N * (N - 1)`` ordered pairwise reciprocal-best MAF alignments,
+species FASTA assemblies, and a rooted Newick guide tree::
+
+    tba + T=$tmp "$tree" *.*.sing.maf out.maf
+
+**Two input modes**
+
+1. **Unprefixed collections (recommended for Galaxy workflows):** Pass ``sequence_ids`` and
+   ``pairwise_ids`` from Galaxy's *Extract element identifiers* tool (``collection_element_identifiers``),
+   plus an optional 2-column ``species_map`` TSV (``collection_id<TAB>tree_leaf_name``) when
+   identifiers contain dots (such as NCBI accessions like ``GCA_032713075.1``). Unprefixed FASTA
+   headers and pairwise MAF ``s`` lines are prefixed with ``<species>.`` on the fly inside the job
+   with GNU ``gawk`` and zero intermediate datasets.
+2. **Pre-prefixed inputs (fallback):** Omit ``sequence_ids`` and ``pairwise_ids`` when FASTAs and
+   MAFs already carry ``<species>.<sequence>`` prefixes.
+
+.. warning:: ``tba`` splits MAF filenames and ``s``-line names on ``.``, requires species names
+   to begin with a letter (``[A-Za-z][A-Za-z0-9_]*``), and filters ``maf``/``eof``. Pairwise MAFs
+   must be sorted by target coordinate; unsorted inputs and missing ordered pairs are rejected up front.
+
+.. _multiz: https://github.com/multiz/multiz
+    ]]></help>
+    <expand macro="multiz_citations"/>
+</tool>

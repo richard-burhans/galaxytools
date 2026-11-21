@@ -1,0 +1,23 @@
+<macros>
+    <!-- Pin tracks the latest Bioconda/Biocontainers multiz release (11.10). -->
+    <token name="@TOOL_VERSION@">11.10</token>
+    <token name="@PROFILE@">22.01</token>
+
+    <xml name="multiz_requirements">
+        <requirements>
+            <requirement type="package" version="@TOOL_VERSION@">multiz</requirement>
+        </requirements>
+    </xml>
+
+    <xml name="multiz_xrefs">
+        <xrefs>
+            <xref type="bio.tools">multiz</xref>
+        </xrefs>
+    </xml>
+
+    <xml name="multiz_citations">
+        <citations>
+            <citation type="doi">10.1101/gr.1933104</citation>
+        </citations>
+    </xml>
+</macros>

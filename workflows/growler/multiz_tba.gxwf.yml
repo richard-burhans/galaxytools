@@ -1,0 +1,105 @@
+class: GalaxyWorkflow
+label: Reference-Free Multiple Genome Alignment (multiz TBA)
+doc: |
+  Builds a reference-free multiple genome alignment (MAF) from a collection of
+  species genome assemblies (FASTA), a collection of ordered pairwise
+  reciprocal-best MAF alignments, and a rooted Newick guide tree using
+  multiz TBA. Element identifiers are extracted in-Galaxy with
+  collection_element_identifiers so unprefixed FASTA headers and MAF s-lines
+  are prefixed with <species>. inside the multiz_tba job without downloading,
+  editing, or re-uploading data.
+release: "0.1.0"
+license: MIT
+creator:
+  - class: Person
+    name: Richard Burhans
+    identifier: https://orcid.org/0009-0006-5949-0958
+tags:
+  - comparative-genomics
+  - whole-genome-alignment
+  - multiz
+  - tba
+  - maf
+
+inputs:
+  species_fastas:
+    type: collection
+    collection_type: list
+    label: Species genome assemblies (FASTA collection)
+    doc: List collection of genome FASTA files, one per species in the guide tree. Element identifiers name each species (or match column 1 of the optional species map).
+    position:
+      left: 0
+      top: 0
+  pairwise_mafs:
+    type: collection
+    collection_type: list
+    label: Pairwise reciprocal-best MAFs (collection)
+    doc: List collection of all N*(N-1) ordered pairwise MAF files (both A.B and B.A directions). Element identifiers encode the ordered pair (sp1__sp2, sp1.sp2, or sp1_sp2).
+    position:
+      left: 0
+      top: 140
+  guide_tree:
+    type: data
+    format: newick
+    label: Species guide tree (Newick)
+    doc: Rooted Newick guide tree giving the TBA progressive merge order. Branch lengths and internal labels are stripped; leaf names must be [A-Za-z][A-Za-z0-9_]* without maf or eof.
+    position:
+      left: 0
+      top: 280
+  species_map:
+    type: data
+    format: tabular
+    optional: true
+    label: Optional identifier-to-species map (2-column TSV)
+    doc: Optional 2-column TSV (collection_id<TAB>tree_leaf_name) mapping raw collection identifiers (such as NCBI accessions containing dots like GCA_032713075.1) to TBA-safe leaf names in the guide tree.
+    position:
+      left: 0
+      top: 420
+
+outputs:
+  tba_multiple_alignment:
+    outputSource: run_multiz_tba/output
+    label: Multiple genome alignment (TBA MAF)
+    doc: Reference-free multi-species MAF alignment produced by multiz tba.
+
+steps:
+  extract_species_identifiers:
+    label: Extract species FASTA element identifiers
+    doc: Extracts the ordered element identifiers of the species FASTA collection so multiz_tba can prefix unprefixed FASTA headers in-job.
+    tool_id: toolshed.g2.bx.psu.edu/repos/iuc/collection_element_identifiers/collection_element_identifiers/0.0.3
+    tool_version: "0.0.3"
+    in:
+      input_collection: species_fastas
+    position:
+      left: 300
+      top: 0
+
+  extract_pairwise_identifiers:
+    label: Extract pairwise MAF element identifiers
+    doc: Extracts the ordered element identifiers of the pairwise MAF collection so multiz_tba can pair each MAF with its ordered species pair and prefix unprefixed s-lines in-job.
+    tool_id: toolshed.g2.bx.psu.edu/repos/iuc/collection_element_identifiers/collection_element_identifiers/0.0.3
+    tool_version: "0.0.3"
+    in:
+      input_collection: pairwise_mafs
+    position:
+      left: 300
+      top: 160
+
+  run_multiz_tba:
+    label: Run multiz TBA reference-free multiple alignment
+    doc: Stages FASTAs and pairwise MAFs (prefixing unprefixed headers and s-lines on the fly with GNU gawk from the extracted element identifiers and optional species map) and runs multiz tba.
+    tool_id: toolshed.g2.bx.psu.edu/repos/richard-burhans/multiz_tba/multiz_tba/11.10+galaxy0
+    tool_version: "11.10+galaxy0"
+    in:
+      sequences: species_fastas
+      pairwise: pairwise_mafs
+      tree: guide_tree
+      sequence_ids: extract_species_identifiers/output
+      pairwise_ids: extract_pairwise_identifiers/output
+      species_map: species_map
+    out:
+      output:
+        rename: "multiz_tba_multiple_alignment.maf"
+    position:
+      left: 620
+      top: 140

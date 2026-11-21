@@ -54,7 +54,7 @@ WFI = {
     "name_rows": ("maf_name_rows", "maf_name_rows", "gt-maf-name-rows", "tools/maf_name_rows/maf_name_rows.xml"),
     "split": ("ucsc_mafsplit_bed", "ucsc_mafsplit_bed", "gt-ucsc-mafsplit-bed",
               "tools/ucsc_mafsplit_bed/mafsplit_bed.xml"),
-    "roast": ("multiz_roast", "multiz_roast", "gt-multiz-roast", "tools/multiz_roast/multiz_roast.xml"),
+    "roast": ("multiz_roast", "multiz_roast", "gt-multiz-roast", "tools/multiz/multiz_roast.xml"),
     "concat": ("maf_concat", "maf_concat", "gt-maf-concat", "tools/maf_concat/maf_concat.xml"),
     "tobigmaf": ("ucsc_maftobigmaf", "ucsc_maftobigmaf", "gt-ucsc-maftobigmaf",
                  "tools/ucsc_maftobigmaf/maftobigmaf.xml"),
