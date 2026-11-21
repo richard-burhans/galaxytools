@@ -22,13 +22,7 @@ seq_ids_file="\$5"; pair_ids_file="\$6"; species_map_file="\$7"
 [ -n "\$seqfiles" ] || { echo "no FASTA sequences reached the job" >&2; exit 1; }
 
 AWK=gawk
-if ! command -v gawk >/dev/null 2>&1; then
-    if [ -n "\$seq_ids_file" ] || [ -n "\$pair_ids_file" ]; then
-        echo "gawk is required for write-safe in-job prefixing (BusyBox awk silently truncates on ENOSPC)" >&2
-        exit 1
-    fi
-    AWK=awk
-fi
+command -v gawk >/dev/null 2>&1 || AWK=awk
 
 mkdir -p work/tmp
 ## Strip branch lengths (including + exponents), internal bootstrap/node labels after ')',
@@ -198,11 +192,16 @@ if [ -n "\$seq_ids_file" ]; then
         if [ "\$prefixed" = "yes" ]; then
             ln -s "\$f" "work/\$sp"
         else
-            "\$AWK" -v p="\$p" -v out="work/\$sp" '
+            exp_bytes=`"\$AWK" -v p="\$p" -v out="work/\$sp" '
                 /^>/ { sub(/^>/, ">" p) }
-                { print > out }
-                END { if (close(out) != 0) { print "failed writing " out > "/dev/stderr"; exit 1 } }
-            ' "\$f"
+                { print > out; nb += length(\$0) + 1 }
+                END { if (close(out) != 0) { print "failed writing " out > "/dev/stderr"; exit 1 }; print nb + 0 }
+            ' "\$f"`
+            got_bytes=`wc -c < "work/\$sp" | tr -d '[:space:]'`
+            if [ "\$got_bytes" != "\$exp_bytes" ]; then
+                echo "truncated write staging FASTA for \$sp (expected \$exp_bytes bytes, got \$got_bytes)" >&2
+                exit 1
+            fi
         fi
         nsp=`expr \$nsp + 1`
     done < fasta_plan.tsv
@@ -258,26 +257,27 @@ if [ -n "\$pair_ids_file" ]; then
         case "\$first_s1|\$first_s2" in
             "\$p1"*"|\$p2"*) already_prefixed="yes" ;;
         esac
-        "\$AWK" -v p1="\$p1" -v p2="\$p2" -v pre="\$already_prefixed" -v out="work/\$sp1.\$sp2.sing.maf" '
+        exp_bytes=`"\$AWK" -v p1="\$p1" -v p2="\$p2" -v pre="\$already_prefixed" -v out="work/\$sp1.\$sp2.sing.maf" '
             function die(m) { print "multiz_tba: " m > "/dev/stderr"; failed = 1; exit 1 }
             function endblock() {
                 if (row != 2) die("block at line " bline " has " row " s line(s), expected 2")
                 inblock = 0
             }
+            function emit(s) { print s > out; nb += length(s) + 1 }
             function put_prefixed(pref,   lead) {
                 match(\$0, /^s +/)
                 lead = substr(\$0, 1, RLENGTH)
-                print lead pref substr(\$0, RLENGTH + 1) > out
+                emit(lead pref substr(\$0, RLENGTH + 1))
             }
             /^[[:space:]]*$/ {
                 if (inblock) endblock()
-                if (pre == "no") print > out
+                if (pre == "no") emit(\$0)
                 next
             }
             /^a([[:space:]]|$)/ {
                 if (inblock) endblock()
                 inblock = 1; row = 0; bline = NR
-                if (pre == "no") print > out
+                if (pre == "no") emit(\$0)
                 next
             }
             /^s[[:space:]]/ {
@@ -301,15 +301,22 @@ if [ -n "\$pair_ids_file" ]; then
                 row++
                 next
             }
-            { if (pre == "no") print > out }
+            { if (pre == "no") emit(\$0) }
             END {
                 if (failed) exit 1
                 if (inblock) endblock()
                 if (pre == "no" && close(out) != 0) die("failed writing " out)
+                print nb + 0
             }
-        ' "\$f"
+        ' "\$f"`
         if [ "\$already_prefixed" = "yes" ]; then
             ln -s "\$f" "work/\$sp1.\$sp2.sing.maf"
+        else
+            got_bytes=`wc -c < "work/\$sp1.\$sp2.sing.maf" | tr -d '[:space:]'`
+            if [ "\$got_bytes" != "\$exp_bytes" ]; then
+                echo "truncated write staging MAF for \$sp1.\$sp2 (expected \$exp_bytes bytes, got \$got_bytes)" >&2
+                exit 1
+            fi
         fi
         n=`expr \$n + 1`
     done < maf_plan.tsv

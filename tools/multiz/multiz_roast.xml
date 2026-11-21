@@ -27,13 +27,7 @@ case "\$ref" in
 esac
 
 AWK=gawk
-if ! command -v gawk >/dev/null 2>&1; then
-    if [ -n "\$pair_ids_file" ]; then
-        echo "gawk is required for write-safe in-job prefixing (BusyBox awk silently truncates on ENOSPC)" >&2
-        exit 1
-    fi
-    AWK=awk
-fi
+command -v gawk >/dev/null 2>&1 || AWK=awk
 
 mkdir work
 tree=`sed 's/:[-+0-9.eE]*//g; s/)[A-Za-z0-9_.-]*/)/g; s/;//; /^ *\$/d' "\$treefile" | tr '\n' ' ' | sed 's/ //g; s/,/ /g'`
@@ -144,26 +138,27 @@ AWK_EOF
         case "\$first_s1|\$first_s2" in
             "\$p1"*"|\$p2"*) already_prefixed="yes" ;;
         esac
-        "\$AWK" -v p1="\$p1" -v p2="\$p2" -v pre="\$already_prefixed" -v out="work/\$ref.\$name.sing.maf" '
+        exp_bytes=`"\$AWK" -v p1="\$p1" -v p2="\$p2" -v pre="\$already_prefixed" -v out="work/\$ref.\$name.sing.maf" '
             function die(m) { print "multiz_roast: " m > "/dev/stderr"; failed = 1; exit 1 }
             function endblock() {
                 if (row != 2) die("block at line " bline " has " row " s line(s), expected 2")
                 inblock = 0
             }
+            function emit(s) { print s > out; nb += length(s) + 1 }
             function put_prefixed(pref,   lead) {
                 match(\$0, /^s +/)
                 lead = substr(\$0, 1, RLENGTH)
-                print lead pref substr(\$0, RLENGTH + 1) > out
+                emit(lead pref substr(\$0, RLENGTH + 1))
             }
             /^[[:space:]]*$/ {
                 if (inblock) endblock()
-                if (pre == "no") print > out
+                if (pre == "no") emit(\$0)
                 next
             }
             /^a([[:space:]]|$)/ {
                 if (inblock) endblock()
                 inblock = 1; row = 0; bline = NR
-                if (pre == "no") print > out
+                if (pre == "no") emit(\$0)
                 next
             }
             /^s[[:space:]]/ {
@@ -187,15 +182,22 @@ AWK_EOF
                 row++
                 next
             }
-            { if (pre == "no") print > out }
+            { if (pre == "no") emit(\$0) }
             END {
                 if (failed) exit 1
                 if (inblock) endblock()
                 if (pre == "no" && close(out) != 0) die("failed writing " out)
+                print nb + 0
             }
-        ' "\$f"
+        ' "\$f"`
         if [ "\$already_prefixed" = "yes" ]; then
             ln -s "\$f" "work/\$ref.\$name.sing.maf"
+        else
+            got_bytes=`wc -c < "work/\$ref.\$name.sing.maf" | tr -d '[:space:]'`
+            if [ "\$got_bytes" != "\$exp_bytes" ]; then
+                echo "truncated write staging MAF for \$ref.\$name (expected \$exp_bytes bytes, got \$got_bytes)" >&2
+                exit 1
+            fi
         fi
     done < roast_plan.tsv
 else
