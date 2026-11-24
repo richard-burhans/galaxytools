@@ -58,27 +58,37 @@ def get_allocated_cpus(value: str | None) -> int:
 
     if available_cpus is None:
         return requested_cpus
-    else:
-        return min(requested_cpus, available_cpus)
+    return min(requested_cpus, available_cpus)
 
 
-def get_allocated_memory(value: str | None) -> int:
+def get_allocated_memory(value: str | None, meminfo_path: str = "/proc/meminfo") -> int:
     available_memory = None
     requested_memory = None
 
+    # Prefer MemAvailable (which includes reclaimable page/slab cache on Linux)
+    # over MemFree (unused pages only, often tiny on long-running worker nodes).
     try:
-        with open("/proc/meminfo") as f:
+        mem_available_kb = None
+        mem_free_kb = None
+        with open(meminfo_path) as f:
             for line in f:
-                if line.startswith("MemFree:"):
-                    _, available_kb, _ = line.split()
-                    available_memory = int(available_kb) // 1048576
+                if line.startswith("MemAvailable:"):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        mem_available_kb = int(parts[1])
+                elif line.startswith("MemFree:"):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        mem_free_kb = int(parts[1])
+        chosen_kb = mem_available_kb if mem_available_kb is not None else mem_free_kb
+        if chosen_kb is not None:
+            available_memory = chosen_kb // 1048576
     except Exception:
         pass
 
     # ``value`` is GALAXY_MEMORY_MB (megabytes); everything else in this function
     # works in gigabytes (available_memory, DEFAULT_MEMORY, the returned value),
-    # so convert MB -> GB. Previously the MB figure was used as GB, so e.g.
-    # GALAXY_MEMORY_MB=65536 (64 GB) was treated as 65536 GB.
+    # so convert MB -> GB.
     if value is not None:
         try:
             requested_memory = int(value) // 1024
@@ -90,69 +100,41 @@ def get_allocated_memory(value: str | None) -> int:
 
     if available_memory is None:
         return requested_memory
-    else:
-        return min(requested_memory, available_memory)
+    return min(requested_memory, available_memory)
 
 
-# copy default config files into the working directory
-shutil.copytree(os.path.join(EGAPX_ROOT, CONFIG_DIR), CONFIG_DIR, dirs_exist_ok=True)
+def parse_gigabase_pairs(raw: str | None) -> int:
+    try:
+        val = int(raw if raw is not None else "1")
+    except (TypeError, ValueError):
+        val = 1
+    return min(8, max(1, val))
 
-# Make sure the upstream resource-tier config is present so galaxy.config can
-# include it (it is normally copied in with the rest of egapx_config, but stage
-# it from the source tree as a fallback so the include never dangles).
-process_resources_path = os.path.join(CONFIG_DIR, PROCESS_RESOURCES)
-if not os.path.exists(process_resources_path) and os.path.exists(UPSTREAM_PROCESS_RESOURCES):
-    shutil.copy2(UPSTREAM_PROCESS_RESOURCES, process_resources_path)
 
-# get galaxy env vars
-galaxy_slots_env_var = os.environ.get("GALAXY_SLOTS")
-galaxy_memory_mb_env_var = os.environ.get("GALAXY_MEMORY_MB")
+def build_galaxy_overlay(galaxy_slots: int, galaxy_memory_gb: int, gigabase_pairs: int) -> str:
+    # Cap the per-process thread/node counts to the Galaxy allocation. The upstream
+    # 'multi_cpu' / 'multi_node' tiers set ``cpus = params.threads`` (and the default
+    # is 16), so on a small allocation a single process would request more CPUs than
+    # the job was granted and Nextflow aborts with "Process requirement exceeds
+    # available CPUs". Clamp to galaxy_slots (never above the upstream default of 16).
+    galaxy_threads = min(16, galaxy_slots)
+    galaxy_nodes = min(16, galaxy_slots)
 
-# gigabase_pairs (1-8) is a pass-through scheduling hint from the tool form. It
-# has no built-in resource effect yet; it is simply exposed as a Nextflow param
-# for downstream / future use.
-try:
-    gigabase_pairs = int(os.environ.get("EGAPX_GIGABASE_PAIRS", "1"))
-except (TypeError, ValueError):
-    gigabase_pairs = 1
-gigabase_pairs = min(8, max(1, gigabase_pairs))
+    # Environment-dependent numbers. Floors keep the values valid (Nextflow rejects
+    # cpus = 0 / memory = 0.GB) on small allocations.
+    num_cpus_per_node = max(1, galaxy_slots // galaxy_threads)
 
-galaxy_config_path = os.path.join(CONFIG_DIR, "galaxy.config")
+    large_cpu_job = max(1, (galaxy_slots - 1) // 2)
+    std_cpu_job = max(1, large_cpu_job // 4)
 
-# galaxy is not trying to limit resources: still pass the hint through.
-if galaxy_slots_env_var is None and galaxy_memory_mb_env_var is None:
-    with open(galaxy_config_path, "a") as of:
-        of.write(f"\nparams.gigabase_pairs = {gigabase_pairs}\n")
-    sys.exit(0)
+    large_memory_job = max(1, (galaxy_memory_gb - 4) // 2)
+    med_memory_job = max(1, large_memory_job // 2)
+    std_memory_job = max(1, large_memory_job // 4)
+    # Clamp small_mem to galaxy_memory_gb so a 6-7 GB floor allocation does not
+    # request 8 GB against executor.memory = 6 GB.
+    small_memory_job = min(8, galaxy_memory_gb)
 
-galaxy_slots = max(get_allocated_cpus(galaxy_slots_env_var), MINIMUM_CPUS)
-galaxy_memory_gb = max(get_allocated_memory(galaxy_memory_mb_env_var), MINIMUM_MEMORY)
-
-# Cap the per-process thread/node counts to the Galaxy allocation. The upstream
-# 'multi_cpu' / 'multi_node' tiers set ``cpus = params.threads`` (and the default
-# is 16), so on a small allocation a single process would request more CPUs than
-# the job was granted and Nextflow aborts with "Process requirement exceeds
-# available CPUs". Clamp to galaxy_slots (never above the upstream default of 16).
-galaxy_threads = min(16, galaxy_slots)
-galaxy_nodes = min(16, galaxy_slots)
-
-# Environment-dependent numbers. Floors keep the values valid (Nextflow rejects
-# cpus = 0 / memory = 0.GB) on small allocations.
-num_cpus_per_node = max(1, galaxy_slots // galaxy_threads)
-
-large_cpu_job = (galaxy_slots - 1) // 2
-std_cpu_job = max(1, large_cpu_job // 4)
-
-large_memory_job = max(1, (galaxy_memory_gb - 4) // 2)
-med_memory_job = max(1, large_memory_job // 2)
-std_memory_job = max(1, large_memory_job // 4)
-small_memory_job = 8  # upstream 'small_mem' tier, kept fixed
-
-# Overlay: include the upstream tiers, then override only what depends on the
-# Galaxy allocation. The label/ext blocks (single_cpu, multi_cpu, multi_node,
-# gpx_submitter, long_job) are inherited from process_resources.config; the
-# multi_* labels track params.threads, which we set here.
-galaxy_config = f"""
+    return f"""
 // --- Galaxy resource limits (generated by galaxy-resource-config.py) ---
 // Upstream process_resources.config stays authoritative for the process
 // tiers/labels; only the environment-dependent numbers are overridden here.
@@ -203,5 +185,38 @@ process {{
 }}
 """
 
-with open(galaxy_config_path, "a") as of:
-    of.write(galaxy_config)
+
+def main() -> int:
+    # copy default config files into the working directory
+    shutil.copytree(os.path.join(EGAPX_ROOT, CONFIG_DIR), CONFIG_DIR, dirs_exist_ok=True)
+
+    # Make sure the upstream resource-tier config is present so galaxy.config can
+    # include it (it is normally copied in with the rest of egapx_config, but stage
+    # it from the source tree as a fallback so the include never dangles).
+    process_resources_path = os.path.join(CONFIG_DIR, PROCESS_RESOURCES)
+    if not os.path.exists(process_resources_path) and os.path.exists(UPSTREAM_PROCESS_RESOURCES):
+        shutil.copy2(UPSTREAM_PROCESS_RESOURCES, process_resources_path)
+
+    galaxy_slots_env_var = os.environ.get("GALAXY_SLOTS")
+    galaxy_memory_mb_env_var = os.environ.get("GALAXY_MEMORY_MB")
+    gigabase_pairs = parse_gigabase_pairs(os.environ.get("EGAPX_GIGABASE_PAIRS"))
+
+    galaxy_config_path = os.path.join(CONFIG_DIR, "galaxy.config")
+
+    # galaxy is not trying to limit resources: still pass the hint through.
+    if galaxy_slots_env_var is None and galaxy_memory_mb_env_var is None:
+        with open(galaxy_config_path, "a") as of:
+            of.write(f"\nparams.gigabase_pairs = {gigabase_pairs}\n")
+        return 0
+
+    galaxy_slots = max(get_allocated_cpus(galaxy_slots_env_var), MINIMUM_CPUS)
+    galaxy_memory_gb = max(get_allocated_memory(galaxy_memory_mb_env_var), MINIMUM_MEMORY)
+
+    galaxy_config = build_galaxy_overlay(galaxy_slots, galaxy_memory_gb, gigabase_pairs)
+    with open(galaxy_config_path, "a") as of:
+        of.write(galaxy_config)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

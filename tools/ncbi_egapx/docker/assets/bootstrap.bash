@@ -1,4 +1,4 @@
-#sh !/usr/bin/env bash
+#!/usr/bin/env bash
 
 set -o errexit
 set -o nounset
@@ -13,7 +13,6 @@ fi
 project_root="/galaxy"
 version_file="$project_root/version"
 miniforge_root="$project_root/miniforge3"
-repo="conda-forge/miniforge"
 
 if [ ! -e "$project_root" ]; then
     mkdir -m 0755 -p "$project_root"
@@ -32,28 +31,29 @@ if [ ! -e "$miniforge_root" ]; then
         echo "error: unable to get latest release of miniforge"
         exit 1
     fi
+
+    ## download and verify miniforge
+    filename="Miniforge3-${tag}-$(uname -s)-$(uname -m).sh"
+    url="https://github.com/conda-forge/miniforge/releases/download/$tag/$filename"
+
+    curl --silent --location --output "$project_root/$filename" "$url"
+    curl --silent --location --output "$project_root/${filename}.sha256" "${url}.sha256"
+
+    expected_checksum=$(awk '{print $1}' "$project_root/${filename}.sha256")
+    actual_checksum=$(openssl dgst -sha256 "$project_root/$filename" | awk '{print $2}')
+
+    if [ "$expected_checksum" != "$actual_checksum" ]; then
+        echo "error: checksum mismatch"
+        echo "  expected: $expected_checksum"
+        echo "  awk '{print \$1}' \"$project_root/${filename}.sha256\""
+        echo "    actual: $actual_checksum"
+        exit 1
+    fi
+
+    ## install miniforge
+    bash "$project_root/$filename" -b -p "$miniforge_root"
+    rm -f "$project_root/$filename"{,.sha256}
 fi
-    
-## download and verify miniforge
-filename="Miniforge3-${tag}-$(uname -s)-$(uname -m).sh"
-url="https://github.com/conda-forge/miniforge/releases/download/$tag/$filename"
-
-curl --silent --location --output "$project_root/$filename" "$url"
-curl --silent --location --output "$project_root/${filename}.sha256" "${url}.sha256"
-
-expected_checksum=$(awk '{print $1}' "$project_root/${filename}.sha256")
-actual_checksum=$(openssl dgst -sha256 "$project_root/$filename" | awk '{print $2}')
-
-if [ "$expected_checksum" != "$actual_checksum" ]; then
-    echo "error: checksum mismatch"
-    echo "  expected: $expected_checksum"
-    echo "  awk '{print \$1}' \"$project_root/${filename}.sha256\""
-    echo "    actual: $actual_checksum"
-    exit 1
-fi
-
-## install miniforge
-bash "$project_root/$filename" -b -p "$miniforge_root"
 
 cat > "$project_root/env.bash" << EOF
 source "$miniforge_root/etc/profile.d/conda.sh"
@@ -70,7 +70,7 @@ EOF
 
 source "$project_root/env.bash"
 
-nextflow_env_installed=$(mamba env list | egrep '^nextflow\b' || true)
+nextflow_env_installed=$(mamba env list | grep -E '^nextflow\b' || true)
 if [ -z "$nextflow_env_installed" ]; then
     mamba create \
         --name nextflow \
@@ -151,8 +151,7 @@ env {
 }
 EOF
 
-ln "$project_root/egapx/egapx_config/galaxy.config" "$project_root/egapx//ui/assets/config/user/galaxy.config"
-rm -f "$project_root/$filename"{,.sha256}
+ln -f "$project_root/egapx/egapx_config/galaxy.config" "$project_root/egapx/ui/assets/config/user/galaxy.config"
 deactivate
 mamba deactivate
 
