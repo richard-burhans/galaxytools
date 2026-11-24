@@ -28,7 +28,7 @@ inputs:
 steps:
   prepare_input:
     tool_id: ncbi_egapx_prepare_input
-    tool_version: 1.0.1+galaxy0
+    tool_version: 1.0.1+galaxy2
     label: prepare_input
     doc: Download the EGAPx local cache (--download-needed) for the configuration.
     in:
@@ -37,7 +37,7 @@ steps:
       cond_input_style|yamlin: config_yaml
   execute:
     tool_id: ncbi_egapx_execute
-    tool_version: 1.0.1+galaxy0
+    tool_version: 1.0.1+galaxy2
     label: execute
     doc: Run the EGAPx annotation offline against the local cache.
     in:

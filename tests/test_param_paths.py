@@ -155,16 +155,6 @@ KNOWN_DEFECTS = {
     ("segalign", "resolves"): "abandoned tool — scoring_options ambiguous params wired one level too "
                               "shallow, the same defect as kegalign, in the tool it was derived from",
     ("segalign", "bare"): "abandoned tool — ambiguous_selector referenced without its section prefix",
-    # Both egapx tools, left for later by agreement -- the surface is a dozen references across
-    # nested conditionals feeding a YAML configfile, which is a different-sized job from a wiring fix.
-    ("ncbi_egapx", "bare"): "$genome and $yamlin referenced without their conditional prefix, while "
-                            "the #if directly above them uses the full path",
-    ("ncbi_egapx", "resolves"): "cond_input_style.proteins is missing the cond_protein_set level; "
-                                "the #if on the line above it has the full path",
-    ("ncbi_egapx_prepare_input", "bare"): "$genome, $yamlin, $taxid, $uri and $locus_tag_prefix "
-                                          "referenced without their conditional prefix",
-    ("ncbi_egapx_prepare_input", "resolves"): "cond_input_style.proteins is missing the "
-                                              "cond_protein_set level",
 }
 
 

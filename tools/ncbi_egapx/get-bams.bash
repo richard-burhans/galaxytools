@@ -9,24 +9,25 @@ set -o pipefail
 ##
 
 bam_temp_dir=$(mktemp --directory ./egapx_out/bam.XXXXXXXXXX) || {
-    echo "ERROR: failed making temporary directory"
+    echo "ERROR: failed making temporary directory" >&2
     exit 1
 }
 
 bam_files_file="$bam_temp_dir/bam-files.txt"
 touch "$bam_files_file" || {
-    echo "ERROR: failed creating temporary file"
+    echo "ERROR: failed creating temporary file" >&2
     exit 1
 }
 trap 'rm -f -- "$bam_files_file"' EXIT
 
-find . -type f -name \*Aligned.out.Sorted.bam -print > "$bam_files_file" || {
-    echo "ERROR: failed finding bam files"
+find . -not -path './egapx_out/*' -type f -name '*Aligned.out.Sorted.bam' -print > "$bam_files_file" || {
+    echo "ERROR: failed finding bam files" >&2
     exit 1
 }
 
 idx=0
-while IFS="" read pathname; do
+while IFS="" read -r pathname; do
+    [ -n "$pathname" ] || continue
     filename=$(basename "$pathname" ".bam")
 
     dest_path_prefix="$bam_temp_dir/$filename"
@@ -37,7 +38,7 @@ while IFS="" read pathname; do
     dest_pathname="${dest_path_prefix}.bam"
 
     cp "$pathname" "$dest_pathname" || {
-        echo "ERROR: failed: cp \"$pathname\" \"$dest_pathname\""
+        echo "ERROR: failed: cp \"$pathname\" \"$dest_pathname\"" >&2
         exit 1
     }
 
